@@ -118,6 +118,8 @@ def _fragment():
     import jinja2
     source = (REPO_ROOT / "seo-agent-web" / "templates" / "project_overview.html").read_text(encoding="utf-8")
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(REPO_ROOT / "seo-agent-web" / "templates")))
+    from backend import i18n
+    i18n.add_template_globals(env)  # le fragment est traduisible (tr)
     return env, source
 
 

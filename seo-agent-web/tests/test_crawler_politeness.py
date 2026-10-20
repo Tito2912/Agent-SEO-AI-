@@ -213,6 +213,8 @@ def test_the_overview_warns_only_when_pages_were_blocked() -> None:
     import jinja2
 
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(REPO_ROOT / "seo-agent-web" / "templates")))
+    from backend import i18n
+    i18n.add_template_globals(env)  # le fragment est traduisible (tr)
     source = (REPO_ROOT / "seo-agent-web" / "templates" / "project_overview.html").read_text(encoding="utf-8")
     start = source.index('{% set blocked =')
     end = source.index("<h1>{{ project.site_name }}</h1>")

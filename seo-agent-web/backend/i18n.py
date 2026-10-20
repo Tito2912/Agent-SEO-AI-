@@ -225,6 +225,45 @@ def _country_options(context: Any) -> list[tuple[str, str]]:
     return _country_cache[lang]
 
 
+# Les fichiers static/*.js appellent `noyaruT("texte francais")`. Seuls ces textes-la sont
+# envoyes a la page (voir `_lang_script.html`), pas tout le catalogue.
+_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+_JS_CALL = re.compile(r"noyaruT\(\s*(\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*')")
+_js_keys_cache: list[str] | None = None
+_js_catalog_cache: dict[str, dict[str, str]] = {}
+
+
+def _js_keys() -> list[str]:
+    global _js_keys_cache
+    if _js_keys_cache is None:
+        keys: list[str] = []
+        for path in sorted(_STATIC_DIR.glob("*.js")):
+            try:
+                source = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            for literal in _JS_CALL.findall(source):
+                try:
+                    key = json.loads(literal) if literal.startswith('"') else json.loads('"' + literal[1:-1].replace("\\'", "'").replace('"', '\\"') + '"')
+                except ValueError:
+                    continue
+                if key not in keys:
+                    keys.append(key)
+        _js_keys_cache = keys
+    return _js_keys_cache
+
+
+@pass_context
+def _js_catalog(context: Any) -> dict[str, str]:
+    lang = request_lang(context.get("request"))
+    if lang == DEFAULT_LANG:
+        return {}
+    if lang not in _js_catalog_cache:
+        catalog = _catalog(lang)
+        _js_catalog_cache[lang] = {key: catalog[key] for key in _js_keys() if key in catalog}
+    return _js_catalog_cache[lang]
+
+
 def add_template_globals(env: Any) -> None:
     """Les fonctions de traduction d'un environnement Jinja (aussi utile a un test qui rend un
     morceau de gabarit dans son propre environnement)."""
@@ -234,6 +273,7 @@ def add_template_globals(env: Any) -> None:
     env.globals["lang_url"] = _lang_url
     env.globals["languages"] = LANGUAGES
     env.globals["localized_country_options"] = _country_options
+    env.globals["js_catalog"] = _js_catalog
 
 
 def install(app: Any, templates: Any, *, is_secure: Any = None, link_builder: Any = None) -> None:

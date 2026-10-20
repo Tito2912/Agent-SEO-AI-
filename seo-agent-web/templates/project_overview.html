@@ -6,11 +6,11 @@
 {% block head_extra %}
   <link rel="stylesheet" href="/static/project_overview.css?v=3" />
   <link rel="stylesheet" href="/static/journey.css?v=1" />
-  <script src="/static/project_overview.js?v=4" defer></script>
+  <script src="/static/project_overview.js?v=5" defer></script>
 {% endblock %}
 
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <span class="crumb-current">{{ project.site_name }}</span>
@@ -21,9 +21,9 @@
 
 {% block actions %}
   {% if project %}
-    <a class="btn" href="/projects/{{ project.slug }}/corrections">Corrections</a>
+    <a class="btn" href="/projects/{{ project.slug }}/corrections">{{ tr("Corrections") }}</a>
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn" {% if crawl_active %}disabled{% endif %}>{% if crawl_active %}Analyse en cours{% else %}Nouvelle analyse{% endif %}</button>
+      <button type="submit" class="btn" {% if crawl_active %}disabled{% endif %}>{% if crawl_active %}{{ tr("Analyse en cours") }}{% else %}{{ tr("Nouvelle analyse") }}{% endif %}</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -35,7 +35,7 @@
     {% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
   {% endif %}
   {% if not project %}
-    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+    <section class="card"><p>{{ tr("Projet introuvable :") }} <span class="mono">{{ slug }}</span></p></section>
   {% else %}
 
   {# ── Precompute health score ── #}
@@ -59,49 +59,43 @@
         {# 13/10/2026 : un domaine suspendu par son bureau d'enregistrement donnait « sante 0,
            0 anomalie », sans un mot. Ce n'est pas un defaut SEO : c'est le site qui manque. #}
         <div class="ov-blocked" role="alert">
-          <strong>Site injoignable — aucune page n'a répondu.</strong>
+          <strong>{{ tr("Site injoignable — aucune page n'a répondu.") }}</strong>
           {% if injoignable.raison == 'dns' %}
-            Le domaine ne résout pas : il n'existe plus dans le DNS. Vérifiez chez votre bureau
-            d'enregistrement que le domaine est renouvelé et actif, et que ses serveurs DNS pointent
-            vers votre hébergeur.
+            {{ tr("Le domaine ne résout pas : il n'existe plus dans le DNS. Vérifiez chez votre bureau d'enregistrement que le domaine est renouvelé et actif, et que ses serveurs DNS pointent vers votre hébergeur.") }}
           {% elif injoignable.raison == 'tls' %}
-            La connexion sécurisée échoue : le certificat HTTPS est absent, expiré ou invalide.
-            Vérifiez-le chez votre hébergeur.
+            {{ tr("La connexion sécurisée échoue : le certificat HTTPS est absent, expiré ou invalide. Vérifiez-le chez votre hébergeur.") }}
           {% elif injoignable.raison == 'connexion' %}
-            Le serveur refuse la connexion. Vérifiez que l'hébergement est actif et que le site
-            est bien déployé.
+            {{ tr("Le serveur refuse la connexion. Vérifiez que l'hébergement est actif et que le site est bien déployé.") }}
           {% elif injoignable.raison == 'delai' %}
-            Le serveur ne répond pas dans les délais. Vérifiez l'état de votre hébergement.
+            {{ tr("Le serveur ne répond pas dans les délais. Vérifiez l'état de votre hébergement.") }}
           {% else %}
-            Vérifiez que le site est en ligne, puis relancez une analyse.
+            {{ tr("Vérifiez que le site est en ligne, puis relancez une analyse.") }}
           {% endif %}
-          Aucun score n'est calculé tant que le site ne répond pas.
+          {{ tr("Aucun score n'est calculé tant que le site ne répond pas.") }}
           {% if injoignable.detail %}<div class="muted small mono" style="margin-top:6px;">{{ injoignable.detail }}</div>{% endif %}
         </div>
       {% endif %}
       {% if blocked %}
         {# The score below was computed WITHOUT these pages. Saying so is the whole point. #}
         <div class="ov-blocked" role="status">
-          <strong>Analyse incomplète — {{ blocked }} page{{ 's' if blocked > 1 else '' }} inaccessible{{ 's' if blocked > 1 else '' }}.</strong>
-          Le site a refusé ces pages au robot (403/429/503) même après plusieurs tentatives.
-          Elles ne sont pas comptées comme des erreurs de votre site, mais le score ci-dessous
-          est calculé sans elles.
+          <strong>{% if blocked > 1 %}{{ tr("Analyse incomplète — {n} pages inaccessibles.", n=blocked) }}{% else %}{{ tr("Analyse incomplète — {n} page inaccessible.", n=blocked) }}{% endif %}</strong>
+          {{ tr("Le site a refusé ces pages au robot (403/429/503) même après plusieurs tentatives. Elles ne sont pas comptées comme des erreurs de votre site, mais le score ci-dessous est calculé sans elles.") }}
           {% if sum.blocked_by_host.urls %}
             <span class="ov-blocked-urls">{{ sum.blocked_by_host.urls[:3] | join(' · ') }}{% if blocked > 3 %} … {% endif %}</span>
           {% endif %}
-          <span class="ov-blocked-hint">Si cela se répète : baissez la vitesse d’analyse dans Réglages de l’analyse, ou autorisez le robot chez votre hébergeur/CDN.</span>
+          <span class="ov-blocked-hint">{{ tr("Si cela se répète : baissez la vitesse d’analyse dans Réglages de l’analyse, ou autorisez le robot chez votre hébergeur/CDN.") }}</span>
         </div>
       {% endif %}
 
   <header class="overview-header">
     <div>
-      <p class="overview-eyebrow">Vue d’ensemble</p>
+      <p class="overview-eyebrow">{{ tr("Vue d’ensemble") }}</p>
       <h1>{{ project.site_name }}</h1>
       <a class="overview-domain" href="{{ project.base_url }}" target="_blank" rel="noopener">{{ project.base_url }}</a>
     </div>
     {% if project.current %}
       <div class="overview-date">
-        <span>Analyse affichée</span>
+        <span>{{ tr("Analyse affichée") }}</span>
         <span data-ts-datetime="{{ cur.timestamp }}">{{ cur.timestamp[6:8] }}/{{ cur.timestamp[4:6] }}/{{ cur.timestamp[:4] }} · {{ cur.timestamp[9:11] }}:{{ cur.timestamp[11:13] }}</span>
       </div>
     {% endif %}
@@ -113,30 +107,30 @@
     {% set defects = sum.issues | rejectattr('is_delta') | list %}
     <div class="overview-metrics">
       <section class="overview-metric overview-health">
-        <div class="overview-metric-label">Score de santé</div>
+        <div class="overview-metric-label">{{ tr("Score de santé") }}</div>
         <div class="overview-metric-value">{% if sc is not none %}{{ sc }}<span>/ 100</span>{% else %}—{% endif %}</div>
         {% if sc is not none %}<div class="overview-health-track" aria-hidden="true"><span style="width:{{ sc }}%;background:{{ sc_color }};"></span></div>{% endif %}
-        <details class="overview-score-help"><summary>À propos du score</summary><p>Part des pages internes analysées sans erreur grave. Les avertissements restent à traiter, même à 100. Les pages bloquées par l’hébergeur sont exclues du calcul.</p></details>
+        <details class="overview-score-help"><summary>{{ tr("À propos du score") }}</summary><p>{{ tr("Part des pages internes analysées sans erreur grave. Les avertissements restent à traiter, même à 100. Les pages bloquées par l’hébergeur sont exclues du calcul.") }}</p></details>
       </section>
       <a class="overview-metric" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">
-        <div class="overview-metric-label">Pages analysées</div>
+        <div class="overview-metric-label">{{ tr("Pages analysées") }}</div>
         <div class="overview-metric-value">{{ sum.pages_crawled }}</div>
-        <div class="overview-metric-note">{{ sum.urls_crawled_distribution }} URL au total, ressources comprises</div>
+        <div class="overview-metric-note">{{ tr("{n} URL au total, ressources comprises", n=sum.urls_crawled_distribution) }}</div>
       </a>
       <a class="overview-metric" href="/projects/{{ project.slug }}/issues?severity=error&crawl={{ cur.timestamp }}">
-        <div class="overview-metric-label"><span class="overview-dot error" aria-hidden="true"></span>Erreurs</div>
+        <div class="overview-metric-label"><span class="overview-dot error" aria-hidden="true"></span>{{ tr("Erreurs") }}</div>
         <div class="overview-metric-value">{{ sum.issues_distribution.error or 0 }}</div>
-        <div class="overview-metric-note">Occurrences à traiter en priorité</div>
+        <div class="overview-metric-note">{{ tr("Occurrences à traiter en priorité") }}</div>
       </a>
       <a class="overview-metric" href="/projects/{{ project.slug }}/issues?severity=warning&crawl={{ cur.timestamp }}">
-        <div class="overview-metric-label"><span class="overview-dot warning" aria-hidden="true"></span>Avertissements</div>
+        <div class="overview-metric-label"><span class="overview-dot warning" aria-hidden="true"></span>{{ tr("Avertissements") }}</div>
         <div class="overview-metric-value">{{ sum.issues_distribution.warning or 0 }}</div>
-        <div class="overview-metric-note">Améliorations recommandées</div>
+        <div class="overview-metric-note">{{ tr("Améliorations recommandées") }}</div>
       </a>
     </div>
     <div class="overview-summary-line">
-      <span>{{ defects|length }} types de problèmes · {{ sum.issues_total }} occurrences</span>
-      <a href="/projects/{{ project.slug }}/issues?severity=notice&crawl={{ cur.timestamp }}">{{ sum.issues_distribution.notice or 0 }} informations complémentaires</a>
+      <span>{{ tr("{types} types de problèmes · {n} occurrences", types=defects|length, n=sum.issues_total) }}</span>
+      <a href="/projects/{{ project.slug }}/issues?severity=notice&crawl={{ cur.timestamp }}">{{ tr("{n} informations complémentaires", n=sum.issues_distribution.notice or 0) }}</a>
     </div>
   {% endif %}
 
@@ -147,15 +141,15 @@
     <div class="alert {{ 'error' if live_job.status == 'failed' else 'notice' }}" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <span>
         {% if live_job.status == 'failed' %}
-          La dernière analyse a <strong>échoué</strong>.
+          {{ tr_html("La dernière analyse a <strong>échoué</strong>.") }}
         {% else %}
-          La dernière analyse a été <strong>annulée</strong>.
+          {{ tr_html("La dernière analyse a été <strong>annulée</strong>.") }}
         {% endif %}
       </span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a class="btn" href="/jobs/{{ live_job.id }}" style="font-size:12px;">Voir le détail →</a>
+        <a class="btn" href="/jobs/{{ live_job.id }}" style="font-size:12px;">{{ tr("Voir le détail →") }}</a>
         <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-          <button type="submit" class="btn" style="font-size:12px;">Relancer une analyse</button>
+          <button type="submit" class="btn" style="font-size:12px;">{{ tr("Relancer une analyse") }}</button>
         </form>
       </div>
     </div>
@@ -171,20 +165,20 @@
       data-run-ts="{% if live_job.result and live_job.result.timestamp %}{{ live_job.result.timestamp }}{% endif %}"
     >
       <div class="card-title-row">
-        <h2>{% if live_job.status == 'queued' %}Votre analyse est en attente{% elif live_job.status == 'cancel_requested' %}Annulation de l’analyse{% else %}Votre site est en cours d’analyse{% endif %}</h2>
+        <h2>{% if live_job.status == 'queued' %}{{ tr("Votre analyse est en attente") }}{% elif live_job.status == 'cancel_requested' %}{{ tr("Annulation de l’analyse") }}{% else %}{{ tr("Votre site est en cours d’analyse") }}{% endif %}</h2>
         <div class="live-job-header-right">
           <span id="live-job-elapsed" class="muted small mono" style="display:none;"></span>
           <span id="live-job-ts" class="muted small mono"></span>
-          <span id="live-job-status" class="pill {{ live_job.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live_job.status, live_job.status) }}</span>
-          <button id="live-job-cancel-btn" class="btn-cancel-crawl" title="Annuler le crawl" style="display:none;">Annuler</button>
+          <span id="live-job-status" class="pill {{ live_job.status }}">{{ tr({'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live_job.status, live_job.status)) }}</span>
+          <button id="live-job-cancel-btn" class="btn-cancel-crawl" title="{{ tr("Annuler le crawl") }}" style="display:none;">{{ tr("Annuler") }}</button>
         </div>
       </div>
 
-      <p class="muted small">Vous pouvez quitter cette page : l’analyse continue. Retrouvez-la depuis l’accueil de vos projets.</p>
+      <p class="muted small">{{ tr("Vous pouvez quitter cette page : l’analyse continue. Retrouvez-la depuis l’accueil de vos projets.") }}</p>
 
       <div id="live-job-progress" class="crawl-meter" style="display:none;">
         <div class="crawl-meter-head">
-          <div class="crawl-meter-title">Exploration des pages</div>
+          <div class="crawl-meter-title">{{ tr("Exploration des pages") }}</div>
           <div class="crawl-meter-count mono" id="live-job-progress-count"></div>
         </div>
         <div class="progress slim crawl">
@@ -213,7 +207,7 @@
       </details>
 
       <p class="muted small" style="margin: 10px 0 0;">
-        <a id="live-job-jobs-link" href="/jobs">Voir dans Exécutions</a>
+        <a id="live-job-jobs-link" href="/jobs">{{ tr("Voir dans Exécutions") }}</a>
       </p>
     </section>
   {% endif %}
@@ -224,21 +218,21 @@
   {% if not project.current %}
     <section class="card">
       <div class="card-title-row">
-        <h2>Première analyse</h2>
-        <a class="btn" href="/projects/{{ project.slug }}/settings/search">Connexions de ce site</a>
+        <h2>{{ tr("Première analyse") }}</h2>
+        <a class="btn" href="/projects/{{ project.slug }}/settings/search">{{ tr("Connexions de ce site") }}</a>
       </div>
-      <p class="muted" style="margin:0 0 12px;">{% if crawl_active %}Votre site est enregistré. Le bilan apparaîtra ici à la fin de l’analyse.{% else %}Aucune analyse terminée pour ce projet.{% endif %}</p>
+      <p class="muted" style="margin:0 0 12px;">{% if crawl_active %}{{ tr("Votre site est enregistré. Le bilan apparaîtra ici à la fin de l’analyse.") }}{% else %}{{ tr("Aucune analyse terminée pour ce projet.") }}{% endif %}</p>
       {% if live_job and live_job.status in ['failed', 'canceled'] %}
         <p class="muted small" style="margin:0 0 14px;">
-          {% if live_job.status == 'failed' %}La dernière analyse n’a pas abouti.{% else %}La dernière analyse a été annulée.{% endif %} Votre site est conservé. Vous pouvez réessayer ou <a href="/jobs?job={{ live_job.id }}">consulter le détail de cette analyse</a>.
+          {% if live_job.status == 'failed' %}{{ tr("La dernière analyse n’a pas abouti.") }}{% else %}{{ tr("La dernière analyse a été annulée.") }}{% endif %} {{ tr_html('Votre site est conservé. Vous pouvez réessayer ou <a href="{url}">consulter le détail de cette analyse</a>.', url='/jobs?job=' ~ live_job.id) }}
         </p>
       {% endif %}
       <div class="topbar-actions">
-        {% if crawl_active %}<a class="btn" href="#live-job-card">Suivre la progression</a>
+        {% if crawl_active %}<a class="btn" href="#live-job-card">{{ tr("Suivre la progression") }}</a>
         {% else %}<form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-          <button type="submit" class="btn primary">{% if live_job and live_job.status in ['failed', 'canceled'] %}Réessayer l’analyse{% else %}Lancer la première analyse{% endif %}</button>
+          <button type="submit" class="btn primary">{% if live_job and live_job.status in ['failed', 'canceled'] %}{{ tr("Réessayer l’analyse") }}{% else %}{{ tr("Lancer la première analyse") }}{% endif %}</button>
         </form>{% endif %}
-        <a class="btn" href="/jobs{% if live_job %}?job={{ live_job.id }}{% endif %}">Voir les exécutions</a>
+        <a class="btn" href="/jobs{% if live_job %}?job={{ live_job.id }}{% endif %}">{{ tr("Voir les exécutions") }}</a>
       </div>
     </section>
 
@@ -250,7 +244,7 @@
     {% include "_repli_de_rapport.html" %}
   {% elif cur.timestamp != latest_ts %}
     <div class="alert notice" style="margin-bottom:20px;">
-      Vous consultez le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier disponible :
+      {{ tr("Vous consultez le crawl") }} <span class="mono">{{ cur.timestamp }}</span>. {{ tr("Dernier disponible :") }}
       <a href="/projects/{{ project.slug }}?crawl={{ latest_ts }}"><span class="mono">{{ latest_ts }}</span></a>
     </div>
   {% endif %}
@@ -259,12 +253,12 @@
      TOOLBAR — crawl selector + exports
   ══════════════════════════════════════ #}
   <details class="screen-options overview-report-controls">
-    <summary>Choisir une analyse, comparer ou exporter</summary>
+    <summary>{{ tr("Choisir une analyse, comparer ou exporter") }}</summary>
   <div class="data-toolbar">
     <form method="get" class="filters" style="width:100%;">
       {% if live_job %}<input type="hidden" name="job" value="{{ live_job.id }}" />{% endif %}
       <label>
-        Analyse affichée
+        {{ tr("Analyse affichée") }}
         <select name="crawl">
           {% for ts in project.crawls %}
             {% set t = crawl_timing.get(ts, {}) if crawl_timing is defined else {} %}
@@ -273,26 +267,26 @@
         </select>
       </label>
       <label>
-        Comparer avec
+        {{ tr("Comparer avec") }}
         <select name="compare">
-          <option value="">— aucun —</option>
+          <option value="">{{ tr("— aucun —") }}</option>
           {% for ts in project.crawls %}
             {% set t = crawl_timing.get(ts, {}) if crawl_timing is defined else {} %}
             <option value="{{ ts }}" data-ts="{{ ts }}" data-dur="{{ t.duration_label or '' }}" {% if project.compare and ts == project.compare.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }} {{ ts[9:11] }}:{{ ts[11:13] }}{% if t.duration_label %} · {{ t.duration_label }}{% endif %}</option>
           {% endfor %}
         </select>
       </label>
-      <button type="submit" class="btn">Appliquer</button>
+      <button type="submit" class="btn">{{ tr("Appliquer") }}</button>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;align-items:center;">
-        <span class="muted small">Exports :</span>
+        <span class="muted small">{{ tr("Exports :") }}</span>
         <a class="btn" href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">PDF</a>
         <a class="btn" href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">CSV</a>
-        <a class="btn" href="/projects/{{ project.slug }}/export/issues-all-urls.csv?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;" title="CSV complet — une ligne par URL affectée par chaque issue">CSV (URLs)</a>
+        <a class="btn" href="/projects/{{ project.slug }}/export/issues-all-urls.csv?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;" title="{{ tr("CSV complet — une ligne par URL affectée par chaque issue") }}">{{ tr("CSV (URLs)") }}</a>
         <a class="btn" href="/file?path={{ cur.report_md }}" style="font-size:11px;padding:4px 10px;">MD</a>
         {% if fix_pack_unlocked %}
-          <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
+          <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">{{ tr("Fix Pack ZIP") }}</a>
         {% else %}
-          <a class="btn" href="{{ billing_url or '/billing' }}" style="font-size:11px;padding:4px 10px;">Fix Pack · Solo+</a>
+          <a class="btn" href="{{ billing_url or '/billing' }}" style="font-size:11px;padding:4px 10px;">{{ tr("Fix Pack · Solo+") }}</a>
         {% endif %}
       </div>
     </form>
@@ -304,33 +298,33 @@
     {% include "_overview_history.html" %}
     <section class="card overview-priorities" aria-labelledby="overview-priorities-title">
       <div class="card-title-row">
-        <h2 id="overview-priorities-title">Vos prochaines actions</h2>
-        <a class="overview-section-link" href="/projects/{{ project.slug }}/corrections">Tout voir →</a>
+        <h2 id="overview-priorities-title">{{ tr("Vos prochaines actions") }}</h2>
+        <a class="overview-section-link" href="/projects/{{ project.slug }}/corrections">{{ tr("Tout voir →") }}</a>
       </div>
       {% if not top_actions %}
         {% if sum.site_injoignable %}
-          <p class="overview-empty">Rétablissez l’accès au site, puis relancez une analyse pour identifier les problèmes.</p>
+          <p class="overview-empty">{{ tr("Rétablissez l’accès au site, puis relancez une analyse pour identifier les problèmes.") }}</p>
         {% else %}
-          <p class="overview-empty">Aucune action prioritaire détectée sur cette analyse.</p>
+          <p class="overview-empty">{{ tr("Aucune action prioritaire détectée sur cette analyse.") }}</p>
         {% endif %}
       {% else %}
         <ol class="overview-action-list">
           {% for a in top_actions %}
-            {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
+            {% set priority_label = tr({'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority)) %}
             <li>
               <div class="overview-action-row">
                 <span class="overview-action-index" aria-hidden="true">{{ loop.index }}</span>
                 <div class="overview-action-content">
-                  <a class="overview-action-title" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
-                  <div class="overview-action-meta">{{ a.count }} occurrences · priorité {{ priority_label }}</div>
+                  <a class="overview-action-title" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ tr(a.label) }}</a>
+                  <div class="overview-action-meta">{{ tr("{n} occurrences · priorité {priority}", n=a.count, priority=priority_label) }}</div>
                 </div>
-                <a class="overview-action-open" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" aria-label="Voir les instructions : {{ a.label }}">Ouvrir <span aria-hidden="true">↗</span></a>
+                <a class="overview-action-open" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" aria-label="{{ tr('Voir les instructions : {label}', label=tr(a.label)) }}">{{ tr("Ouvrir") }} <span aria-hidden="true">↗</span></a>
               </div>
               {% if a.why or (fix_pack_unlocked and a.fix) %}
                 <details class="overview-action-details">
-                  <summary>Pourquoi agir ?</summary>
-                  {% if a.why %}<p>{% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(200, True, '…') }}{% endif %}</p>{% endif %}
-                  {% if fix_pack_unlocked and a.fix %}<ul>{% for step in a.fix[:3] %}<li>{{ step }}</li>{% endfor %}</ul>{% endif %}
+                  <summary>{{ tr("Pourquoi agir ?") }}</summary>
+                  {% if a.why %}<p>{% if fix_pack_unlocked %}{{ tr(a.why) }}{% else %}{{ tr(a.why) | truncate(200, True, '…') }}{% endif %}</p>{% endif %}
+                  {% if fix_pack_unlocked and a.fix %}<ul>{% for step in a.fix[:3] %}<li>{{ tr(step) }}</li>{% endfor %}</ul>{% endif %}
                 </details>
               {% endif %}
             </li>
@@ -345,27 +339,27 @@
   ══════════════════════════════════════ #}
   <section class="card overview-anomalies">
     <div class="card-title-row">
-      <h2>Principales anomalies</h2>
+      <h2>{{ tr("Principales anomalies") }}</h2>
       <div style="display:flex;align-items:center;gap:10px;">
-        <span class="muted small">{{ sum.issues_total }} occurrences</span>
-        <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Toutes les anomalies →</a>
+        <span class="muted small">{{ tr("{n} occurrences", n=sum.issues_total) }}</span>
+        <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">{{ tr("Toutes les anomalies →") }}</a>
       </div>
     </div>
     {% if not sum.top_issues %}
-      <p class="muted">{% if sum.analysis_complete %}Aucune anomalie détectée sur les pages analysées.{% else %}Ce bilan ne permet pas de conclure à l’absence de problèmes. Consultez les limites de l’analyse.{% endif %}</p>
+      <p class="muted">{% if sum.analysis_complete %}{{ tr("Aucune anomalie détectée sur les pages analysées.") }}{% else %}{{ tr("Ce bilan ne permet pas de conclure à l’absence de problèmes. Consultez les limites de l’analyse.") }}{% endif %}</p>
     {% else %}
-      <div class="table-wrap" tabindex="0" role="region" aria-label="Principales anomalies">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="{{ tr("Principales anomalies") }}">
       <table class="ov-issue-table">
-        <thead><tr><th>Problème</th><th>Gravité</th><th class="num">Occurrences</th><th class="num">Évolution</th></tr></thead>
+        <thead><tr><th>{{ tr("Problème") }}</th><th>{{ tr("Gravité") }}</th><th class="num">{{ tr("Occurrences") }}</th><th class="num">{{ tr("Évolution") }}</th></tr></thead>
         <tbody>
           {% for it in sum.top_issues %}
             <tr>
               <td class="overview-anomaly-label">
                 <span class="ov-sev-dot {{ it.severity }}"></span>
-                <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
+                <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ tr(it.label) }}</a>
               </td>
               <td style="white-space:nowrap;padding-left:16px;">
-                {% set sl = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
+                {% set sl = tr({'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity)) %}
                 <span class="sev {{ it.severity }}">{{ sl }}</span>
               </td>
               <td class="mono" style="white-space:nowrap;padding-left:16px;">{{ it.count }}</td>
@@ -387,7 +381,7 @@
     {# URL breakdown — 1 col #}
     <section class="card overview-url-summary">
       <div class="card-title-row">
-        <h2>Répartition des URLs</h2>
+        <h2>{{ tr("Répartition des URLs") }}</h2>
         <span class="muted small mono">{{ sum.urls_crawled_distribution }}</span>
       </div>
       {% set tot_urls = sum.urls_crawled_distribution %}
@@ -397,22 +391,22 @@
       {% set ok_urls = sum.urls_without_errors %}
       <div class="ov-breakdown">
         <div class="ov-bk-row">
-          <span class="ov-bk-lbl">Internes</span>
+          <span class="ov-bk-lbl">{{ tr("Internes") }}</span>
           <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--notice);width:{{ ((int_urls / tot_urls * 100)|round(0)|int if tot_urls else 100) }}%;"></div></div>
           <span class="ov-bk-val">{{ int_urls }}</span>
         </div>
         <div class="ov-bk-row">
-          <span class="ov-bk-lbl">Ressources</span>
+          <span class="ov-bk-lbl">{{ tr("Ressources") }}</span>
           <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:rgba(255,255,255,.3);width:{{ ((res_urls / tot_urls * 100)|round(0)|int if tot_urls else 0) }}%;"></div></div>
           <span class="ov-bk-val">{{ res_urls }}</span>
         </div>
         <div class="ov-bk-row">
-          <span class="ov-bk-lbl">Sans erreurs</span>
+          <span class="ov-bk-lbl">{{ tr("Sans erreurs") }}</span>
           <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--ok);width:{{ ((ok_urls / int_urls * 100)|round(0)|int if int_urls else 100) }}%;"></div></div>
           <span class="ov-bk-val">{{ ok_urls }}</span>
         </div>
         <div class="ov-bk-row">
-          <span class="ov-bk-lbl">Avec erreurs</span>
+          <span class="ov-bk-lbl">{{ tr("Avec erreurs") }}</span>
           <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--err);width:{{ ((err_urls / int_urls * 100)|round(0)|int if int_urls else 0) }}%;"></div></div>
           <span class="ov-bk-val" style="color:var(--err);">{{ err_urls }}</span>
         </div>
@@ -425,11 +419,11 @@
     {% set cwv = sum.cwv %}
     <section class="card overview-cwv">
       <div class="card-title-row">
-        <h2>Core Web Vitals</h2>
+        <h2>{{ tr("Core Web Vitals") }}</h2>
         {% if ps and ps.enabled %}
-          <span class="badge sm ok">activé</span>
+          <span class="badge sm ok">{{ tr("activé") }}</span>
         {% else %}
-          <span class="badge sm notice">désactivé</span>
+          <span class="badge sm notice">{{ tr("désactivé") }}</span>
         {% endif %}
       </div>
 
@@ -457,26 +451,26 @@
             </div>
           </div>
           <div class="legend">
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Bon <span class="mono">{{ psd.good or 0 }}</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--warn);"></span>Amélioration <span class="mono">{{ psd.ni or 0 }}</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--err);"></span>Médiocre <span class="mono">{{ psd.poor or 0 }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>{{ tr("Bon") }} <span class="mono">{{ psd.good or 0 }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--warn);"></span>{{ tr("Amélioration") }} <span class="mono">{{ psd.ni or 0 }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--err);"></span>{{ tr("Médiocre") }} <span class="mono">{{ psd.poor or 0 }}</span></div>
             <div class="legend-item"><span class="legend-swatch" style="--sw: var(--notice);"></span>N/A <span class="mono">{{ psd.na or 0 }}</span></div>
           </div>
         </div>
 
-        <p class="muted small">Pages testées: <span class="mono">{{ cwv.tested_pages }}</span> · Stratégie: <span class="mono">{{ cwv.strategy }}</span></p>
+        <p class="muted small">{{ tr("Pages testées :") }} <span class="mono">{{ cwv.tested_pages }}</span> · {{ tr("Stratégie :") }} <span class="mono">{{ cwv.strategy }}</span></p>
 
-        <details class="overview-cwv-details"><summary>Voir le détail des mesures LCP, TBT et CLS</summary>
+        <details class="overview-cwv-details"><summary>{{ tr("Voir le détail des mesures LCP, TBT et CLS") }}</summary>
         <div class="table-wrap">
           <table class="table compact">
             <thead>
               <tr>
-                <th>Métrique</th>
-                <th>Statut</th>
-                <th class="num">Pages affectées</th>
-                <th class="num">Bon</th>
-                <th class="num">Moyen</th>
-                <th class="num">Médiocre</th>
+                <th>{{ tr("Métrique") }}</th>
+                <th>{{ tr("Statut") }}</th>
+                <th class="num">{{ tr("Pages affectées") }}</th>
+                <th class="num">{{ tr("Bon") }}</th>
+                <th class="num">{{ tr("Moyen") }}</th>
+                <th class="num">{{ tr("Médiocre") }}</th>
               </tr>
             </thead>
             <tbody>
@@ -500,9 +494,9 @@
         </details>
       {% else %}
         {% if ps and ps.enabled %}
-          <p class="muted">PageSpeed est activé, mais aucune métrique CWV n'est disponible sur cette analyse.</p>
+          <p class="muted">{{ tr("PageSpeed est activé, mais aucune métrique CWV n'est disponible sur cette analyse.") }}</p>
         {% else %}
-          <p class="muted">Mesurez la vitesse et la stabilité de vos pages avec PageSpeed. <a href="/projects/{{ project.slug }}/settings/crawl">Configurer PageSpeed →</a></p>
+          <p class="muted">{{ tr("Mesurez la vitesse et la stabilité de vos pages avec PageSpeed.") }} <a href="/projects/{{ project.slug }}/settings/crawl">{{ tr("Configurer PageSpeed →") }}</a></p>
         {% endif %}
       {% endif %}
     </section>
@@ -517,11 +511,11 @@
         <section class="card overview-source {% if not search_connections.gsc.connected and not (gsc and gsc.ok) %}overview-source-empty{% endif %}">
           {% set gsc_days = live_gsc.days if live_gsc and live_gsc.days else (gsc.days if gsc and gsc.days else 28) %}
           <div class="card-title-row">
-            <h2>Google Search Console</h2>
+            <h2>{{ tr("Google Search Console") }}</h2>
             <div class="card-title-actions">
               {% if search_connections.gsc.connected %}
-              <div class="pill-select" title="Période du graphique Google">
-                <label for="gsc-chart-days">Période</label>
+              <div class="pill-select" title="{{ tr("Période du graphique Google") }}">
+                <label for="gsc-chart-days">{{ tr("Période") }}</label>
                 <select id="gsc-chart-days" class="js-ts-days" data-widget-id="gsc-live-widget">
                   {% for d in ([7, 28, 90] + ([gsc_days] if gsc_days not in [7, 28, 90] else []))|sort %}
                     <option value="{{ d }}" {% if d == gsc_days %}selected{% endif %}>{{ d }}j</option>
@@ -538,19 +532,19 @@
           {% endif %}
           <div class="search-source-summary" data-summary-block {% if not (gsc and gsc.ok) %}data-summary-fallback="true"{% endif %}>
             {% if gsc and gsc.ok %}
-              <p class="muted small">Données de l’analyse enregistrée, distinctes du suivi actuel ci-dessous.</p>
-              <p class="muted small">Propriété: <span class="mono">{{ gsc.property }}</span></p>
-              <p class="muted small">Période: <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ gsc.days }}j)</p>
+              <p class="muted small">{{ tr("Données de l’analyse enregistrée, distinctes du suivi actuel ci-dessous.") }}</p>
+              <p class="muted small">{{ tr("Propriété :") }} <span class="mono">{{ gsc.property }}</span></p>
+              <p class="muted small">{{ tr("Période :") }} <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ tr("{n} j", n=gsc.days) }})</p>
               {% if gsc.url_inspection and gsc.url_inspection.enabled %}
                 <div class="issue-chips">
-                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_errors?crawl={{ cur.timestamp }}"><span class="dot error"></span>Erreurs <span class="mono">{{ gsc.url_inspection.errors }}</span></a>
-                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_warnings?crawl={{ cur.timestamp }}"><span class="dot warning"></span>Avertissements <span class="mono">{{ gsc.url_inspection.warnings }}</span></a>
-                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_notices?crawl={{ cur.timestamp }}"><span class="dot notice"></span>Avis <span class="mono">{{ gsc.url_inspection.notices }}</span></a>
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_errors?crawl={{ cur.timestamp }}"><span class="dot error"></span>{{ tr("Erreurs") }} <span class="mono">{{ gsc.url_inspection.errors }}</span></a>
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_warnings?crawl={{ cur.timestamp }}"><span class="dot warning"></span>{{ tr("Avertissements") }} <span class="mono">{{ gsc.url_inspection.warnings }}</span></a>
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_notices?crawl={{ cur.timestamp }}"><span class="dot notice"></span>{{ tr("Avis") }} <span class="mono">{{ gsc.url_inspection.notices }}</span></a>
                 </div>
-                {% if gsc.url_inspection.json %}<p class="muted small" style="margin-top:8px;">Détails: <a href="/file?path={{ gsc.url_inspection.json }}">gsc-url-inspection.json</a></p>{% endif %}
+                {% if gsc.url_inspection.json %}<p class="muted small" style="margin-top:8px;">{{ tr("Détails :") }} <a href="/file?path={{ gsc.url_inspection.json }}">gsc-url-inspection.json</a></p>{% endif %}
               {% endif %}
               {% if gsc.queries_csv or gsc.pages_csv %}
-                <p class="muted small" style="margin-top:8px;">CSV:
+                <p class="muted small" style="margin-top:8px;">CSV :
                   {% if gsc.queries_csv %}<a href="/file?path={{ gsc.queries_csv }}">gsc-queries.csv</a>{% endif %}
                   {% if gsc.queries_csv and gsc.pages_csv %} · {% endif %}
                   {% if gsc.pages_csv %}<a href="/file?path={{ gsc.pages_csv }}">gsc-pages.csv</a>{% endif %}
@@ -562,13 +556,13 @@
                  crawl, pas du live : un projet connecté après cette analyse affichait « indisponible »
                  juste au-dessus d'un graphique qui fonctionnait. Deux mesures de deux moments
                  présentées comme une seule, et le client doute alors de tout l'écran. #}
-              <p class="muted">Les données Google n’étaient pas disponibles lors de la dernière analyse.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">Connexions de ce site</a></p>
+              <p class="muted">{{ tr("Les données Google n’étaient pas disponibles lors de la dernière analyse.") }}</p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">{{ tr("Connexions de ce site") }}</a></p>
             {% elif search_connections.gsc.connected %}
-              <p class="muted">Le suivi Google est connecté pour ce projet.</p>
+              <p class="muted">{{ tr("Le suivi Google est connecté pour ce projet.") }}</p>
             {% else %}
-              <p class="muted">Reliez Google pour suivre les clics et les recherches qui affichent votre site.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">Configurer le suivi</a></p>
+              <p class="muted">{{ tr("Reliez Google pour suivre les clics et les recherches qui affichent votre site.") }}</p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">{{ tr("Configurer le suivi") }}</a></p>
             {% endif %}
           </div>
 
@@ -576,13 +570,13 @@
             <div id="gsc-live-widget" class="ts-widget" data-connections-url="{{ search_connections.gsc.settings_url }}" data-default-metrics="clicks,impressions" data-max-metrics="2" data-stored-period="{{ gsc.start_date if gsc else '' }} → {{ gsc.end_date if gsc else '' }}"
               {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}data-series-id="gsc-daily-series"{% endif %}
               {% if search_connections.gsc.connected %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=gsc&days={{ gsc_days }}"{% endif %}>
-              <div class="ts-metrics" aria-label="Métriques Google Search Console">
-                <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Clics</span><span class="ts-metric-value" data-value-for="clicks">{{ gsc.totals.clicks if gsc and gsc.ok else "-" }}</span></button>
-                <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Impressions</span><span class="ts-metric-value" data-value-for="impressions">{{ gsc.totals.impressions if gsc and gsc.ok else "-" }}</span></button>
-                <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">CTR moyen</span><span class="ts-metric-value" data-value-for="ctr">{% if gsc and gsc.ok %}{{ (gsc.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span></button>
-                <button type="button" class="ts-metric" data-metric="position" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Position moyenne</span><span class="ts-metric-value" data-value-for="position">{% if gsc and gsc.ok and gsc.totals.avg_position %}{{ gsc.totals.avg_position|round(1) }}{% else %}-{% endif %}</span></button>
+              <div class="ts-metrics" aria-label="{{ tr("Métriques Google Search Console") }}">
+                <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">{{ tr("Clics") }}</span><span class="ts-metric-value" data-value-for="clicks">{{ gsc.totals.clicks if gsc and gsc.ok else "-" }}</span></button>
+                <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">{{ tr("Impressions") }}</span><span class="ts-metric-value" data-value-for="impressions">{{ gsc.totals.impressions if gsc and gsc.ok else "-" }}</span></button>
+                <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">{{ tr("CTR moyen") }}</span><span class="ts-metric-value" data-value-for="ctr">{% if gsc and gsc.ok %}{{ (gsc.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span></button>
+                <button type="button" class="ts-metric" data-metric="position" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">{{ tr("Position moyenne") }}</span><span class="ts-metric-value" data-value-for="position">{% if gsc and gsc.ok and gsc.totals.avg_position %}{{ gsc.totals.avg_position|round(1) }}{% else %}-{% endif %}</span></button>
               </div>
-              <div class="ts-chart"><canvas class="ts-canvas" aria-label="Graphique GSC" role="img"></canvas><div class="ts-empty" role="status">Chargement du graphique…</div></div>
+              <div class="ts-chart"><canvas class="ts-canvas" aria-label="{{ tr("Graphique GSC") }}" role="img"></canvas><div class="ts-empty" role="status">{{ tr("Chargement du graphique…") }}</div></div>
               <div class="ts-meta muted small" data-ts-meta></div>
               {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}<script type="application/json" id="gsc-daily-series">{{ gsc.daily | tojson }}</script>{% endif %}
             </div>
@@ -596,13 +590,13 @@
               {% if crawl_items and crawl_items.gsc and crawl_items.gsc.page %}data-crawl-page-id="gsc-crawl-page"{% endif %}
               {% if not search_connections.gsc.connected %}data-crawl-only{% endif %}>
               <div class="search-mini-head">
-                <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">Requêtes</button><button type="button" class="tab-btn" data-dim="page">Pages</button></div>
-                <a class="muted small" href="/projects/{{ project.slug }}/performance?source=gsc&dim=query&days={{ gsc_days }}">Voir tout</a>
+                <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">{{ tr("Requêtes") }}</button><button type="button" class="tab-btn" data-dim="page">{{ tr("Pages") }}</button></div>
+                <a class="muted small" href="/projects/{{ project.slug }}/performance?source=gsc&dim=query&days={{ gsc_days }}">{{ tr("Voir tout") }}</a>
               </div>
               <div class="table-wrap">
                 <table class="table compact mini-perf-table">
-                  <thead><tr><th>Requête / page</th><th class="num">Clics</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th></tr></thead>
-                  <tbody data-mini-body><tr><td colspan="5" class="muted">Chargement…</td></tr></tbody>
+                  <thead><tr><th>{{ tr("Requête / page") }}</th><th class="num">{{ tr("Clics") }}</th><th class="num">{{ tr("Impressions") }}</th><th class="num">{{ tr("CTR") }}</th><th class="num">{{ tr("Position") }}</th></tr></thead>
+                  <tbody data-mini-body><tr><td colspan="5" class="muted">{{ tr("Chargement…") }}</td></tr></tbody>
                 </table>
               </div>
               <div class="muted small search-mini-meta" data-mini-meta></div>
@@ -613,11 +607,11 @@
         <section class="card overview-source {% if not search_connections.bing.connected and not (bing and bing.ok) %}overview-source-empty{% endif %}">
           {% set bing_days = live_bing.days if live_bing and live_bing.days else (bing.days if bing and bing.days else 28) %}
           <div class="card-title-row">
-            <h2>Bing Webmaster Tools</h2>
+            <h2>{{ tr("Bing Webmaster Tools") }}</h2>
             <div class="card-title-actions">
               {% if search_connections.bing.connected %}
-              <div class="pill-select" title="Période du graphique Bing">
-                <label for="bing-chart-days">Période</label>
+              <div class="pill-select" title="{{ tr("Période du graphique Bing") }}">
+                <label for="bing-chart-days">{{ tr("Période") }}</label>
                 <select id="bing-chart-days" class="js-ts-days" data-widget-id="bing-live-widget">
                   {% for d in ([7, 28, 90] + ([bing_days] if bing_days not in [7, 28, 90] else []))|sort %}
                     <option value="{{ d }}" {% if d == bing_days %}selected{% endif %}>{{ d }}j</option>
@@ -634,16 +628,16 @@
           {% endif %}
           <div class="search-source-summary" data-summary-block {% if not (bing and bing.ok) %}data-summary-fallback="true"{% endif %}>
             {% if bing and bing.ok %}
-              <p class="muted small">Données de l’analyse enregistrée, distinctes du suivi actuel ci-dessous.</p>
+              <p class="muted small">{{ tr("Données de l’analyse enregistrée, distinctes du suivi actuel ci-dessous.") }}</p>
               {% if bing.site_url %}<p class="muted small">siteUrl: <span class="mono">{{ bing.site_url }}</span></p>{% endif %}
-              {% if bing.start_date and bing.end_date %}<p class="muted small">Période: <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ bing.days }}j)</p>{% endif %}
+              {% if bing.start_date and bing.end_date %}<p class="muted small">{{ tr("Période :") }} <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ tr("{n} j", n=bing.days) }})</p>{% endif %}
               <div class="issue-chips">
-                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_crawl_issues?crawl={{ cur.timestamp }}"><span class="dot warning"></span>Problèmes de crawl <span class="mono">{{ bing.crawl_issues.rows }}</span></a>
-                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_blocked_urls?crawl={{ cur.timestamp }}"><span class="dot error"></span>URLs bloquées <span class="mono">{{ bing.blocked_urls.rows }}</span></a>
-                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_sitemaps?crawl={{ cur.timestamp }}"><span class="dot notice"></span>Sitemaps <span class="mono">{{ bing.sitemaps.rows }}</span></a>
+                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_crawl_issues?crawl={{ cur.timestamp }}"><span class="dot warning"></span>{{ tr("Problèmes de crawl") }} <span class="mono">{{ bing.crawl_issues.rows }}</span></a>
+                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_blocked_urls?crawl={{ cur.timestamp }}"><span class="dot error"></span>{{ tr("URLs bloquées") }} <span class="mono">{{ bing.blocked_urls.rows }}</span></a>
+                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_sitemaps?crawl={{ cur.timestamp }}"><span class="dot notice"></span>{{ tr("Sitemaps") }} <span class="mono">{{ bing.sitemaps.rows }}</span></a>
               </div>
               {% if bing.queries_csv or bing.pages_csv %}
-                <p class="muted small" style="margin-top:8px;">CSV:
+                <p class="muted small" style="margin-top:8px;">CSV :
                   {% if bing.queries_csv %}<a href="/file?path={{ bing.queries_csv }}">bing-queries.csv</a>{% endif %}
                   {% if bing.queries_csv and bing.pages_csv %} · {% endif %}
                   {% if bing.pages_csv %}<a href="/file?path={{ bing.pages_csv }}">bing-pages.csv</a>{% endif %}
@@ -652,13 +646,13 @@
             {% elif bing and bing.enabled %}
               {# Daté pour la même raison que la carte GSC juste au-dessus : cette valeur vient
                  du rapport de la dernière analyse, le graphique en dessous est live. #}
-              <p class="muted">Les données Bing n’étaient pas disponibles lors de la dernière analyse.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">Connexions de ce site</a></p>
+              <p class="muted">{{ tr("Les données Bing n’étaient pas disponibles lors de la dernière analyse.") }}</p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">{{ tr("Connexions de ce site") }}</a></p>
             {% elif search_connections.bing.connected %}
-              <p class="muted">Le suivi Bing est connecté pour ce projet.</p>
+              <p class="muted">{{ tr("Le suivi Bing est connecté pour ce projet.") }}</p>
             {% else %}
-              <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">Configurer le suivi</a></p>
+              <p class="muted">{{ tr("Activez Bing pour ajouter les données de performance et les anomalies.") }}</p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">{{ tr("Configurer le suivi") }}</a></p>
             {% endif %}
           </div>
 
@@ -666,12 +660,12 @@
             <div id="bing-live-widget" class="ts-widget" data-connections-url="{{ search_connections.bing.settings_url }}" data-default-metrics="clicks,impressions" data-max-metrics="2" data-stored-period="{{ bing.start_date if bing else '' }} → {{ bing.end_date if bing else '' }}"
               {% if bing and bing.daily and (bing.daily|length) >= 2 %}data-series-id="bing-daily-series"{% endif %}
               {% if search_connections.bing.connected %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=bing&days={{ bing_days }}"{% endif %}>
-              <div class="ts-metrics" aria-label="Métriques Bing Webmaster Tools">
-                <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Clics</span><span class="ts-metric-value" data-value-for="clicks">{{ bing.totals.clicks if bing and bing.ok else "-" }}</span></button>
-                <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Impressions</span><span class="ts-metric-value" data-value-for="impressions">{{ bing.totals.impressions if bing and bing.ok else "-" }}</span></button>
-                <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">CTR moyen</span><span class="ts-metric-value" data-value-for="ctr">{% if bing and bing.ok %}{{ (bing.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span></button>
+              <div class="ts-metrics" aria-label="{{ tr("Métriques Bing Webmaster Tools") }}">
+                <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">{{ tr("Clics") }}</span><span class="ts-metric-value" data-value-for="clicks">{{ bing.totals.clicks if bing and bing.ok else "-" }}</span></button>
+                <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">{{ tr("Impressions") }}</span><span class="ts-metric-value" data-value-for="impressions">{{ bing.totals.impressions if bing and bing.ok else "-" }}</span></button>
+                <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">{{ tr("CTR moyen") }}</span><span class="ts-metric-value" data-value-for="ctr">{% if bing and bing.ok %}{{ (bing.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span></button>
               </div>
-              <div class="ts-chart"><canvas class="ts-canvas" aria-label="Graphique Bing" role="img"></canvas><div class="ts-empty" role="status">Chargement du graphique…</div></div>
+              <div class="ts-chart"><canvas class="ts-canvas" aria-label="{{ tr("Graphique Bing") }}" role="img"></canvas><div class="ts-empty" role="status">{{ tr("Chargement du graphique…") }}</div></div>
               <div class="ts-meta muted small" data-ts-meta></div>
               {% if bing and bing.daily and (bing.daily|length) >= 2 %}<script type="application/json" id="bing-daily-series">{{ bing.daily | tojson }}</script>{% endif %}
             </div>
@@ -685,13 +679,13 @@
               {% if crawl_items and crawl_items.bing and crawl_items.bing.page %}data-crawl-page-id="bing-crawl-page"{% endif %}
               {% if not search_connections.bing.connected %}data-crawl-only{% endif %}>
               <div class="search-mini-head">
-                <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">Requêtes</button><button type="button" class="tab-btn" data-dim="page">Pages</button></div>
-                <a class="muted small" href="/projects/{{ project.slug }}/performance?source=bing&dim=query&days={{ bing_days }}">Voir tout</a>
+                <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">{{ tr("Requêtes") }}</button><button type="button" class="tab-btn" data-dim="page">{{ tr("Pages") }}</button></div>
+                <a class="muted small" href="/projects/{{ project.slug }}/performance?source=bing&dim=query&days={{ bing_days }}">{{ tr("Voir tout") }}</a>
               </div>
               <div class="table-wrap">
                 <table class="table compact mini-perf-table">
-                  <thead><tr><th>Requête / page</th><th class="num">Clics</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th></tr></thead>
-                  <tbody data-mini-body><tr><td colspan="5" class="muted">Chargement…</td></tr></tbody>
+                  <thead><tr><th>{{ tr("Requête / page") }}</th><th class="num">{{ tr("Clics") }}</th><th class="num">{{ tr("Impressions") }}</th><th class="num">{{ tr("CTR") }}</th><th class="num">{{ tr("Position") }}</th></tr></thead>
+                  <tbody data-mini-body><tr><td colspan="5" class="muted">{{ tr("Chargement…") }}</td></tr></tbody>
                 </table>
               </div>
               <div class="muted small search-mini-meta" data-mini-meta></div>
@@ -743,7 +737,7 @@
         const initialDate = fmtRunTs(runTs) || fmtEpoch(createdAt);
         if (tsEl) tsEl.textContent = initialDate;
         function lastLine(v) { if (!v) return ""; const ls = v.split(/\r?\n/); for (let i=ls.length-1;i>=0;i--) { const l=String(ls[i]||"").trim(); if(l) return l; } return ""; }
-        const statusMap = {queued:"en attente",running:"en cours",cancel_requested:"annulation…",done:"terminé",failed:"échec",canceled:"annulé"};
+        const statusMap = {queued:{{ tr("en attente")|tojson }},running:{{ tr("en cours")|tojson }},cancel_requested:{{ tr("annulation…")|tojson }},done:{{ tr("terminé")|tojson }},failed:{{ tr("échec")|tojson }},canceled:{{ tr("annulé")|tojson }}};
         function parsePageSpeed(stdout) {
           const lines = (stdout||"").split(/\r?\n/);
           for (let i=lines.length-1;i>=0;i--) {
@@ -772,11 +766,11 @@
         if (cancelBtn) {
           cancelBtn.addEventListener('click', async () => {
             cancelBtn.disabled = true;
-            cancelBtn.textContent = "Annulation…";
+            cancelBtn.textContent = {{ tr("Annulation…")|tojson }};
             try {
               await fetch(`/jobs/${encodeURIComponent(jobId)}/cancel`, {method:'POST', redirect:'manual'});
-              if (statusEl) { statusEl.textContent = "annulation…"; statusEl.className = "pill cancel_requested"; }
-            } catch(_) { cancelBtn.disabled = false; cancelBtn.textContent = "Annuler"; }
+              if (statusEl) { statusEl.textContent = {{ tr("annulation…")|tojson }}; statusEl.className = "pill cancel_requested"; }
+            } catch(_) { cancelBtn.disabled = false; cancelBtn.textContent = {{ tr("Annuler")|tojson }}; }
           });
         }
         function render(data) {
@@ -794,7 +788,7 @@
             if (isFin && pct>=100) pct = 99;
             progressFill.style.setProperty("--p",String(pct));
             progressCount.textContent = `${cur2}/${tot}`;
-            progressText.textContent = isFin ? `Pages explorées : ${cur2}/${tot} · finalisation…` : `Pages explorées : ${cur2}/${tot}`;
+            progressText.textContent = {{ tr("Pages explorées :")|tojson }} + ` ${cur2}/${tot}` + (isFin ? " · " + {{ tr("finalisation…")|tojson }} : "");
             progressWrap.style.display = "";
           } else if (progressWrap) { progressWrap.style.display = "none"; }
           const stdout = data && typeof data.stdout==="string" ? data.stdout : "";
@@ -804,7 +798,7 @@
             const psPct = Math.round((ps.current/ps.total)*100);
             psFill.style.setProperty("--p",String(psPct));
             psCount.textContent = `${ps.current}/${ps.total}`;
-            psText.textContent = `Analyse PageSpeed : ${ps.current}/${ps.total}`;
+            psText.textContent = {{ tr("Analyse PageSpeed :")|tojson }} + ` ${ps.current}/${ps.total}`;
             psWrap.style.display = "";
           } else if (psWrap) { psWrap.style.display = "none"; }
           const line = lastLine(stdout) || lastLine(stderr);

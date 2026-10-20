@@ -5,11 +5,11 @@
 {% if cur.used_fallback %}
   <div class="alert {% if analyse_en_cours %}notice{% else %}warning{% endif %}" role="status" style="margin-bottom:20px;" data-repli="{{ 'en_cours' if analyse_en_cours else 'perdu' }}">
     {% if analyse_en_cours %}
-      L’analyse du <span data-ts-datetime="{{ cur.requested_timestamp }}">{{ cur.requested_timestamp }}</span> est en cours : son rapport n’est pas encore disponible.
+      {{ tr_html('L’analyse du <span data-ts-datetime="{ts}">{ts}</span> est en cours : son rapport n’est pas encore disponible.', ts=cur.requested_timestamp) }}
     {% else %}
-      Le rapport de l’analyse du <span data-ts-datetime="{{ cur.requested_timestamp }}">{{ cur.requested_timestamp }}</span> est introuvable : elle a été interrompue avant de l’enregistrer, par exemple par un redémarrage du service. Relancez-la pour obtenir des chiffres à jour.
+      {{ tr_html('Le rapport de l’analyse du <span data-ts-datetime="{ts}">{ts}</span> est introuvable : elle a été interrompue avant de l’enregistrer, par exemple par un redémarrage du service. Relancez-la pour obtenir des chiffres à jour.', ts=cur.requested_timestamp) }}
     {% endif %}
-    Affichage de la dernière analyse disponible, du <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span data-ts-datetime="{{ cur.timestamp }}">{{ cur.timestamp }}</span></a>.
-    <a href="/jobs">Voir les analyses</a>
+    {{ tr_html('Affichage de la dernière analyse disponible, du <a href="{url}"><span data-ts-datetime="{ts}">{ts}</span></a>.', url='/projects/' ~ project.slug ~ '?crawl=' ~ cur.timestamp, ts=cur.timestamp) }}
+    <a href="/jobs">{{ tr("Voir les analyses") }}</a>
   </div>
 {% endif %}

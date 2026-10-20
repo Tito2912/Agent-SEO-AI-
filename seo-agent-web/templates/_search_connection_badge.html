@@ -1,36 +1,36 @@
 {% macro connection_actions(connection) %}
-    <p>{% if connection.connected %}Connecté pour ce projet.{% else %}Connectez votre compte pour suivre les performances de ce site.{% endif %}</p>
+    <p>{% if connection.connected %}{{ tr("Connecté pour ce projet.") }}{% else %}{{ tr("Connectez votre compte pour suivre les performances de ce site.") }}{% endif %}</p>
     {% if connection.can_resume %}
       <form method="post" action="/projects/{{ slug }}/search-connections/{{ connection.source }}">
         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
         <input type="hidden" name="next" value="{{ connection.return_to }}" />
         <input type="hidden" name="action" value="connect" />
-        <button class="search-connection-action" type="submit">Connecter {{ connection.label }}</button>
+        <button class="search-connection-action" type="submit">{{ tr("Connecter {name}", name=connection.label) }}</button>
       </form>
     {% endif %}
     {% if connection.oauth_ready %}
-      <a class="search-connection-action" href="{{ connection.connect_url }}">{% if connection.connected or connection.can_resume %}Changer de compte{% else %}Connecter {{ connection.label }}{% endif %}</a>
+      <a class="search-connection-action" href="{{ connection.connect_url }}">{% if connection.connected or connection.can_resume %}{{ tr("Changer de compte") }}{% else %}{{ tr("Connecter {name}", name=connection.label) }}{% endif %}</a>
     {% elif not connection.connected and not connection.can_resume %}
-      <p>La connexion doit d’abord être configurée dans Noyaru.</p>
-      <a class="search-connection-action" href="/settings/accounts#{% if connection.source == 'gsc' %}gsc-oauth-card{% else %}bing-connect-card{% endif %}">Voir les réglages de connexion</a>
+      <p>{{ tr("La connexion doit d’abord être configurée dans Noyaru.") }}</p>
+      <a class="search-connection-action" href="/settings/accounts#{% if connection.source == 'gsc' %}gsc-oauth-card{% else %}bing-connect-card{% endif %}">{{ tr("Voir les réglages de connexion") }}</a>
     {% endif %}
     {% if connection.can_disconnect %}
       <form method="post" action="/projects/{{ slug }}/search-connections/{{ connection.source }}">
         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
         <input type="hidden" name="next" value="{{ connection.return_to }}" />
         <input type="hidden" name="action" value="disconnect" />
-        <button class="search-connection-action search-connection-disconnect" type="submit">Déconnecter {{ connection.label }}</button>
+        <button class="search-connection-action search-connection-disconnect" type="submit">{{ tr("Déconnecter {name}", name=connection.label) }}</button>
       </form>
-      <p class="search-connection-note">Déconnecte ce projet uniquement. Les analyses déjà enregistrées restent disponibles.</p>
+      <p class="search-connection-note">{{ tr("Déconnecte ce projet uniquement. Les analyses déjà enregistrées restent disponibles.") }}</p>
     {% endif %}
 
 {% endmacro %}
 
 {% macro connection_badge(connection) %}
 <details class="search-connection" id="{{ connection.source }}-connection">
-  <summary class="badge {% if connection.connected %}ok{% else %}notice{% endif %}" aria-label="Connexion {{ connection.label }} : {% if connection.connected %}connecté{% else %}non connecté{% endif %}">
+  <summary class="badge {% if connection.connected %}ok{% else %}notice{% endif %}" aria-label="{% if connection.connected %}{{ tr('Connexion {name} : connecté', name=connection.label) }}{% else %}{{ tr('Connexion {name} : non connecté', name=connection.label) }}{% endif %}">
     <span class="search-connection-dot" aria-hidden="true"></span>
-    {% if connection.connected %}Connecté{% else %}Connecter{% endif %}
+    {% if connection.connected %}{{ tr("Connecté") }}{% else %}{{ tr("Connecter") }}{% endif %}
     <span class="search-connection-chevron" aria-hidden="true">⌄</span>
   </summary>
   <div class="search-connection-menu">

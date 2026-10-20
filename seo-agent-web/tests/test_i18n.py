@@ -157,3 +157,42 @@ def test_connected_app_shell_projects_and_billing_in_english(lab) -> None:
     assert "Current plan" in billing_page
     assert "Plan actuel" not in billing_page
     assert "Plan actuel" in browser.get("/billing", params={"lang": "fr"}).text
+
+
+def test_project_overview_and_issues_in_english(lab, tmp_path) -> None:
+    owner = user(lab["db"])
+    project(lab["db"], owner, slug="atelier")
+    url = "https://atelier.example/"
+    report_dir = tmp_path / "runs" / str(owner.id) / "atelier" / "20261018-120000" / "audit"
+    report_dir.mkdir(parents=True)
+    (report_dir / "report.json").write_text(json.dumps({
+        "meta": {"base_url": url},
+        "pages": [{"url": url, "status_code": 200, "content_type": "text/html", "indexable": True}],
+        "issues": {"missing_title": {"count": 1, "examples": [url]}},
+    }))
+    browser = session_client(owner)
+
+    overview = browser.get("/projects/atelier", params={"lang": "en"}).text
+    assert "Health score" in overview and "Top issues" in overview
+    assert "Title tag missing / empty" in overview
+    assert "Score de santé" not in overview
+    issues = browser.get("/projects/atelier/issues").text
+    assert "Filters and exports" in issues and "Title tag missing / empty" in issues
+    assert "Balise title manquante / vide" in browser.get("/projects/atelier/issues", params={"lang": "fr"}).text
+
+
+def test_static_scripts_receive_only_their_translations(client: TestClient) -> None:
+    keys = i18n._js_keys()
+    assert "Aucune donnée reçue sur cette période." in keys
+    missing = [key for key in keys if key not in CATALOG]
+    assert not missing, "Texte noyaruT() sans traduction dans locales/en.json : %s" % missing
+    def page_catalog(lang: str) -> dict[str, str]:
+        html = client.get("/", params={"lang": lang}).text
+        match = re.search(r"window\.NOYARU_I18N = (\{.*?\});", html)
+        assert match
+        return json.loads(match.group(1))
+
+    english = page_catalog("en")
+    assert english["Aucune donnée reçue sur cette période."] == "No data received for this period."
+    assert set(english) <= set(keys)
+    assert page_catalog("fr") == {}
