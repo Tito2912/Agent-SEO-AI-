@@ -1,0 +1,48 @@
+{% macro report_exports(slug, timestamp, scope='overview', compare='', severity='', category='', q='', issue_key='', source_path='', fix_pack_unlocked=false, billing_url='/billing') %}
+  {% set query = {'crawl': timestamp} %}
+  {% if compare and scope != 'issue' %}{% set _ = query.update({'compare': compare}) %}{% endif %}
+  {% if severity %}{% set _ = query.update({'severity': severity}) %}{% endif %}
+  {% if category %}{% set _ = query.update({'category': category}) %}{% endif %}
+  {% if q and scope == 'issues' %}{% set _ = query.update({'q': q}) %}{% endif %}
+  {% set base = '/projects/' ~ slug ~ '/export/' %}
+  {% set resource = ('issues/' ~ issue_key) if scope == 'issue' else ('issues' if scope == 'issues' else 'report') %}
+  <details class="report-exports">
+    <summary>{{ tr("Exports PDF et CSV") }}</summary>
+    <div class="report-exports-body">
+      <p>{{ tr("Exportez l'audit en PDF ou en CSV pour travailler avec la personne qui s'occupe de votre site.") }}</p>
+      <p class="report-exports-context">{{ tr("Analyse du") }} <span data-ts-datetime="{{ timestamp }}">{{ timestamp }}</span>{% if severity or category or q %} · {{ tr("résultats filtrés") }}{% endif %}</p>
+      <div class="report-exports-grid">
+        <a class="report-export-choice report-export-pdf" href="{{ base ~ resource ~ '.pdf?' ~ (query|urlencode) }}">
+          <strong>{{ tr("Rapport à transmettre (PDF)") }}</strong>
+          <span>{% if scope == 'issue' %}{{ tr("Correction recommandée") }}{% elif scope == 'issues' %}{{ tr("Anomalies triées par priorité") }}{% else %}{{ tr("Analyse affichée") }}{% endif %}</span>
+        </a>
+        <a class="report-export-choice" href="{{ base ~ resource ~ '.csv?' ~ (query|urlencode) }}">
+          <strong>CSV · {% if scope == 'overview' %}{{ tr("Analyse affichée") }}{% else %}{{ tr("Anomalies") }}{% endif %}</strong>
+          <span>{{ tr("Détails techniques") }}</span>
+        </a>
+        {% if scope != 'issue' %}
+          {% set url_query = {'crawl': timestamp} %}
+          {% for key in ('severity', 'category', 'q') %}{% if query.get(key) %}{% set _ = url_query.update({key: query[key]}) %}{% endif %}{% endfor %}
+          <a class="report-export-choice" href="{{ base ~ 'issues-all-urls.csv?' ~ (url_query|urlencode) }}">
+            <strong>{{ tr("CSV (URLs)") }}</strong>
+            <span>{{ tr("Anomalies triées par priorité, avec leurs URL") }}</span>
+          </a>
+        {% endif %}
+      </div>
+      {% if scope == 'overview' %}
+        <div class="report-exports-archive">
+          <p>{{ tr("Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo.") }}</p>
+          {% if fix_pack_unlocked %}<a class="btn" href="{{ base ~ 'fix-pack.zip?' ~ ({'crawl': timestamp}|urlencode) }}">{{ tr("Archive de corrections ZIP") }}</a>
+          {% else %}<a class="btn" href="{{ billing_url }}">{{ tr("Archive de corrections · Solo+") }}</a>{% endif %}
+          <a class="report-exports-help" href="{{ doc_path('fix-pack-sans-depot') }}">{{ tr("Voir les instructions") }}</a>
+        </div>
+      {% endif %}
+      {% if source_path %}
+        <details class="report-exports-technical">
+          <summary>{{ tr("Détails techniques") }}</summary>
+          <a class="btn" href="{{ file_preview_link(request, source_path, timestamp) }}">{{ tr("Source") }} · {% if scope == 'overview' %}Markdown{% else %}JSON{% endif %}</a>
+        </details>
+      {% endif %}
+    </div>
+  </details>
+{% endmacro %}

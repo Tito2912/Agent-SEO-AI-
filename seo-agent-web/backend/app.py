@@ -18218,47 +18218,104 @@ def jobs(request: Request, job: str | None = None) -> HTMLResponse:
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
+_FILE_RETURN_QUERY = {"crawl", "compare", "severity", "category", "q", "page", "per_page"}
+_FILE_PROJECT_RETURN = re.compile(r"^/projects/([^/]+)(?:/issues(?:/([^/]+))?)?$")
+
+
+def _file_preview_link(request: Request, path: str, crawl: str = "") -> str:
+    """Encode the complete file path and keep only the source screen's useful state."""
+    query = {key: value for key, value in request.query_params.items() if key in _FILE_RETURN_QUERY}
+    if crawl:
+        query["crawl"] = crawl
+    source = urlunsplit(("", "", request.url.path, urlencode(query), ""))
+    return "/file?" + urlencode({"path": str(path), "next": source})
+
+
+templates.env.globals["file_preview_link"] = _file_preview_link
+
+
+def _file_preview_context(request: Request, path: Path, next_path: str) -> dict[str, Any]:
+    """A return parameter never establishes either file or project access."""
+    fallback = {"back_href": "/", "back_label": "Retrouver mes sites"}
+    parts = urlsplit(_safe_next_path(next_path))
+    match = _FILE_PROJECT_RETURN.fullmatch(parts.path)
+    user = getattr(request.state, "user", None)
+    if not match or not user:
+        return fallback
+    project = _db_project(str(user.id), match.group(1))
+    if not project:
+        return fallback
+    runs_dir = _runs_dir_for_user(str(project.owner_user_id)).resolve()
+    try:
+        relative = path.relative_to((runs_dir / project.slug).resolve())
+    except ValueError:
+        return fallback
+    if len(relative.parts) < 2 or not re.fullmatch(r"\d{8}-\d{6}", relative.parts[0]):
+        return fallback
+    ts = relative.parts[0]
+    query = {key: value for key, value in parse_qsl(parts.query) if key in _FILE_RETURN_QUERY}
+    query["crawl"] = ts  # The file's actual analysis, even if a caller supplied another date.
+    back_label = "Revenir à l’anomalie" if match.group(2) else (
+        "Revenir aux résultats" if parts.path.endswith("/issues") else "Revenir au bilan du site"
+    )
+    overview = f"/projects/{project.slug}?" + urlencode({"crawl": ts})
+    return {
+        "back_href": urlunsplit(("", "", parts.path, urlencode(query), "")),
+        "back_label": back_label, "slug": project.slug, "site_name": project.site_name or project.slug,
+        "timestamp": ts, "overview_href": overview,
+        "pdf_href": (f"/projects/{project.slug}/export/report.pdf?" + urlencode({"crawl": ts}))
+        if dash.load_report_json(runs_dir, project.slug, ts) else "",
+    }
+
+
 @app.get("/file", response_class=HTMLResponse)
-def view_file(request: Request, path: str) -> HTMLResponse:
+def view_file(request: Request, path: str, next: str = "") -> HTMLResponse:
     raw_path = Path(path).expanduser()
     if not raw_path.is_absolute():
         raw_path = (REPO_ROOT / raw_path).resolve()
     else:
         raw_path = raw_path.resolve()
 
+    def render(*, status: int = 200, content: str = "", context: dict[str, Any] | None = None,
+               name: str = "", size: int = 0, limit: int = 0) -> HTMLResponse:
+        resp = templates.TemplateResponse("file.html", {
+            "request": request, "file_status": status, "content": content,
+            "file_context": context or {"back_href": "/", "back_label": "Retrouver mes sites"},
+            "file_name": name, "path": str(raw_path) if name else "",
+            "file_size": size, "file_limit": limit,
+        }, status_code=status)
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Referrer-Policy"] = "no-referrer"
+        return resp
+
     user = getattr(request.state, "user", None)
     is_admin = bool(getattr(user, "is_admin", False))
     if is_admin:
         allowed_roots = [DEFAULT_RUNS_DIR.resolve(), DATA_DIR.resolve()]
     else:
-        # Cette liste EST la barriere : tout fichier hors de ces racines est refuse. Elle vaut
-        # donc exactement les comptes que cette personne a le droit de lire — le sien, plus celui
-        # qui l'accueille comme membre. Sans utilisateur elle est vide, donc tout est refuse :
-        # l'ancien repli rendait `DEFAULT_RUNS_DIR`, c'est-a-dire la racine de TOUS les clients.
-        # La route n'est pas atteignable sans session aujourd'hui, mais la barriere ne doit pas
-        # dependre d'une liste blanche ecrite ailleurs.
+        # Keep the existing boundary: one's own account and accounts that admit this member.
         allowed_roots = [_runs_dir_for_user(c).resolve()
                          for c in _comptes_accessibles(str(getattr(user, "id", "") or ""))]
     if not any(raw_path.is_relative_to(root) for root in allowed_roots):
-        return HTMLResponse("Path not allowed", status_code=403)
-    if not raw_path.exists():
-        _ensure_runs_artifact_local(raw_path)
-    if not raw_path.exists() or not raw_path.is_file():
-        return HTMLResponse("File not found", status_code=404)
-    max_bytes = _file_view_max_bytes()
+        return render(status=403)
+    context = _file_preview_context(request, raw_path, next)
     try:
+        if not raw_path.exists():
+            _ensure_runs_artifact_local(raw_path)
+        if not raw_path.is_file():
+            return render(status=404, context=context, name=raw_path.name)
+        max_bytes = _file_view_max_bytes()
         size = raw_path.stat().st_size
-    except Exception:
-        size = 0
-    if size > max_bytes:
-        return HTMLResponse(f"File too large to preview ({size} bytes, max {max_bytes})", status_code=413)
-
-    content = raw_path.read_text(encoding="utf-8", errors="replace")
-    return templates.TemplateResponse(
-        "file.html",
-        {"request": request, "path": str(raw_path), "content": content},
-    )
-
+        if size > max_bytes:
+            return render(status=413, context=context, name=raw_path.name, size=size, limit=max_bytes)
+        # Bound the read as well as the stat: a growing file must not bypass the preview cap.
+        with raw_path.open("rb") as source:
+            raw = source.read(max_bytes + 1)
+        if len(raw) > max_bytes:
+            return render(status=413, context=context, name=raw_path.name, size=len(raw), limit=max_bytes)
+        return render(content=raw.decode("utf-8", errors="replace"), context=context, name=raw_path.name)
+    except OSError:
+        return render(status=503, context=context, name=raw_path.name)
 
 @app.post("/run")
 def run(

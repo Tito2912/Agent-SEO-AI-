@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_report_exports.html" import report_exports with context %}
 {% from "_search_connection_badge.html" import connection_badge with context %}
 {% set crawl_active = live_job and live_job.status in ['queued', 'running', 'cancel_requested'] %}
 {% block title %}{{ project.site_name if project else slug }} - Vue d'ensemble{% endblock %}
@@ -6,6 +7,7 @@
 {% block head_extra %}
   <link rel="stylesheet" href="/static/project_overview.css?v=3" />
   <link rel="stylesheet" href="/static/journey.css?v=1" />
+  <link rel="stylesheet" href="/static/report-exports.css?v=1" />
   <script src="/static/project_overview.js?v=5" defer></script>
 {% endblock %}
 
@@ -253,7 +255,7 @@
      TOOLBAR — crawl selector + exports
   ══════════════════════════════════════ #}
   <details class="screen-options overview-report-controls">
-    <summary>{{ tr("Choisir une analyse, comparer ou exporter") }}</summary>
+    <summary>{{ tr("Analyse affichée") ~ " · " ~ tr("Comparer avec") }}</summary>
   <div class="data-toolbar">
     <form method="get" class="filters" style="width:100%;">
       {% if live_job %}<input type="hidden" name="job" value="{{ live_job.id }}" />{% endif %}
@@ -277,22 +279,13 @@
         </select>
       </label>
       <button type="submit" class="btn">{{ tr("Appliquer") }}</button>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;align-items:center;">
-        <span class="muted small">{{ tr("Exports :") }}</span>
-        <a class="btn" href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">PDF</a>
-        <a class="btn" href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">CSV</a>
-        <a class="btn" href="/projects/{{ project.slug }}/export/issues-all-urls.csv?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;" title="{{ tr("CSV complet — une ligne par URL affectée par chaque issue") }}">{{ tr("CSV (URLs)") }}</a>
-        <a class="btn" href="/file?path={{ cur.report_md }}" style="font-size:11px;padding:4px 10px;">MD</a>
-        {% if fix_pack_unlocked %}
-          <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">{{ tr("Fix Pack ZIP") }}</a>
-        {% else %}
-          <a class="btn" href="{{ billing_url or '/billing' }}" style="font-size:11px;padding:4px 10px;">{{ tr("Fix Pack · Solo+") }}</a>
-        {% endif %}
-      </div>
+
     </form>
   </div>
 
   </details>
+
+  {{ report_exports(project.slug, cur.timestamp, compare=project.compare.timestamp if project.compare else "", source_path=cur.report_md, fix_pack_unlocked=fix_pack_unlocked, billing_url=billing_url or "/billing") }}
 
   <div class="overview-focus-grid">
     {% include "_overview_history.html" %}
@@ -541,14 +534,14 @@
                   <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_warnings?crawl={{ cur.timestamp }}"><span class="dot warning"></span>{{ tr("Avertissements") }} <span class="mono">{{ gsc.url_inspection.warnings }}</span></a>
                   <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_notices?crawl={{ cur.timestamp }}"><span class="dot notice"></span>{{ tr("Avis") }} <span class="mono">{{ gsc.url_inspection.notices }}</span></a>
                 </div>
-                {% if gsc.url_inspection.json %}<p class="muted small" style="margin-top:8px;">{{ tr("Détails :") }} <a href="/file?path={{ gsc.url_inspection.json }}">gsc-url-inspection.json</a></p>{% endif %}
+                {% if gsc.url_inspection.json %}<p class="muted small" style="margin-top:8px;">{{ tr("Détails :") }} <a href="{{ file_preview_link(request, gsc.url_inspection.json, cur.timestamp) }}">gsc-url-inspection.json</a></p>{% endif %}
               {% endif %}
               {% if gsc.queries_csv or gsc.pages_csv %}
                 <p class="muted small" style="margin-top:8px;">CSV :
-                  {% if gsc.queries_csv %}<a href="/file?path={{ gsc.queries_csv }}">gsc-queries.csv</a>{% endif %}
+                  {% if gsc.queries_csv %}<a href="{{ file_preview_link(request, gsc.queries_csv, cur.timestamp) }}">gsc-queries.csv</a>{% endif %}
                   {% if gsc.queries_csv and gsc.pages_csv %} · {% endif %}
-                  {% if gsc.pages_csv %}<a href="/file?path={{ gsc.pages_csv }}">gsc-pages.csv</a>{% endif %}
-                  {% if gsc.daily_csv %} · <a href="/file?path={{ gsc.daily_csv }}">gsc-daily.csv</a>{% endif %}
+                  {% if gsc.pages_csv %}<a href="{{ file_preview_link(request, gsc.pages_csv, cur.timestamp) }}">gsc-pages.csv</a>{% endif %}
+                  {% if gsc.daily_csv %} · <a href="{{ file_preview_link(request, gsc.daily_csv, cur.timestamp) }}">gsc-daily.csv</a>{% endif %}
                 </p>
               {% endif %}
             {% elif gsc and gsc.enabled %}
@@ -638,9 +631,9 @@
               </div>
               {% if bing.queries_csv or bing.pages_csv %}
                 <p class="muted small" style="margin-top:8px;">CSV :
-                  {% if bing.queries_csv %}<a href="/file?path={{ bing.queries_csv }}">bing-queries.csv</a>{% endif %}
+                  {% if bing.queries_csv %}<a href="{{ file_preview_link(request, bing.queries_csv, cur.timestamp) }}">bing-queries.csv</a>{% endif %}
                   {% if bing.queries_csv and bing.pages_csv %} · {% endif %}
-                  {% if bing.pages_csv %}<a href="/file?path={{ bing.pages_csv }}">bing-pages.csv</a>{% endif %}
+                  {% if bing.pages_csv %}<a href="{{ file_preview_link(request, bing.pages_csv, cur.timestamp) }}">bing-pages.csv</a>{% endif %}
                 </p>
               {% endif %}
             {% elif bing and bing.enabled %}
