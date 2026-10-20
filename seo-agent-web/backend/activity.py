@@ -37,6 +37,8 @@ def view(job, *, site_name="", project_url="", report_url="", kind=""):
     elif active:
         headline = (
             "Préparation du bilan"
+            if finalizing and kind == "crawl"
+            else "Finalisation en cours"
             if finalizing
             else "Analyse en cours"
             if kind == "crawl"
@@ -44,6 +46,8 @@ def view(job, *, site_name="", project_url="", report_url="", kind=""):
         )
         message = (
             "Les pages ont été parcourues ; le bilan est encore en préparation."
+            if finalizing and kind == "crawl"
+            else "Le traitement finalise ses résultats ; ils ne sont pas encore disponibles."
             if finalizing
             else "Le suivi affiche les informations reçues du moteur. Vous pouvez consulter vos autres sites pendant ce temps."
         )

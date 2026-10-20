@@ -325,6 +325,11 @@ def test_finalizing_and_malformed_progress_never_imply_a_result(journey):
     m._save_job(row)
     view = journey["client"].get("/api/jobs/" + row.id).json()["activity"]
     assert view["stage"] == 3 and not view["report_ready"]
+    row.result = {**row.result, "type": "autopilot"}
+    m._save_job(row)
+    generic = journey["client"].get("/api/jobs/" + row.id).json()["activity"]
+    assert generic["headline"] == "Finalisation en cours"
+    assert "pages" not in generic["message"] and not generic["report_ready"]
     row.progress = {"current": "not-a-number", "total": "not-a-number"}
     m._save_job(row)
     response = journey["client"].get("/api/jobs/" + row.id)
