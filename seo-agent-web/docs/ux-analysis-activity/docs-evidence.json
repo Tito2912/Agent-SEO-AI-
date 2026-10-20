@@ -1,0 +1,65 @@
+{
+  "checks": [
+    {
+      "screen": "docs-lancer-un-crawl",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "docs-depannage",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "docs-connecter-github",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "docs-lancer-un-crawl",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "docs-depannage",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "docs-connecter-github",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "docs-lancer-un-crawl",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "docs-depannage",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "docs-connecter-github",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "docs-lancer-un-crawl",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "docs-depannage",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "docs-connecter-github",
+      "width": 360,
+      "overflow": false
+    }
+  ],
+  "javascript_errors": []
+}
