@@ -46,8 +46,8 @@ revanche le cookie de langue `noyaru_lang`, qui n'était pas mentionné.
 
 ## Mentions légales (`/mentions-legales`, `/en/mentions-legales`)
 
-- Une ligne par mention : dénomination sociale, forme juridique, capital social (dès qu'il sera
-  connu), siège social, immatriculation, TVA intracommunautaire, téléphone, e-mail, directeur de la
+- Une ligne par mention : dénomination sociale, forme juridique, capital social (10 000 €, donné
+  par le propriétaire le 21/10/2026), siège social, immatriculation, TVA intracommunautaire, téléphone, e-mail, directeur de la
   publication, hébergeur. Valeurs reprises de la version en ligne du 20/10/2026. (3.1, 3.2)
 - Traduction anglaise avec la terminologie de l'audit (Website Publisher, Registered Office,
   Company Registration Number, EU VAT Identification Number, Publication Director, Hosting

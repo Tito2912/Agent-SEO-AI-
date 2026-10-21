@@ -33,7 +33,7 @@
 
   <h2>1. Éditeur et objet</h2>
   <p>
-    {{ app_name }} est édité par {{ publisher_identity }}{% if publisher.share_capital %}, au capital de {{ publisher.share_capital }}{% endif %}.
+    {{ app_name }} est édité par {{ publisher_identity }}{% if share_capital %}, au capital de {{ share_capital }}{% endif %}.
     Voir aussi les <a href="{{ campaign_link(request, '/mentions-legales') }}">mentions légales</a>.
     Ces conditions encadrent l'utilisation du service : l'analyse technique des sites que vous
     ajoutez, la correction de leur code par pull request sur votre dépôt ou dans votre site

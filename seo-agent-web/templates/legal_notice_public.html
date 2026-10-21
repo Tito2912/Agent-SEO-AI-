@@ -14,7 +14,7 @@
    (render.com/terms, lu le 30/09/2026).
    20/10/2026 (audit juridique) : l'editeur vient de backend/legal.py, une ligne par mention, et
    n'est plus une variable LEGAL_* dont l'absence effacait une mention obligatoire. Une valeur
-   encore inconnue (le capital social) n'est pas affichee : elle bloque la publication
+   encore inconnue n'est pas affichee : elle bloque la publication
    (docs/legal/LEGAL-VALIDATION-REQUIRED.md). Version anglaise : legal_notice_public_en.html. #}
 {% include "_legal_styles.html" %}
 {% endblock %}
@@ -28,7 +28,7 @@
   <dl>
     <div><dt>Dénomination sociale</dt><dd>{{ publisher.name }}</dd></div>
     <div><dt>Forme juridique</dt><dd>Société par actions simplifiée unipersonnelle ({{ publisher.form }})</dd></div>
-    {% if publisher.share_capital %}<div><dt>Capital social</dt><dd>{{ publisher.share_capital }}</dd></div>{% endif %}
+    {% if share_capital %}<div><dt>Capital social</dt><dd>{{ share_capital }}</dd></div>{% endif %}
     <div><dt>Siège social</dt><dd>{{ publisher.address }}</dd></div>
     <div><dt>Immatriculation</dt><dd>{{ publisher.registration }}</dd></div>
     <div><dt>TVA intracommunautaire</dt><dd>{{ publisher.vat_number }}</dd></div>

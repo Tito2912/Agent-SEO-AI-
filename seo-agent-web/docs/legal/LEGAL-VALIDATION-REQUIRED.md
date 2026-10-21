@@ -11,7 +11,6 @@ Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeu
 
 | Information | Document | Pourquoi |
 | --- | --- | --- |
-| Capital social d'E-Com Shop (`share_capital`) | Mentions légales FR/EN, CGU article 1 | Mention obligatoire pour une société (LCEN, art. 6 III). Elle n'est pas affichée tant qu'elle est inconnue (l'annuaire officiel des entreprises ne la donne pas). Donnez le montant exact. |
 | Durée de conservation des journaux techniques chez Render, selon votre offre | Confidentialité § 7 (FR/EN) | La page dit « la durée appliquée par notre hébergeur ». L'audit demande une durée exacte : indiquez-la, sans l'estimer. |
 | Durée de conservation des traces d'erreur chez Sentry | Confidentialité § 4 et § 7 | Aucune durée n'est indiquée. À fournir si vous voulez la mentionner. |
 
