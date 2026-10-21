@@ -1,3 +1,4 @@
+const noyaruT = window.noyaruT || ((text) => text);
 (() => {
   const forms = document.querySelectorAll('[data-audit-submit]');
   for (const form of forms) {
@@ -11,7 +12,7 @@
       form.setAttribute('aria-busy', 'true');
       button.disabled = true;
       // Le texte traduit vient du gabarit (data-audit-submit) ; le francais reste le repli.
-      button.textContent = form.dataset.auditSubmit || 'Démarrage de l’analyse…';
+      button.textContent = form.dataset.auditSubmit || noyaruT('Démarrage de l’analyse…');
     });
     window.addEventListener('pageshow', () => {
       delete form.dataset.submitting;

@@ -139,6 +139,6 @@ informations qui restent à compléter.
 
 ## Points en attente
 
-Voir `LEGAL-VALIDATION-REQUIRED.md`. Hors du périmètre juridique, quelques messages de
-l'application citent encore « Comptes & connexions » (ancien nom de « Mon compte ») ; ils n'ont
-pas été modifiés.
+Voir `LEGAL-VALIDATION-REQUIRED.md`. Les messages de l'application qui citaient encore « Comptes
+& connexions » (ancien nom de « Mon compte ») ont été corrigés le 21 octobre 2026 (lot 16 de
+traduction et messages GitHub).

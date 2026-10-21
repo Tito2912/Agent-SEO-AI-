@@ -1,37 +1,37 @@
 {% extends "layout.html" %}
-{% block title %}Historique des analyses - {{ project.site_name }}{% endblock %}
+{% block title %}{{ tr("Historique des analyses") }} - {{ project.site_name }}{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
   <a href="/projects/{{ slug }}">{{ project.site_name }}</a>
   <span class="crumb-sep">/</span>
-  <span class="crumb-current">Historique des analyses</span>
+  <span class="crumb-current">{{ tr("Historique des analyses") }}</span>
 {% endblock %}
 
 {% block content %}
   <div class="page-header">
-    <h1>Historique des analyses</h1>
+    <h1>{{ tr("Historique des analyses") }}</h1>
     <p class="muted">{{ project.site_name }}</p>
   </div>
 
   <section class="card">
     <div class="card-title-row">
-      <h2>Analyses du site</h2>
-      {% if crawls %}<span class="muted small">{{ crawls | length }} analyse{{ 's' if crawls | length > 1 else '' }}</span>{% endif %}
+      <h2>{{ tr("Analyses du site") }}</h2>
+      {% if crawls %}<span class="muted small">{{ tr("{n} analyses", n=crawls | length) if crawls | length > 1 else tr("1 analyse") }}</span>{% endif %}
     </div>
     {% if not crawls %}
-      <p class="muted">Aucune analyse disponible pour ce site.</p>
-      <a class="btn primary" href="/projects/{{ slug }}">Ouvrir mon site pour l’analyser</a>
+      <p class="muted">{{ tr("Aucune analyse disponible pour ce site.") }}</p>
+      <a class="btn primary" href="/projects/{{ slug }}">{{ tr("Ouvrir mon site pour l’analyser") }}</a>
     {% else %}
       <div class="table-wrap">
         <table class="table compact">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Heure</th>
-              <th>Durée</th>
-              <th class="muted">Identifiant</th>
+              <th>{{ tr("Date") }}</th>
+              <th>{{ tr("Heure") }}</th>
+              <th>{{ tr("Durée") }}</th>
+              <th class="muted">{{ tr("Identifiant") }}</th>
               <th></th>
             </tr>
           </thead>
@@ -42,14 +42,14 @@
                 <td>
                   <strong>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }}</strong>
                   {% if loop.first %}
-                    <span class="badge ok" style="font-size:10px;padding:1px 6px;margin-left:6px;">dernier</span>
+                    <span class="badge ok" style="font-size:10px;padding:1px 6px;margin-left:6px;">{{ tr("dernier") }}</span>
                   {% endif %}
                 </td>
                 <td class="mono" data-ts-time="{{ ts }}">{{ ts[9:11] }}:{{ ts[11:13] }}</td>
                 <td class="mono muted">{{ t.duration_label if t.duration_label else '—' }}</td>
                 <td class="mono muted small">{{ ts }}</td>
                 <td class="actions">
-                  <a class="btn" href="/projects/{{ slug }}?crawl={{ ts }}">Ouvrir</a>
+                  <a class="btn" href="/projects/{{ slug }}?crawl={{ ts }}">{{ tr("Ouvrir") }}</a>
                 </td>
               </tr>
             {% endfor %}
