@@ -42,12 +42,12 @@ HOST: dict[str, str] = {
     "url": "https://render.com",
 }
 
-# La date de chaque document. À remplacer par la date de publication effective (voir
-# LEGAL-VALIDATION-REQUIRED.md) : c'est celle du texte, jamais celle du jour de la visite.
+# La date de chaque document : celle de sa publication (validée par le propriétaire le
+# 21/10/2026), jamais celle du jour de la visite. À changer à chaque nouvelle version du texte.
 UPDATED: dict[str, date] = {
-    "terms": date(2026, 10, 20),
-    "privacy": date(2026, 10, 20),
-    "legal_notice": date(2026, 10, 20),
+    "terms": date(2026, 10, 21),
+    "privacy": date(2026, 10, 21),
+    "legal_notice": date(2026, 10, 21),
 }
 
 _MOIS = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre",

@@ -1,18 +1,17 @@
 # Pages juridiques — validations nécessaires avant publication
 
-État au 20 octobre 2026, branche `claude/noyaru-pages-juridiques`. Rien n'est publié : la fusion
-de cette branche mettrait en ligne les six pages (CGU, confidentialité, mentions légales, en
-français et en anglais). Chaque point ci-dessous doit être tranché avant cette fusion.
+Le 21 octobre 2026, le propriétaire a validé la publication des six pages (CGU, confidentialité,
+mentions légales, en français et en anglais ; demande #39). Les points ci-dessous restent ouverts
+après cette validation : chacun est à régler dès que l'information est disponible.
 
 Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeur inconnue y vaut
 `None`. Le détail des changements est dans `LEGAL-CHANGES.md`.
 
 ## 1. Informations manquantes
 
-| Information | Document | Ce qui bloque la publication |
+| Information | Document | Pourquoi |
 | --- | --- | --- |
-| Capital social d'E-Com Shop (`share_capital`) | Mentions légales FR/EN, CGU article 1 | Mention obligatoire pour une société (LCEN, art. 6 III). Elle n'est pas affichée tant qu'elle est inconnue. Donnez le montant exact. |
-| Date de publication des trois documents (`UPDATED`) | CGU, confidentialité, mentions légales | Les pages affichent « Mise à jour le 20 octobre 2026 ». À remplacer par la date réelle de mise en ligne. |
+| Capital social d'E-Com Shop (`share_capital`) | Mentions légales FR/EN, CGU article 1 | Mention obligatoire pour une société (LCEN, art. 6 III). Elle n'est pas affichée tant qu'elle est inconnue (l'annuaire officiel des entreprises ne la donne pas). Donnez le montant exact. |
 | Durée de conservation des journaux techniques chez Render, selon votre offre | Confidentialité § 7 (FR/EN) | La page dit « la durée appliquée par notre hébergeur ». L'audit demande une durée exacte : indiquez-la, sans l'estimer. |
 | Durée de conservation des traces d'erreur chez Sentry | Confidentialité § 4 et § 7 | Aucune durée n'est indiquée. À fournir si vous voulez la mentionner. |
 

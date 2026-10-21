@@ -1,8 +1,8 @@
 # Pages juridiques — rapport des modifications
 
 Application de l'audit juridique d'octobre 2026, sans nouvel audit. Branche
-`claude/noyaru-pages-juridiques`, non fusionnée, non publiée. Les validations restantes sont dans
-`LEGAL-VALIDATION-REQUIRED.md`.
+`claude/noyaru-pages-juridiques` (demande #39), publication validée par le propriétaire le
+21 octobre 2026. Les points encore ouverts sont dans `LEGAL-VALIDATION-REQUIRED.md`.
 
 Aucune fonction du service n'a changé : ni Stripe, ni tarifs, quotas, paiements ou remboursements,
 ni GitHub, ni corrections automatiques, ni base de données. Le design est celui des pages
