@@ -1,0 +1,5031 @@
+{
+  "base_commit": "d7f4f24",
+  "checks": [
+    {
+      "screen": "public-anonymous",
+      "path": "/support",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/status",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/status",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/privacy",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-home",
+      "path": "/",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/support",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/status",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/status",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/privacy",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/issues",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/issues",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/corrections",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/content",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/content",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/performance",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/performance",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/keywords/opportunities",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/keywords/opportunities",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/competitors",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/competitors",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks/opportunities",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks/opportunities",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/search",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/search",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/cms",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/cms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/automation",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/automation",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/crawls",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/crawls",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/jobs",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/jobs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/accounts",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/accounts",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/team",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/team",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/sans-analyse",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/sans-analyse",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/first-correction",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/first-correction",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/issues/missing_title",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/issues/missing_title",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "confirmation",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "confirmation-dismiss-keyboard",
+      "lang": "fr",
+      "width": 1440,
+      "localized": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "new-account-no-site",
+      "path": "/",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/status",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/status",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-home",
+      "path": "/en/",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/status",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/status",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/issues",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/issues",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/corrections",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/content",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/content",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/performance",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/performance",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/keywords/opportunities",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/keywords/opportunities",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/competitors",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/competitors",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks/opportunities",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks/opportunities",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/search",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/search",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/cms",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/cms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/automation",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/automation",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/crawls",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/crawls",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/jobs",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/jobs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/billing",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/docs",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/accounts",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/accounts",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/team",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/team",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/sans-analyse",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/sans-analyse",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/first-correction",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/first-correction",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/issues/missing_title",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/issues/missing_title",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "confirmation",
+      "path": "/billing",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "confirmation-dismiss-keyboard",
+      "lang": "en",
+      "width": 1440,
+      "localized": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "new-account-no-site",
+      "path": "/",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/support",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/status",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/status",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/privacy",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-home",
+      "path": "/",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/support",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/status",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/status",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/privacy",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/issues",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/issues",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/corrections",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/content",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/content",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/performance",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/performance",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/keywords/opportunities",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/keywords/opportunities",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/competitors",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/competitors",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks/opportunities",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks/opportunities",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/search",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/search",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/cms",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/cms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/automation",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/automation",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/crawls",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/crawls",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/jobs",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/jobs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/accounts",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/settings/accounts",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/team",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/settings/team",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/sans-analyse",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/sans-analyse",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/first-correction",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/first-correction",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/issues/missing_title",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/issues/missing_title",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "mobile-menu-keyboard",
+      "lang": "fr",
+      "width": 768,
+      "opened_and_closed": true
+    },
+    {
+      "screen": "confirmation",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "confirmation-dismiss-keyboard",
+      "lang": "fr",
+      "width": 768,
+      "localized": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "new-account-no-site",
+      "path": "/",
+      "lang": "fr",
+      "width": 768,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/status",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/status",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-home",
+      "path": "/en/",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/status",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/status",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/issues",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/issues",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/corrections",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/content",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/content",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/performance",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/performance",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/keywords/opportunities",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/keywords/opportunities",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/competitors",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/competitors",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks/opportunities",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks/opportunities",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/search",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/search",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/cms",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/cms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/automation",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/automation",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/crawls",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/crawls",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/jobs",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/jobs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/billing",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/docs",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/accounts",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/settings/accounts",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/team",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/settings/team",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/sans-analyse",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/sans-analyse",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/first-correction",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/first-correction",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/issues/missing_title",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/projects/atelier/issues/missing_title",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "mobile-menu-keyboard",
+      "lang": "en",
+      "width": 768,
+      "opened_and_closed": true
+    },
+    {
+      "screen": "confirmation",
+      "path": "/billing",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "confirmation-dismiss-keyboard",
+      "lang": "en",
+      "width": 768,
+      "localized": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "new-account-no-site",
+      "path": "/",
+      "lang": "en",
+      "width": 768,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/support",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/status",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/status",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/privacy",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-home",
+      "path": "/",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/support",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/status",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/status",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/privacy",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/issues",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/issues",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/corrections",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/content",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/content",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/performance",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/performance",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/keywords/opportunities",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/keywords/opportunities",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/competitors",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/competitors",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks/opportunities",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks/opportunities",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/search",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/search",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/cms",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/cms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/automation",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/automation",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/crawls",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/crawls",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/jobs",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/jobs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/accounts",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/settings/accounts",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/team",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/settings/team",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/sans-analyse",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/sans-analyse",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/first-correction",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/first-correction",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/issues/missing_title",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/issues/missing_title",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "mobile-menu-keyboard",
+      "lang": "fr",
+      "width": 390,
+      "opened_and_closed": true
+    },
+    {
+      "screen": "confirmation",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "confirmation-dismiss-keyboard",
+      "lang": "fr",
+      "width": 390,
+      "localized": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "new-account-no-site",
+      "path": "/",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/status",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/status",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-home",
+      "path": "/en/",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/status",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/status",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/issues",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/issues",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/corrections",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/content",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/content",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/performance",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/performance",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/keywords/opportunities",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/keywords/opportunities",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/competitors",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/competitors",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks/opportunities",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks/opportunities",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/search",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/search",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/cms",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/cms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/automation",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/automation",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/crawls",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/crawls",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/jobs",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/jobs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/billing",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/docs",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/accounts",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/settings/accounts",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/team",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/settings/team",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/sans-analyse",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/sans-analyse",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/first-correction",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/first-correction",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/issues/missing_title",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/issues/missing_title",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "mobile-menu-keyboard",
+      "lang": "en",
+      "width": 390,
+      "opened_and_closed": true
+    },
+    {
+      "screen": "confirmation",
+      "path": "/billing",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "confirmation-dismiss-keyboard",
+      "lang": "en",
+      "width": 390,
+      "localized": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "new-account-no-site",
+      "path": "/",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/support",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/status",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/status",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/privacy",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-home",
+      "path": "/",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/support",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/status",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/status",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/privacy",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/issues",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/issues",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/corrections",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/content",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/content",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/performance",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/performance",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/keywords/opportunities",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/keywords/opportunities",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/competitors",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/competitors",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks/opportunities",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks/opportunities",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/search",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/search",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/cms",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/cms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/automation",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/automation",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/crawls",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/crawls",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/jobs",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/jobs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/accounts",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/accounts",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/team",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/team",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/sans-analyse",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/sans-analyse",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/first-correction",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/first-correction",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/issues/missing_title",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/issues/missing_title",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "mobile-menu-keyboard",
+      "lang": "fr",
+      "width": 360,
+      "opened_and_closed": true
+    },
+    {
+      "screen": "confirmation",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "confirmation-dismiss-keyboard",
+      "lang": "fr",
+      "width": 360,
+      "localized": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "new-account-no-site",
+      "path": "/",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/status",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/status",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-anonymous",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-home",
+      "path": "/en/",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/status",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/status",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-connected",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-keyboard",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/issues",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/issues",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/corrections",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/content",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/content",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/performance",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/performance",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/keywords/opportunities",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/keywords/opportunities",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/competitors",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/competitors",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/backlinks/opportunities",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/backlinks/opportunities",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/search",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/search",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/cms",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/cms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/automation",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/automation",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier/crawls",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/crawls",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/jobs",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/jobs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/billing",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/docs",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/accounts",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/accounts",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/settings/team",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/team",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-menu",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/sans-analyse",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/sans-analyse",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/first-correction",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/first-correction",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "client-transition",
+      "path": "/projects/atelier/issues/missing_title",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/issues/missing_title",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "mobile-menu-keyboard",
+      "lang": "en",
+      "width": 360,
+      "opened_and_closed": true
+    },
+    {
+      "screen": "confirmation",
+      "path": "/billing",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "confirmation-dismiss-keyboard",
+      "lang": "en",
+      "width": 360,
+      "localized": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "new-account-no-site",
+      "path": "/",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/ajouter-un-projet",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/ajouter-un-projet",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/analyser-les-concurrents",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/analyser-les-concurrents",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/anomalies-et-priorites",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/anomalies-et-priorites",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/automatiser-les-audits",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/automatiser-les-audits",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/backlinks",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/backlinks",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/comptes-d-equipe",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/comptes-d-equipe",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/connecter-github",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/connecter-github",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/connecter-search-console",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/connecter-search-console",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/corrections-automatiques",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/corrections-automatiques",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/corriger-dans-wordpress",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/corriger-dans-wordpress",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/depannage",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/depannage",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/ajouter-un-projet",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/ajouter-un-projet",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/analyser-les-concurrents",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/analyser-les-concurrents",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/anomalies-et-priorites",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/anomalies-et-priorites",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/automatiser-les-audits",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/automatiser-les-audits",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/backlinks",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/backlinks",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/comptes-d-equipe",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/comptes-d-equipe",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/connecter-github",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/connecter-github",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/connecter-search-console",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/connecter-search-console",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/corrections-automatiques",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/corrections-automatiques",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/corriger-dans-wordpress",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/corriger-dans-wordpress",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/depannage",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/depannage",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/exports-et-rapports",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/exports-et-rapports",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/fix-pack-sans-depot",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/fix-pack-sans-depot",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/lancer-un-crawl",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/lancer-un-crawl",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/lire-le-rapport",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/lire-le-rapport",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/opportunites-de-mots-cles",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/opportunites-de-mots-cles",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/plans-et-quotas",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/plans-et-quotas",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/rediger-du-contenu",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/rediger-du-contenu",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/suivre-la-performance",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/suivre-la-performance",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/docs/verifier-une-correction",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/verifier-une-correction",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/exports-et-rapports",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/exports-et-rapports",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/fix-pack-sans-depot",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/fix-pack-sans-depot",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/lancer-un-crawl",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/lancer-un-crawl",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/lire-le-rapport",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/lire-le-rapport",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/opportunites-de-mots-cles",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/opportunites-de-mots-cles",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/plans-et-quotas",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/plans-et-quotas",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/rediger-du-contenu",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/rediger-du-contenu",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/suivre-la-performance",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/suivre-la-performance",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/docs/verifier-une-correction",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/verifier-une-correction",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/ressources-seo/audit-seo-technique-checklist-priorites",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo/audit-seo-technique-checklist-priorites",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/ressources-seo/ce-que-vos-concurrents-publient-et-pas-vous",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo/ce-que-vos-concurrents-publient-et-pas-vous",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/ressources-seo/connecter-google-search-console-audit-mensuel",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo/connecter-google-search-console-audit-mensuel",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/ressources-seo/core-web-vitals-lire-signaux-seo",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo/core-web-vitals-lire-signaux-seo",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/ressources-seo/corriger-le-seo-dans-le-code-pas-dans-un-rapport",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo/corriger-le-seo-dans-le-code-pas-dans-un-rapport",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/ressources-seo/corriger-title-meta-description-grande-echelle",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo/corriger-title-meta-description-grande-echelle",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/ressources-seo/audit-seo-technique-checklist-priorites",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo/audit-seo-technique-checklist-priorites",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/ressources-seo/ce-que-vos-concurrents-publient-et-pas-vous",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo/ce-que-vos-concurrents-publient-et-pas-vous",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/ressources-seo/connecter-google-search-console-audit-mensuel",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo/connecter-google-search-console-audit-mensuel",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/ressources-seo/core-web-vitals-lire-signaux-seo",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo/core-web-vitals-lire-signaux-seo",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/ressources-seo/corriger-le-seo-dans-le-code-pas-dans-un-rapport",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo/corriger-le-seo-dans-le-code-pas-dans-un-rapport",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/ressources-seo/corriger-title-meta-description-grande-echelle",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo/corriger-title-meta-description-grande-echelle",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/ressources-seo/frequence-crawl-seo-site-vitrine-ecommerce-blog",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo/frequence-crawl-seo-site-vitrine-ecommerce-blog",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/ressources-seo/netlinking-opportunites-backlinks-sans-spam",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo/netlinking-opportunites-backlinks-sans-spam",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/en/ressources-seo/regression-seo-apres-mise-en-production",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo/regression-seo-apres-mise-en-production",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-article",
+      "path": "/ressources-seo/frequence-crawl-seo-site-vitrine-ecommerce-blog",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo/frequence-crawl-seo-site-vitrine-ecommerce-blog",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/ressources-seo/netlinking-opportunites-backlinks-sans-spam",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo/netlinking-opportunites-backlinks-sans-spam",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-article",
+      "path": "/ressources-seo/regression-seo-apres-mise-en-production",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo/regression-seo-apres-mise-en-production",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier/corrections",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "expired-session",
+      "path": "/projects/atelier/issues",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/login",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/automation",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/automation",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/system",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/system",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/operations",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/operations",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/activation",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation/accounts",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/activation/accounts",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation/accounts/202634cd-e7db-4fdd-9c4e-5e382c762e2e",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/activation/accounts/202634cd-e7db-4fdd-9c4e-5e382c762e2e",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/support",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier/corrections",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/billing",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "expired-session",
+      "path": "/projects/atelier/issues",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/auth/login",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/automation",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/automation",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/system",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/system",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/operations",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/operations",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/activation",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation/accounts",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/activation/accounts",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation/accounts/202634cd-e7db-4fdd-9c4e-5e382c762e2e",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/activation/accounts/202634cd-e7db-4fdd-9c4e-5e382c762e2e",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/support",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/docs",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/docs",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/pricing",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/terms",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/terms",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "cookie-new-browser",
+      "path": "/support",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "cookie-dismiss-keyboard",
+      "lang": "fr",
+      "storage_blocked": false,
+      "focus_preserved": true
+    },
+    {
+      "screen": "cookie-storage-blocked",
+      "path": "/support",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "final_path": "/support",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "cookie-dismiss-keyboard",
+      "lang": "fr",
+      "storage_blocked": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier/corrections",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/billing",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "expired-session",
+      "path": "/projects/atelier/issues",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/login",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/automation",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/automation",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/system",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/system",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/operations",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/operations",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/activation",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation/accounts",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/activation/accounts",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation/accounts/202634cd-e7db-4fdd-9c4e-5e382c762e2e",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/settings/activation/accounts/202634cd-e7db-4fdd-9c4e-5e382c762e2e",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier/corrections",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/corrections",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/projects/atelier/settings/crawl",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/projects/atelier/settings/crawl",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "shared-project",
+      "path": "/billing",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/billing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "expired-session",
+      "path": "/projects/atelier/issues",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/auth/login",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/automation",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/automation",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/system",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/system",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/operations",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/operations",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/activation",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation/accounts",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/activation/accounts",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "administration",
+      "path": "/settings/activation/accounts/202634cd-e7db-4fdd-9c4e-5e382c762e2e",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/settings/activation/accounts/202634cd-e7db-4fdd-9c4e-5e382c762e2e",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/docs",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public-without-javascript",
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/terms",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "cookie-new-browser",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "cookie-dismiss-keyboard",
+      "lang": "en",
+      "storage_blocked": false,
+      "focus_preserved": true
+    },
+    {
+      "screen": "cookie-storage-blocked",
+      "path": "/en/support",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "final_path": "/en/support",
+      "overflow": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "cookie-dismiss-keyboard",
+      "lang": "en",
+      "storage_blocked": true,
+      "focus_preserved": true
+    },
+    {
+      "screen": "correction-select",
+      "path": "/projects/atelier/first-correction",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/projects/atelier/first-correction",
+      "overflow": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "manual-change-awaits-analysis",
+      "lang": "fr",
+      "status_is_not_verified": true
+    },
+    {
+      "screen": "verified-result-to-next-correction",
+      "lang": "fr",
+      "analysis_simulated": true,
+      "previous_result_preserved": true
+    }
+  ],
+  "failures": [],
+  "javascript_errors": [],
+  "network": {
+    "external": 0,
+    "posts": [
+      "/projects/atelier/first-correction",
+      "/projects/atelier/first-correction"
+    ]
+  },
+  "http_routes_loaded": 198,
+  "client_menu_paths": [
+    "/",
+    "/projects/atelier",
+    "/projects/atelier/issues",
+    "/projects/atelier/corrections",
+    "/projects/atelier/content",
+    "/projects/atelier/performance",
+    "/projects/atelier/keywords/opportunities",
+    "/projects/atelier/competitors",
+    "/projects/atelier/backlinks",
+    "/projects/atelier/backlinks/opportunities",
+    "/projects/atelier/settings/search",
+    "/projects/atelier/cms",
+    "/projects/atelier/settings/crawl",
+    "/projects/atelier/automation",
+    "/projects/atelier/crawls",
+    "/jobs",
+    "/billing?project=atelier&return_to=%2Fprojects%2Fatelier",
+    "/docs",
+    "/settings/accounts",
+    "/settings/team",
+    "/projects/atelier?lang=en"
+  ],
+  "notes": [
+    "Comptes, base et rapports synthétiques. Aucun OAuth, paiement, email ou écriture de site réel.",
+    "Les seuls POST locaux choisissent une correction et déclarent une modification manuelle fictive. La nouvelle analyse est injectée par la fonction de vérification réelle avec un rapport simulé.",
+    "Aucun POST de crawl, modèle ou fournisseur. Le passage à la correction suivante ne choisit pas automatiquement la page."
+  ],
+  "tested_code_commit": "af9f55139cf1a4bb027f1c2c29ad20661e9f0874"
+}

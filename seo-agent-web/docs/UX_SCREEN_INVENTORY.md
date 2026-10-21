@@ -1,5 +1,7 @@
 # Inventaire des écrans et interactions Noyaru
 
+Ce relevé conserve l’audit initial et ses compléments. Voir l’[inventaire courant](UX_SCREEN_INVENTORY_CURRENT.md) pour les routes, templates et variantes actuels, et le [bilan transversal](UX_CROSS_JOURNEY_LOT16.md) pour les preuves navigateur et les limites d’accès.
+
 Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `41ad1b7` (main, 19 octobre 2026 ; preuves navigateur initiales sur `44f575c`).
 
 193 déclarations de routes ; 50 templates directement référencés par les routes ; 69 templates HTML au total (inclusions et anciens templates compris). 3 routes automatiques FastAPI complètent les déclarations, soit 196 routes HTTP sur la base auditée, hors montage statique.

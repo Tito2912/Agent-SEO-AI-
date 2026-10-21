@@ -1,0 +1,154 @@
+{
+  "base_commit": "d7f4f24",
+  "checks": [
+    {
+      "path": "/support",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": true
+    },
+    {
+      "path": "/status",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": true
+    },
+    {
+      "path": "/docs",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": true
+    },
+    {
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": true
+    },
+    {
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": true
+    },
+    {
+      "path": "/terms",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": true
+    },
+    {
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": true
+    },
+    {
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": true
+    },
+    {
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/billing?msg=synthetic",
+      "lang": "fr",
+      "close_label": "Fermer",
+      "close_name": "Fermer ce message de confirmation"
+    },
+    {
+      "path": "/support",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/status",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/docs",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/docs/demarrer",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/ressources-seo",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/terms",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/privacy",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/mentions-legales",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/pricing",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "path": "/billing?msg=synthetic",
+      "lang": "en",
+      "close_label": "Fermer",
+      "close_name": "Fermer ce message de confirmation"
+    },
+    {
+      "path": "/support",
+      "javascript": false,
+      "notice_position": "fixed",
+      "close_visible": true
+    }
+  ],
+  "javascript_errors": [],
+  "notes": [
+    "Comptes synthétiques, aucun POST ni service distant."
+  ],
+  "tested_code_commit": "d7f4f24619223d4ed857cc54b8e0e923629f46f9"
+}
