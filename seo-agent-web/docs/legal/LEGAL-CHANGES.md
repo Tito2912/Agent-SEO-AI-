@@ -21,7 +21,7 @@ existantes.
 | 10. Responsabilité | Plafond professionnel conservé, avec réserve faute lourde, dol et responsabilités qu'une règle impérative interdit de limiter ; garantie légale de conformité conservée. | 1.4 |
 | 11. Données personnelles | Renvoi au rôle de sous-traitant. | 2.1 |
 | 12. Litiges et droit applicable | Droit français sans préjudice des règles impératives du pays de résidence ; juridictions compétentes ; clauses professionnelles limitées à leur validité ; médiateur toujours nommé. | 1.5 |
-| 13. Modifications | Datation, information des clients avant une modification substantielle, pas d'effet rétroactif, droit de résilier. | 1.7 |
+| 13. Modifications | Datation, information des clients avant une modification substantielle, pas d'effet rétroactif, droit de résilier. Complété le 21/10/2026 : raisons valables, sans coût supplémentaire, préavis de 30 jours, résiliation sans frais, et droit du consommateur de mettre fin au contrat dans les 30 jours (articles R212-1 3°, R212-4 et L224-25-26 du Code de la consommation). | 1.7 |
 | 14. Langue (nouveau) | Clause de langue proposée par l'audit. | 1.6 |
 
 Les articles 8 à 15 sont renumérotés (un article ajouté avant, un après).
