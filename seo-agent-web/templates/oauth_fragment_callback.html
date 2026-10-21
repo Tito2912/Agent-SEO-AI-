@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Connexion {{ provider_label }}</title>
+    <title>{{ tr("Connexion {provider}", provider=provider_label) }}</title>
     {% include "_favicons.html" %}
     <style>
       :root {
@@ -45,8 +45,8 @@
       <input type="hidden" name="error" id="oauth-error" value="" />
       <input type="hidden" name="error_description" id="oauth-error-description" value="" />
       <div class="card">
-        <h1 class="title">Connexion {{ provider_label }}</h1>
-        <p class="muted">Traitement en cours…</p>
+        <h1 class="title">{{ tr("Connexion {provider}", provider=provider_label) }}</h1>
+        <p class="muted">{{ tr("Traitement en cours…") }}</p>
       </div>
     </form>
 

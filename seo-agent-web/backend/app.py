@@ -17735,7 +17735,7 @@ def gsc_properties_via_oauth(request: Request) -> JSONResponse:
 
     if not connected_slug:
         return JSONResponse(
-            {"ok": False, "error": "Aucun projet connecté à Google Search Console. Connecte un projet dans Paramètres → Comptes & connexions."},
+            {"ok": False, "error": "Aucun projet n’est connecté à Google Search Console. Connectez-en un dans « Mon compte → Connexions »."},
             status_code=400,
         )
 
