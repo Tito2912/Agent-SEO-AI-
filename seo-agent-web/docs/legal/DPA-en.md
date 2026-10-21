@@ -105,9 +105,9 @@ to confidentiality or are under an appropriate statutory obligation of confident
 persons who need access to provide the service, maintain it or provide support are authorised to
 access the data.
 
-**TO BE COMPLETED**: categories of persons authorised at E-Com Shop, and the nature of their
-confidentiality commitment, based on the company's actual organisation. No information is
-confirmed to date; no individual's name needs to appear in this agreement.
+As at the date of this agreement, only E-Com Shop's managing director accesses the data processed
+for the Customer and is bound by confidentiality under this agreement. Before any other person
+(employee or contractor) is given access, E-Com Shop has them sign a confidentiality undertaking.
 
 ## 9. Security
 

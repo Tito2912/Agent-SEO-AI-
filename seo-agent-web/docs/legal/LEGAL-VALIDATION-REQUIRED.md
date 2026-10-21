@@ -55,7 +55,6 @@ brouillon : il ne peut être proposé aux clients qu'une fois réglés tous les 
 
 | Information | Article du DPA |
 | --- | --- |
-| Catégories de personnes habilitées à accéder aux données, et leur engagement de confidentialité | 8 |
 | Accord de traitement en vigueur avec chaque sous-traitant ultérieur | 10, annexe 3 |
 | Mécanisme de transfert, justificatif et région de traitement confirmée de chaque sous-traitant ultérieur (Render, Amazon Web Services, Anthropic, OpenAI, Google Gemini, Sentry, SerpAPI, Ahrefs) | 11 |
 | Durée de conservation appliquée par chaque sous-traitant ultérieur | 15 |
@@ -97,6 +96,24 @@ juridiquement. Ce sont des choix courants et équilibrés ; ils restent à faire
 | Rembourser au prorata un client qui résilie après une objection | 10 | Un remboursement manuel dans Stripe, comme pour une rétractation. |
 | Restituer en 30 jours les données que les exports ne couvrent pas | 15 | Une procédure d'extraction, à mettre en œuvre (voir ci-dessous). |
 | Prévenir les clients 30 jours avant un nouveau sous-traitant ultérieur | 10 | Un e-mail manuel à chaque client concerné. |
+| Faire signer un engagement de confidentialité avant de donner accès aux données à une autre personne | 8 | Le propriétaire, seul à accéder aux données le 21/10/2026, l'a indiqué ce jour-là. |
+
+### Où trouver le contrat de traitement de chaque sous-traitant ultérieur
+
+Relevé le 21 octobre 2026 sur les pages des prestataires. Pour chacun : télécharger ou accepter le
+contrat, le ranger, et vérifier sa certification au cadre UE–États-Unis sur
+dataprivacyframework.gov (rubrique « Data Privacy Framework List »).
+
+| Prestataire | Où est le contrat | Comment l'obtenir | Transferts, d'après le contrat |
+| --- | --- | --- | --- |
+| Render | render.com/dpa | Contrat lié aux conditions de Render ; enregistrer la page en PDF, ou le demander au support si une version signée est nécessaire | Certifié au cadre UE–États-Unis depuis le 6 janvier 2025 (annonce de Render) ; clauses types en complément |
+| Amazon Web Services | AWS Artifact, dans la console AWS (rubrique Agreements) | Contrat intégré aux conditions de service AWS ; le télécharger depuis AWS Artifact | Clauses types incluses dans le contrat |
+| Anthropic | anthropic.com/legal/data-processing-addendum | Intégré automatiquement aux conditions commerciales de l'API ; rien à signer ; enregistrer la page en PDF | Clauses types (modules 2 et 3) réputées signées ; liste des sous-traitants : anthropic.com/subprocessors |
+| OpenAI | openai.com/policies/data-processing-addendum | Accepté par l'utilisation des services ; un client établi dans l'EEE contracte avec OpenAI Ireland Ltd ; enregistrer la page en PDF | À vérifier dans le contrat |
+| Google (Gemini) | business.safety.google/processorterms, d'après les conditions de l'API Gemini (ai.google.dev/gemini/terms) | S'applique à l'usage payant (projet Google Cloud avec facturation) et, pour l'EEE, à tout usage ; vérifier que le projet a une facturation active | À vérifier dans le contrat |
+| Sentry | sentry.io/legal/dpa | À accepter en ligne : Paramètres de l'organisation → Legal & Compliance, par une personne habilitée | Cadre UE–États-Unis, et clauses types (modules 2 et 3) à défaut ; liste des sous-traitants : sentry.io/legal/subprocessors |
+| SerpApi | Sur demande | Écrire à privacy@serpapi.com pour obtenir le contrat en vigueur | Clauses types citées dans sa politique ; aucune certification mentionnée ; recherches gardées 31 jours (aucune avec le mode ZeroTrace) |
+| Ahrefs (non activé le 21/10/2026) | ahrefs.com/legal (Data Processing Addendum) | À faire seulement si l'intégration est activée ; les clauses types deviennent applicables une fois signées et envoyées par e-mail à Ahrefs | Clauses types (modules 2 et 3) |
 
 ### Points à faire valider par un juriste
 

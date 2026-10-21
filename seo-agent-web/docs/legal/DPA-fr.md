@@ -109,9 +109,9 @@ respecter la confidentialité ou soient soumises à une obligation légale appro
 confidentialité. Seules les personnes qui en ont besoin pour fournir le service, le maintenir ou
 assurer le support sont autorisées à y accéder.
 
-**À COMPLÉTER** : catégories de personnes habilitées chez E-Com Shop, et nature de leur engagement
-de confidentialité, d'après l'organisation réelle de la société. Aucune information n'est
-confirmée à ce jour ; aucun nom de personne n'a à figurer dans cet accord.
+À la date du présent accord, seul le dirigeant d'E-Com Shop accède aux données traitées pour le
+Client ; il est tenu à la confidentialité au titre du présent accord. Avant tout accès d'une autre
+personne (salarié ou prestataire), E-Com Shop lui fait signer un engagement de confidentialité.
 
 ## 9. Sécurité
 
