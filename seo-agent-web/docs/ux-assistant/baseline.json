@@ -1,0 +1,107 @@
+{
+  "base_commit": "2bf5813",
+  "checks": [
+    {
+      "screen": "open",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "minimum_button_height": 29.702606201171875,
+      "meta": "En ligne"
+    },
+    {
+      "screen": "escape",
+      "lang": "fr",
+      "width": 1440,
+      "focus_returned": false
+    },
+    {
+      "screen": "unavailable",
+      "lang": "fr",
+      "width": 1440,
+      "send_enabled": true,
+      "suggestions_enabled": 3
+    },
+    {
+      "screen": "open",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "minimum_button_height": 29.100006103515625,
+      "meta": "Online"
+    },
+    {
+      "screen": "escape",
+      "lang": "en",
+      "width": 1440,
+      "focus_returned": false
+    },
+    {
+      "screen": "unavailable",
+      "lang": "en",
+      "width": 1440,
+      "send_enabled": true,
+      "suggestions_enabled": 3
+    },
+    {
+      "screen": "open",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "minimum_button_height": 29.3466796875,
+      "meta": "En ligne"
+    },
+    {
+      "screen": "escape",
+      "lang": "fr",
+      "width": 360,
+      "focus_returned": false
+    },
+    {
+      "screen": "unavailable",
+      "lang": "fr",
+      "width": 360,
+      "send_enabled": true,
+      "suggestions_enabled": 3
+    },
+    {
+      "screen": "open",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "minimum_button_height": 29.0999755859375,
+      "meta": "Online"
+    },
+    {
+      "screen": "escape",
+      "lang": "en",
+      "width": 360,
+      "focus_returned": false
+    },
+    {
+      "screen": "unavailable",
+      "lang": "en",
+      "width": 360,
+      "send_enabled": true,
+      "suggestions_enabled": 3
+    },
+    {
+      "screen": "account-switch",
+      "path": "/",
+      "alice_history_visible_to_bob": true
+    },
+    {
+      "screen": "account-switch",
+      "path": "/projects/atelier",
+      "alice_history_visible_to_bob": true
+    },
+    {
+      "screen": "provider-error",
+      "private_detail_visible": true,
+      "input_preserved": false
+    }
+  ],
+  "notes": [
+    "Local synthetic users only. Provider functions mocked; no external request or site mutation."
+  ]
+}

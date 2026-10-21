@@ -1,0 +1,15 @@
+{
+  "checks": [
+    {
+      "screen": "reply-respects-selected-focus",
+      "lang": "fr"
+    },
+    {
+      "screen": "reply-respects-selected-focus",
+      "lang": "en"
+    }
+  ],
+  "notes": [
+    "Local provider only; a late reply respects focus selected inside the open panel."
+  ]
+}
