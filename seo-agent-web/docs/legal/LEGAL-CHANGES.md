@@ -95,6 +95,34 @@ fusion, ces variables ne servent plus ; vous pourrez les supprimer sur Render (s
 `LEGAL_BACKUP_LOCATION` reste utilisée : si vous la modifiez, prévenez-moi pour que sa traduction
 anglaise suive.
 
+## Contrat de traitement des données (DPA) — corrections du 21 octobre 2026
+
+Application d'une analyse juridique du brouillon, sans nouvel audit, en français et en anglais. Le
+DPA reste un brouillon non publié ; ses 18 articles et 3 annexes sont conservés. Rien ne change
+dans le service.
+
+| Article | Modification |
+| --- | --- |
+| 1. Parties et acceptation | Acceptation expresse en ligne par une personne habilitée, identification de l'organisation, preuves à conserver (date, version exacte, action d'acceptation), nouvelle acceptation d'une version modifiée. Marqué « à mettre en œuvre et à valider » : le mécanisme n'existe pas dans le service. |
+| 5. Données | Données personnelles non anticipées ; la restriction sur les catégories particulières est gardée, sans prétendre qu'elle supprime tout risque. |
+| 7. Instructions documentées | Reprise de l'article 28.3.a : transferts compris, traitement exigé par le droit de l'Union ou d'un État membre et information préalable, information immédiate en cas d'instruction contraire au droit de la protection des données. |
+| 8. Confidentialité | Engagement de confidentialité ou obligation légale ; accès limité au besoin. Catégories de personnes habilitées à compléter (aucune information confirmée). |
+| 9. Sécurité | Mesures techniques et organisationnelles appropriées au risque (article 32) ; aucune certification ni audit indépendant revendiqué. |
+| 10. Sous-traitants ultérieurs | Autorisation générale écrite, liste tenue à jour, préavis de 30 jours proposé (à valider), opposition, procédure d'objection, résiliation en cas d'objection non résolue, remplacement urgent, obligations imposées, responsabilité de l'article 28.4. |
+| 11. Transferts | Le DPA n'est pas un instrument de transfert du chapitre V ; tableau par prestataire (rôle, région, données, mécanisme, justificatif), tous « à confirmer » ; le module des clauses types se détermine au cas par cas. |
+| 12. Droits des personnes | Assistance pour l'accès, la rectification, l'effacement, la limitation, l'opposition et la portabilité ; transmission des demandes reçues ; les demandes sur les traitements propres d'E-Com Shop sont distinguées. |
+| 13. Violations de données | Notification sans retard injustifié, informations transmises puis complétées, contenu minimal, contact de suivi ; aucun délai fixe. |
+| 14. Assistance | Sécurité, violations, analyses d'impact et consultation préalable (articles 32 à 36). |
+| 15. Restitution et suppression | Restitution ou suppression au choix du client ; base active, exports, sauvegardes, copies des sous-traitants ultérieurs et systèmes du client décrits séparément ; 30 jours de sauvegarde « à confirmer » ; restitution complète identifiée comme fonction manquante. |
+| 16. Audits | Demande écrite, documentation d'abord, préavis et fréquence proposés (à valider), confidentialité, protection des autres clients, accès limités, frais ; exceptions (incident grave, autorité de contrôle) ; aucun obstacle aux audits exigés par la loi. |
+| 17. Responsabilités | Articulation CGU, DPA, RGPD et personnes concernées (article 82) ; le plafond des CGU ne s'applique pas automatiquement ; régime à décider et à valider. |
+| Annexe 1 | Finalités et obligations et droits du client ajoutés ; cohérence avec les articles 3 à 6. |
+| Annexe 2 | Mesures techniques vérifiées dans le code ; sauvegarde « à confirmer » ; fusion automatique volontaire signalée ; mesures organisationnelles à compléter. |
+| Annexe 3 | Rôle et données de chaque sous-traitant ultérieur ; Sentry, SerpAPI et Ahrefs « à confirmer » ; les services connectés par le client ne sont plus exclus d'office. |
+| Version anglaise | Mêmes clauses ; terminologie Controller, Processor, Subprocessor, Documented Instructions, Personal Data Breach, Return / Deletion of Personal Data, Technical and Organisational Measures ; orthographe britannique. |
+
+Les informations à compléter et les validations sont dans `LEGAL-VALIDATION-REQUIRED.md`, section 5.
+
 ## Points en attente
 
 Voir `LEGAL-VALIDATION-REQUIRED.md`. Hors du périmètre juridique, quelques messages de

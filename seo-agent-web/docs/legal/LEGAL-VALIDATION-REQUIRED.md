@@ -32,7 +32,7 @@ Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeu
 | --- | --- | --- |
 | Informer les clients par e-mail avant une modification substantielle des CGU | CGU article 13 (FR/EN) | Le service n'a **pas** de fonction d'envoi automatique pour cela. L'engagement suppose un envoi manuel de votre part à chaque modification substantielle. Confirmez-le, ou demandez-moi d'ajouter cette fonction. |
 | Rembourser une rétractation sous 14 jours | CGU article 5 (FR/EN) | Le remboursement est une opération manuelle dans Stripe (`RUNBOOK.md`, « Rétractation »). La case « Je demande que mon abonnement commence immédiatement » existe bien avant le paiement. |
-| Fournir un accord de traitement des données (DPA) sur demande | Confidentialité § 1, CGU article 11 | Les pages annoncent qu'il « peut être demandé ». Le DPA (`DPA-fr.md`, `DPA-en.md`) est un brouillon non opérationnel : il faut compléter ses passages « À COMPLÉTER » avant de le proposer aux clients. Mode d'acceptation choisi le 21/10/2026 : une case à cocher dans le service ; la case et la conservation de la preuve (compte, date, version) restent à construire, une fois le texte validé. |
+| Fournir un accord de traitement des données (DPA) sur demande | Confidentialité § 1, CGU article 11 | Les pages annoncent qu'il « peut être demandé ». Le DPA (`DPA-fr.md`, `DPA-en.md`) est un brouillon non opérationnel, corrigé le 21/10/2026 : il ne peut être proposé aux clients qu'une fois réglés les points de la section 5. Mode d'acceptation choisi le 21/10/2026 : une case à cocher dans le service. |
 | Décrire les garanties de transfert sur demande | Confidentialité § 5 | Suppose d'avoir les justificatifs du point 2. |
 
 ## 4. Décisions juridiques à faire valider
@@ -42,6 +42,64 @@ Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeu
 | Clause de langue (français version de référence) | CGU article 14 | Proposition contractuelle de l'audit : son opposabilité n'est pas garantie dans tous les pays. |
 | Réserve « faute lourde ou dol » du plafond de responsabilité des professionnels | CGU article 10 | Rédaction à valider. |
 | Compétence des tribunaux de Paris pour les professionnels | CGU article 12 | Conservée, et désormais limitée aux cas où elle est valable et opposable. |
-| Rôle de sous-traitant d'E-Com Shop et services du client (GitHub, WordPress, Search Console…) | Confidentialité § 1, DPA annexe 3 | Le brouillon traite ces services comme ceux du client, pas comme des sous-traitants ultérieurs. |
+| Rôle de sous-traitant d'E-Com Shop et services du client (GitHub, WordPress, Search Console…) | Confidentialité § 1, DPA annexe 3 | Le DPA ne les exclut plus d'office des sous-traitants ultérieurs : leur qualification dépend des contrats et des opérations de traitement, à confirmer service par service (section 5). |
 | Cookie de langue `noyaru_lang` (1 an) | Confidentialité § 8 | Présenté comme un cookie de préférence choisie, sans consentement. À confirmer. |
-| DPA dans son ensemble | `DPA-fr.md`, `DPA-en.md` | Brouillon à faire valider, puis à compléter. |
+| DPA dans son ensemble | `DPA-fr.md`, `DPA-en.md` | Brouillon corrigé le 21/10/2026, à faire valider (section 5). |
+
+## 5. Contrat de traitement des données (DPA)
+
+Corrigé le 21 octobre 2026 en français et en anglais (détail dans `LEGAL-CHANGES.md`). Il reste un
+brouillon : il ne peut être proposé aux clients qu'une fois réglés tous les points ci-dessous.
+
+### Informations à compléter par E-Com Shop
+
+| Information | Article du DPA |
+| --- | --- |
+| Catégories de personnes habilitées à accéder aux données, et leur engagement de confidentialité | 8 |
+| Endroit où le client consulte la liste à jour des sous-traitants ultérieurs | 10 |
+| Accord de traitement en vigueur avec chaque sous-traitant ultérieur | 10, annexe 3 |
+| Mécanisme de transfert, justificatif et région de traitement confirmée de chaque sous-traitant ultérieur (Render, Amazon Web Services, Anthropic, OpenAI, Google Gemini, Sentry, SerpAPI, Ahrefs) | 11 |
+| Canal de notification des violations de données et contact de suivi | 13 |
+| Durée de conservation appliquée par chaque sous-traitant ultérieur | 15 |
+| Protections appliquées aux sauvegardes (chiffrement du stockage, accès restreints) | 15 |
+| Mesures organisationnelles réellement appliquées (accès internes, incidents, tests de sécurité) | Annexe 2 |
+
+### Faits à confirmer
+
+| Fait | Article du DPA |
+| --- | --- |
+| La sauvegarde quotidienne et sa suppression à 30 jours fonctionnent en production, et une restauration est possible. Elles sont configurées dans `render.yaml` (tâche `noyaru-db-backup`, `BACKUP_RETENTION_DAYS=30`), sans preuve de leur fonctionnement. | 15, annexe 2 |
+| Les traces d'erreur envoyées à Sentry contiennent-elles des données personnelles des clients ? | Annexe 3 |
+| SerpAPI et Ahrefs ne reçoivent-ils vraiment aucune donnée personnelle ? | Annexe 3 |
+| Qualification de GitHub, de WordPress et de son hébergeur, de Google Search Console, de Bing Webmaster Tools, de Netlify, et de Google PageSpeed Insights (appelé avec la clé d'E-Com Shop sur les adresses des pages du client) | Annexe 3 |
+
+### Décisions contractuelles d'E-Com Shop
+
+| Décision | Article du DPA | Proposition du brouillon |
+| --- | --- | --- |
+| Préavis avant un nouveau sous-traitant ultérieur, et canal d'information | 10 | 30 jours, par e-mail à l'adresse du compte |
+| Délai pour résoudre une objection, et remboursement éventuel en cas de résiliation | 10 | 30 jours ; remboursement à décider |
+| Forme du choix entre restitution et suppression, et règle à défaut de choix | 15 | Suppression à défaut de choix |
+| Préavis, fréquence et frais des audits | 16 | 30 jours ; une fois par période de 12 mois au plus ; chacun ses frais, sauf audit très lourd |
+| Régime de responsabilité pour les manquements au DPA | 17 | Le plafond des CGU ne s'applique pas automatiquement ; régime à fixer |
+| Délai chiffré de notification des violations de données | 13 | Aucun, tant que la capacité à le tenir n'est pas validée |
+
+### Points à faire valider par un juriste
+
+- Le DPA dans son ensemble, en vérifiant que les versions française et anglaise donnent les mêmes
+  droits, obligations, délais et exceptions.
+- L'acceptation par case à cocher (article 1) : déclaration de pouvoir de la personne qui coche,
+  preuves conservées et leur durée de conservation, nouvelle acceptation d'une version modifiée.
+- L'articulation entre CGU, DPA et RGPD, et le régime de responsabilité (article 17).
+- La qualification des services connectés par le client (annexe 3).
+- Le module de clauses contractuelles types de chaque transfert (article 11).
+- Les propositions de la sous-section précédente, une fois décidées par E-Com Shop.
+
+### Développements nécessaires avant de proposer le DPA
+
+Aucun n'est réalisé ; ils n'ont pas été développés dans le cadre de ces corrections.
+
+- La case à cocher de l'article 1 et la conservation des preuves : organisation contractante,
+  compte et personne, date et heure, version exacte, trace de l'action d'acceptation.
+- Un moyen de restituer les données que les exports ne couvrent pas, si le client choisit la
+  restitution (article 15).
