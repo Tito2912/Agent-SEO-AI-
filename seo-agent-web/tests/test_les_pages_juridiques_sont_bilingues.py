@@ -119,6 +119,7 @@ def test_les_clauses_qui_PROTEGENT_sont_dans_les_deux_langues() -> None:
     paires = (
         ("<strong>14 jours</strong>", "<strong>14 days</strong>"),
         ("<strong>12 mois</strong>", "<strong>12 months</strong>"),
+        ("<strong>1 000 €</strong>", "<strong>€1,000</strong>"),
         ("ne vous fait pas perdre votre droit de rétractation", "does not take away your right of withdrawal"),
         ("garantie légale de conformité", "legal guarantee of conformity"),
         ("faute lourde ou de dol", "gross negligence or wilful misconduct"),

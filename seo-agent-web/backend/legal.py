@@ -52,6 +52,11 @@ UPDATED: dict[str, date] = {
     "legal_notice": date(2026, 10, 21),
 }
 
+# Version de l'avertissement montré avant d'activer une fusion ou une publication automatique
+# (CGU, articles 6 et 7 ; crawl_settings.html, corrections.html, content.html). Elle est gardée
+# dans le journal d'audit avec chaque activation : à changer quand ce texte change.
+AUTO_MODE_WARNING_VERSION = "2026-10-21"
+
 _MOIS = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre",
          "octobre", "novembre", "décembre")
 _MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September",

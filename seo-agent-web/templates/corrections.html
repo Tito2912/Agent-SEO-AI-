@@ -384,9 +384,18 @@
           '<select id="gh-c-mode" style="' + fld + '"><option value="review">' + esc({{ tr("PR à vérifier")|tojson }}) + '</option><option value="auto">Auto-merge</option></select>',
           '<button type="button" id="gh-c-connect" class="btn primary" style="font-size:12px;">' + esc({{ tr("Connecter")|tojson }}) + '</button>',
           '</div>',
+          '<div id="gh-c-auto" hidden style="margin-top:8px;font-size:12px;">',
+          '<p style="margin:0 0 6px;">' + esc({{ tr("Les corrections concernées sont fusionnées dès que les vérifications de votre dépôt passent, sans relecture humaine préalable. Ces contrôles réduisent les risques sans garantir l’absence d’erreur ou de régression (CGU, article 6).")|tojson }}) + '</p>',
+          '<label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" id="gh-c-consent"> ' + esc({{ tr("J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.")|tojson }}) + '</label>',
+          '</div>',
           '<p id="gh-c-msg" style="margin:8px 0 0;font-size:11px;color:var(--muted);"></p>'
         ].join('');
         var sel = document.getElementById('gh-c-repo');
+        var modeSel = document.getElementById('gh-c-mode');
+        modeSel.addEventListener('change', function () {
+          document.getElementById('gh-c-auto').hidden = modeSel.value !== 'auto';
+          document.getElementById('gh-c-consent').checked = false;
+        });
         sel.addEventListener('change', function () {
           var parts = (sel.value || '').split('|');
           if (parts[1]) document.getElementById('gh-c-branch').value = parts[1];
@@ -398,10 +407,12 @@
           var mode = document.getElementById('gh-c-mode').value || 'review';
           var msg = document.getElementById('gh-c-msg');
           if (!repo || repo.indexOf('/') < 0) { msg.textContent = {{ tr("Sélectionne un dépôt.")|tojson }}; msg.style.color = 'var(--err,#f87171)'; return; }
+          var consent = document.getElementById('gh-c-consent').checked;
+          if (mode === 'auto' && !consent) { msg.textContent = {{ tr("Confirmez que vous autorisez la fusion automatique des corrections sur ce dépôt.")|tojson }}; msg.style.color = 'var(--err,#f87171)'; return; }
           var b = document.getElementById('gh-c-connect'); b.textContent = {{ tr("Connexion…")|tojson }}; b.disabled = true;
           fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/connect', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ repo: repo, branch: branch, mode: mode })
+            body: JSON.stringify({ repo: repo, branch: branch, mode: mode, consent: consent })
           }).then(function (r) { return r.json(); }).then(function (d2) {
             if (d2.ok) {
               msg.textContent = '✓ ' + {{ tr("Dépôt connecté !")|tojson }}; msg.style.color = 'var(--ok-2)';

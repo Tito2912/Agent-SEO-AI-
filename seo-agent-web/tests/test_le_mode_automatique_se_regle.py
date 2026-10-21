@@ -129,7 +129,7 @@ def test_tous_les_reglages_se_gardent_et_se_relisent(client_connecte, plan) -> N
     client, slug, pid = client_connecte
     r = _m._regler(client, slug, enabled=True, section="/blog", frequence="bihebdomadaire", jour=3,
                    heure=14, fuseau="America/Toronto", taille="long", ton="expert",
-                   langues=["de", "EN"], publication="auto")
+                   langues=["de", "EN"], publication="auto", consent=True)
     assert r.status_code == 200 and "à 14:00 (Montréal / Toronto)" in r.json()["prochain"], r.text
     auto = _m._auto(pid)
     assert {k: auto[k] for k in ("frequence", "jour", "heure", "fuseau", "taille", "ton", "langues",
