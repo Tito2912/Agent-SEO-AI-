@@ -6,6 +6,8 @@ Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `4
 
 Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs états ou rediriger. Les droits sont déterminés par les middlewares et les contrôles de projet/compte, pas par cette extraction. Voir [l’audit](UX_AUDIT_2026-10-19.md) pour les accès, constats et preuves navigateur.
 
+Mise à jour du lot 15 : tarifs publics, définitions communes et abonnement sont détaillés dans [le bilan des tarifs et quotas](UX_PRICING_QUOTAS_LOT15.md). Six usages mensuels sont visibles, avec mois UTC, soldes et états distincts ; les accès, prix et décomptes existants restent contrôlés côté serveur. Aucun nouveau point d’entrée ni route ; le partiel `_plan_usage.html` porte le total courant à **88 templates**. Les limites de validation locale et les confirmations de paiement conservées sont précisées dans le bilan.
+
 ## Ajout du lot 4
 
 `GET /projects/{slug}/settings/search` — Google et Bing du projet, template `settings_search.html`. Réservé au propriétaire et aux membres autorisés du compte ; retour conservé vers les résultats. Les formulaires réutilisent les actions par projet existantes, sans nouvelle mutation ni nouveau callback OAuth. Voir [le bilan et les preuves du lot 4](UX_SEARCH_RESULTS_LOT4.md). Les décomptes ci-dessus restent ceux de l’audit initial.

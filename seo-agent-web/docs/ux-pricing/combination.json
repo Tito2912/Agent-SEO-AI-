@@ -1,0 +1,10 @@
+{
+  "source": "ae1eda5491c996439c5e7d52a7db84d6b99e6289",
+  "claude_41": "f0d255ca3748542cfcfbf3701f716839f4f7db83",
+  "claude_43": "b76c683f97aa561e02aa999a700a35f456b35f98",
+  "combined_tree": "b0b10cccdb789c8036e6760ee26145cb4e814f53",
+  "conflicts": false,
+  "targeted_tests_passed": 176,
+  "duplicate_translation_keys": false,
+  "existing_translations_preserved": true
+}

@@ -1,0 +1,826 @@
+{
+  "sample_count": 6580,
+  "minimum_ratio": 7.65,
+  "distinct_samples": [
+    {
+      "lang": "fr",
+      "text": "Voir les formules",
+      "ratio": 10.7
+    },
+    {
+      "lang": "fr",
+      "text": "Comparer les plans, fonction par fonction",
+      "ratio": 10.7
+    },
+    {
+      "lang": "fr",
+      "text": "Comprendre le décompte",
+      "ratio": 10.7
+    },
+    {
+      "lang": "fr",
+      "text": "Questions fréquentes",
+      "ratio": 10.7
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Fix pack sans dépôt Git",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus :",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Articles rédigés par l'IA",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Rédaction automatique",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Concurrents analysés",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Recherches de backlinks",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Réponses rédigées par l'IA",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Surveillance des liens obtenus",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Collaborateurs invités",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Les corrections dans le code nécessitent un dépôt GitHub compatible. Une correction IA cor",
+      "ratio": 10.34
+    },
+    {
+      "lang": "fr",
+      "text": "Comprendre le décompte",
+      "ratio": 7.65
+    },
+    {
+      "lang": "fr",
+      "text": "—",
+      "ratio": 10.34
+    },
+    {
+      "lang": "fr",
+      "text": "Comprendre ce qui est décompté",
+      "ratio": 15.99
+    },
+    {
+      "lang": "fr",
+      "text": "Une correction IA correspond à un fichier modifié par le modèle dans GitHub ou à un titre ",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Corrections IA",
+      "ratio": 15.99
+    },
+    {
+      "lang": "fr",
+      "text": "Articles rédigés par l'IA",
+      "ratio": 15.99
+    },
+    {
+      "lang": "fr",
+      "text": "Pages analysées",
+      "ratio": 15.99
+    },
+    {
+      "lang": "fr",
+      "text": "Voir le détail des plans et quotas",
+      "ratio": 10.43
+    },
+    {
+      "lang": "fr",
+      "text": "Sur WordPress, elle est décomptée dès la préparation du texte, avant son enregistrement. U",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Dans GitHub, trois fichiers écrits par le modèle comptent pour trois corrections. Une prop",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Le compteur des articles est distinct de celui des corrections. Chaque version rédigée dan",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Une nouvelle analyse, y compris après une correction, utilise le quota de pages. Le décomp",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Quotas",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Comprendre le décompte",
+      "ratio": 10.37
+    },
+    {
+      "lang": "fr",
+      "text": "Sites : 0 / 1",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "0 / 1",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Mois suivi : 2026-10 (UTC)",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Les compteurs mensuels repartent à zéro le 1er de chaque mois à 00:00 UTC. Cette date est ",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "Pages analysées",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "0 / 800",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Disponible ce mois-ci : 800",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "Messages IA",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "0 / 30",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Disponible ce mois-ci : 30",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "Corrections IA",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "0 / 2",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Disponible ce mois-ci : 2",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "Articles rédigés par l'IA",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "0 / —",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus dans ce forfait · Voir les formules",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "Voir les formules",
+      "ratio": 10.37
+    },
+    {
+      "lang": "fr",
+      "text": "Recherches de liens entrants",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Brouillons de messages pour les liens entrants",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "—",
+      "ratio": 9.6
+    },
+    {
+      "lang": "fr",
+      "text": "—",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "Sites : 1 / 10",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "1 / 10",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "1 200 / 100 000",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Disponible ce mois-ci : 98 800",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "20 / 500",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Disponible ce mois-ci : 480",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "17 / 250",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Disponible ce mois-ci : 233",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "3 / 4",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Disponible ce mois-ci : 1",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "18 / 80",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Disponible ce mois-ci : 62",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "7 / 80",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Disponible ce mois-ci : 73",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "Sites : 0 / Illimité",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "0 / Illimité",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "— / Illimité",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Compte admin – quotas non limités",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Fix pack sans dépôt Git",
+      "ratio": 10.07
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus :",
+      "ratio": 10.07
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Articles rédigés par l'IA",
+      "ratio": 10.07
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Rédaction automatique",
+      "ratio": 10.07
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Concurrents analysés",
+      "ratio": 10.07
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Recherches de backlinks",
+      "ratio": 10.07
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Réponses rédigées par l'IA",
+      "ratio": 10.07
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Surveillance des liens obtenus",
+      "ratio": 10.07
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Collaborateurs invités",
+      "ratio": 10.07
+    },
+    {
+      "lang": "fr",
+      "text": "3 / 2",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Quota atteint · Voir les formules",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "3 / Illimité",
+      "ratio": 15.89
+    },
+    {
+      "lang": "fr",
+      "text": "Aucun plafond mensuel configuré.",
+      "ratio": 10.02
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Corrections par l'IA",
+      "ratio": 10.08
+    },
+    {
+      "lang": "fr",
+      "text": "Non inclus : Fichiers par pull request",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "View plans",
+      "ratio": 10.7
+    },
+    {
+      "lang": "en",
+      "text": "Compare plans, feature by feature",
+      "ratio": 10.7
+    },
+    {
+      "lang": "en",
+      "text": "Understand the usage counts",
+      "ratio": 10.7
+    },
+    {
+      "lang": "en",
+      "text": "Frequently asked questions",
+      "ratio": 10.7
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Fix pack without a Git repository",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Not included:",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Not included: AI-written articles",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Automatic writing",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Competitors analyzed",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Backlink searches",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Not included: AI-written replies",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Monitoring of earned links",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Invited collaborators",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Code fixes require a compatible GitHub repository. An AI fix means one file changed by the",
+      "ratio": 10.34
+    },
+    {
+      "lang": "en",
+      "text": "Understand the usage counts",
+      "ratio": 7.65
+    },
+    {
+      "lang": "en",
+      "text": "—",
+      "ratio": 10.34
+    },
+    {
+      "lang": "en",
+      "text": "Understand what is counted",
+      "ratio": 15.99
+    },
+    {
+      "lang": "en",
+      "text": "An AI fix means one file changed by the model in GitHub, or one title or meta description ",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "AI fixes",
+      "ratio": 15.99
+    },
+    {
+      "lang": "en",
+      "text": "AI-written articles",
+      "ratio": 15.99
+    },
+    {
+      "lang": "en",
+      "text": "Pages analyzed",
+      "ratio": 15.99
+    },
+    {
+      "lang": "en",
+      "text": "Read the plans and quotas guide",
+      "ratio": 10.43
+    },
+    {
+      "lang": "en",
+      "text": "In WordPress, it is counted when the text is prepared, before it is saved. Manually entere",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "In GitHub, three files written by the model count as three fixes. A proposal still needs r",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Articles have a separate counter from fixes. Each version written in a language counts as ",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "A new analysis, including one after a fix, uses the page quota. The count is adjusted to t",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Quotas",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Understand the usage counts",
+      "ratio": 10.37
+    },
+    {
+      "lang": "en",
+      "text": "Sites : 0 / 1",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "0 / 1",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Tracked month: 2026-10 (UTC)",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Monthly counters reset on the first day of each month at 00:00 UTC. This date is separate ",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "Pages analyzed",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "0 / 800",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Remaining this month: 800",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "AI messages",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "0 / 30",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Remaining this month: 30",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "AI fixes",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "0 / 2",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Remaining this month: 2",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "AI-written articles",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "0 / —",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Not included in this plan · View plans",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "View plans",
+      "ratio": 10.37
+    },
+    {
+      "lang": "en",
+      "text": "Backlink searches",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Backlink message drafts",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "—",
+      "ratio": 9.6
+    },
+    {
+      "lang": "en",
+      "text": "—",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "Sites : 1 / 10",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "1 / 10",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "1,200 / 100,000",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Remaining this month: 98,800",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "20 / 500",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Remaining this month: 480",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "17 / 250",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Remaining this month: 233",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "3 / 4",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Remaining this month: 1",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "18 / 80",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Remaining this month: 62",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "7 / 80",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Remaining this month: 73",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "Sites : 0 / Unlimited",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "0 / Unlimited",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "— / Unlimited",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Admin account – unlimited quotas",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Fix pack without a Git repository",
+      "ratio": 10.07
+    },
+    {
+      "lang": "en",
+      "text": "Not included:",
+      "ratio": 10.07
+    },
+    {
+      "lang": "en",
+      "text": "Not included: AI-written articles",
+      "ratio": 10.07
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Automatic writing",
+      "ratio": 10.07
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Competitors analyzed",
+      "ratio": 10.07
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Backlink searches",
+      "ratio": 10.07
+    },
+    {
+      "lang": "en",
+      "text": "Not included: AI-written replies",
+      "ratio": 10.07
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Monitoring of earned links",
+      "ratio": 10.07
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Invited collaborators",
+      "ratio": 10.07
+    },
+    {
+      "lang": "en",
+      "text": "3 / 2",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "Quota reached · View plans",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "3 / Unlimited",
+      "ratio": 15.89
+    },
+    {
+      "lang": "en",
+      "text": "No monthly limit configured.",
+      "ratio": 10.02
+    },
+    {
+      "lang": "en",
+      "text": "Not included: AI fixes",
+      "ratio": 10.08
+    },
+    {
+      "lang": "en",
+      "text": "Not included: Files per pull request",
+      "ratio": 10.08
+    }
+  ]
+}

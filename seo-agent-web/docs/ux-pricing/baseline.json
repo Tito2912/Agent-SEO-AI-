@@ -1,0 +1,131 @@
+{
+  "base_commit": "044e7aa",
+  "checks": [
+    {
+      "screen": "public",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 0,
+      "repository_only_faq": true,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "pro",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 3,
+      "repository_only_faq": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "member",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 3,
+      "repository_only_faq": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 0,
+      "repository_only_faq": true,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "pro",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 3,
+      "repository_only_faq": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "member",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 3,
+      "repository_only_faq": false,
+      "html_lang": "fr"
+    },
+    {
+      "screen": "public",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 0,
+      "repository_only_faq": true,
+      "html_lang": "en"
+    },
+    {
+      "screen": "pro",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 3,
+      "repository_only_faq": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "member",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 3,
+      "repository_only_faq": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "public",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 0,
+      "repository_only_faq": true,
+      "html_lang": "en"
+    },
+    {
+      "screen": "pro",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 3,
+      "repository_only_faq": false,
+      "html_lang": "en"
+    },
+    {
+      "screen": "member",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "article_usage_visible": false,
+      "quota_rows": 3,
+      "repository_only_faq": false,
+      "html_lang": "en"
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": 0,
+  "notes": [
+    "Comptes et consommations locaux fictifs ; aucun appel Stripe ou IA.",
+    "Le code facture chaque texte WordPress préparé et les quotas sont indexés par mois UTC ; la FAQ publique est limitée au dépôt et les articles ne sont pas affichés."
+  ]
+}
