@@ -15,10 +15,12 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-PUBLISHER: dict[str, str | None] = {
+PUBLISHER: dict[str, str | int | None] = {
     "name": "E-Com Shop",
     "form": "SASU",
-    "share_capital": None,
+    # En euros, donné par le propriétaire le 21/10/2026. Écrit dans la langue de la page par
+    # share_capital().
+    "share_capital": 10_000,
     "address": "60 rue François 1er, 75008 Paris, France",
     "registration": "934 934 308 R.C.S. Paris",
     "vat_number": "FR18934934308",
@@ -67,6 +69,16 @@ def identity() -> str:
     return ", ".join(p for p in parts if p)
 
 
+def share_capital(lang: str) -> str | None:
+    """Le capital social, écrit dans la langue de la page : « 10 000 € », "€10,000"."""
+    amount = PUBLISHER["share_capital"]
+    if not amount:
+        return None
+    if lang == "en":
+        return f"€{amount:,}"
+    return f"{amount:,}".replace(",", "\u00a0") + "\u00a0€"
+
+
 def updated(document: str, lang: str) -> str:
     """La date d'un document, écrite dans sa langue : « 20 octobre 2026 », "October 20, 2026"."""
     day = UPDATED[document]
@@ -85,6 +97,7 @@ def context(lang: str) -> dict[str, Any]:
     return {
         "publisher": PUBLISHER,
         "publisher_identity": identity(),
+        "share_capital": share_capital(lang),
         "publisher_phone_link": phone_link(PUBLISHER["phone"] or ""),
         "mediator": MEDIATOR,
         "host": HOST,

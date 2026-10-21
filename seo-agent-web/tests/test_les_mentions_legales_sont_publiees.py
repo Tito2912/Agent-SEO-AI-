@@ -61,9 +61,11 @@ def test_la_page_reste_publique_quand_l_acces_BETA_est_ferme(monkeypatch) -> Non
 
 
 def test_chaque_mention_connue_est_affichee_dans_les_DEUX_langues() -> None:
-    for chemin in ("/mentions-legales", "/en/mentions-legales"):
+    for chemin, lang in (("/mentions-legales", "fr"), ("/en/mentions-legales", "en")):
         page = _page(chemin)
         for cle, valeur in m.legal.PUBLISHER.items():
+            if cle == "share_capital":
+                valeur = m.legal.share_capital(lang)
             if valeur:
                 assert valeur in page, (chemin, cle)
         assert 'href="tel:%s"' % m.legal.phone_link(m.legal.PUBLISHER["phone"]) in page, "un lien tel: sans espace"
@@ -82,8 +84,17 @@ def test_une_variable_LEGAL_vide_n_efface_PLUS_rien(monkeypatch) -> None:
 def test_une_valeur_INCONNUE_n_est_pas_inventee_et_bloque_la_publication(monkeypatch) -> None:
     monkeypatch.setitem(m.legal.PUBLISHER, "share_capital", None)
     assert "Capital social" not in _page() and "share_capital" in m.legal.missing()
-    monkeypatch.setitem(m.legal.PUBLISHER, "share_capital", "1 000 €")
-    assert "<dd>1 000 €</dd>" in _page() and "Share Capital" in _page("/en/mentions-legales")
+    monkeypatch.setitem(m.legal.PUBLISHER, "share_capital", 1_000)
+    assert "<dd>1\u00a0000\u00a0€</dd>" in _page()
+    assert "<dt>Share Capital</dt><dd>€1,000</dd>" in _page("/en/mentions-legales")
+
+
+def test_le_capital_social_est_publie_dans_les_deux_langues() -> None:
+    assert "<dt>Capital social</dt><dd>10\u00a0000\u00a0€</dd>" in _page()
+    assert "<dt>Share Capital</dt><dd>€10,000</dd>" in _page("/en/mentions-legales")
+    assert "au capital de 10\u00a0000\u00a0€" in _page("/terms")
+    assert "with a share capital of €10,000" in _page("/en/terms")
+    assert "share_capital" not in m.legal.missing()
 
 
 def test_l_hebergeur_est_celui_que_Render_declare() -> None:

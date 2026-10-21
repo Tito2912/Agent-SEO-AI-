@@ -23,7 +23,7 @@
   <dl>
     <div><dt>Company name</dt><dd>{{ publisher.name }}</dd></div>
     <div><dt>Legal form</dt><dd>{{ publisher.form }} (French simplified joint-stock company with a sole shareholder)</dd></div>
-    {% if publisher.share_capital %}<div><dt>Share Capital</dt><dd>{{ publisher.share_capital }}</dd></div>{% endif %}
+    {% if share_capital %}<div><dt>Share Capital</dt><dd>{{ share_capital }}</dd></div>{% endif %}
     <div><dt>Registered Office</dt><dd>{{ publisher.address }}</dd></div>
     <div><dt>Company Registration Number</dt><dd>{{ publisher.registration }}</dd></div>
     <div><dt>EU VAT Identification Number</dt><dd>{{ publisher.vat_number }}</dd></div>
