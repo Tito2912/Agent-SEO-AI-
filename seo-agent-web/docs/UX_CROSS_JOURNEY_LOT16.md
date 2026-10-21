@@ -39,9 +39,11 @@ Code `af9f55139cf1a4bb027f1c2c29ad20661e9f0874`. Les changements applicatifs son
 | Sans JavaScript / stockage refusé | Support, documentation, tarifs, CGU, FR/EN à 1 440/360 px : information dans le flux, fermeture cachée. Avec script : fermeture, mémorisation ou stockage refusé et reprise du focus testés dans les deux langues. Menu mobile ouvert/fermé au clavier. |
 | [Contrastes ciblés](ux-cross-journey/contrast.json) | **160 échantillons**, minimum **4,68:1**, fonds RGBA composés. Textes de navigation, information cookies, fermeture de confirmation et retour long de facturation ; boutons/liens modifiés d’au moins 44 px. Ce n’est pas une certification WCAG. |
 | [Production anonyme](ux-cross-journey/production.json) | **66 observations initiales** : 40 pages publiques, 24 pages d’accès et 2 redirections d’écrans privés. FR/EN à 1 440/390 px. Un délai de chargement sur l’inscription anglaise à 390 px ; **recontrôle réussi, HTTP 200**, chargement terminé. Aucun débordement sur les pages chargées, ni erreur JavaScript. Seulement GET/HEAD ; aucun formulaire soumis. Révision déployée non déterminée. |
-| Tests ciblés | **148 réussis**, un avertissement existant. Inventaire non destructif, navigation mobile, i18n, aide, compte/équipe, résultat vérifié, prochaine étape, connexions et Activité/Réglages de Claude. |
+| Tests ciblés | **167 réussis** : 148 de navigation/parcours puis 19 juridiques après adaptation de leur extraction HTML. Avertissement de dépréciation existant. Inventaire non destructif, navigation mobile, i18n, aide, compte/équipe, résultat vérifié, prochaine étape, connexions et Activité/Réglages de Claude. |
 | Contrôles statiques | Compilation, Ruff F/E9, Bandit medium/high, 88 templates Jinja et `git diff --check` réussis. Avertissements `nosec` préexistants. La suite complète de CI sur le commit publié est consignée dans la PR. |
 | [Inventaire courant](UX_SCREEN_INVENTORY_CURRENT.md) | **195 déclarations + 3 routes FastAPI = 198**, rapprochées des 198 routes HTTP réellement chargées localement. **88 templates**, 54 repérés dans les gestionnaires. Extraction statique des formulaires/fenêtres/panneaux ; ne prouve pas leur ouverture. |
+
+La première CI sur `331043c` a relevé 12 échecs du même helper juridique : il découpait la page sur la chaîne exacte `<main class="container">`. L’ajout d’une classe et d’une cible clavier rendait cette extraction caduque, sans modifier les textes. Le helper utilise désormais le parseur HTML déjà présent dans les dépendances, exige un seul `main.container` et garde toutes les assertions juridiques existantes. Les 19 tests de ce fichier passent ; le code applicatif et les preuves navigateur `af9f551` sont inchangés. La suite complète est relancée sur le nouveau commit de la PR.
 
 Commandes de tests, avec une base temporaire, un `DATABASE_URL` vide et le worker désactivé :
 
@@ -50,6 +52,7 @@ python -m pytest -q \
   seo-agent-web/tests/test_current_ux_inventory.py \
   seo-agent-web/tests/test_navigation_mobile.py \
   seo-agent-web/tests/test_i18n.py \
+  seo-agent-web/tests/test_les_pages_juridiques_sont_bilingues.py \
   seo-agent-web/tests/test_public_help_navigation.py \
   seo-agent-web/tests/test_account_team_journey.py \
   seo-agent-web/tests/test_first_verified_correction.py \

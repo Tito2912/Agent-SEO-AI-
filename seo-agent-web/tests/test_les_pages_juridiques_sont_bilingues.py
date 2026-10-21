@@ -17,6 +17,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from bs4 import BeautifulSoup
 
 WEB_ROOT = Path(__file__).resolve().parents[1]
 if str(WEB_ROOT) not in sys.path:
@@ -46,7 +47,10 @@ def _page(chemin: str, client: TestClient | None = None) -> str:
 
 
 def _corps(page: str) -> str:
-    return page.split('<main class="container">', 1)[1].split("</main>", 1)[0]
+    mains = BeautifulSoup(page, "html.parser").find_all("main")
+    assert len(mains) == 1, "un seul contenu principal attendu"
+    assert "container" in mains[0].get("class", [])
+    return mains[0].decode_contents()
 
 
 def _texte(page: str) -> str:
