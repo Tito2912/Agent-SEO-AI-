@@ -1,4 +1,5 @@
 /* Poll the existing owner-scoped API, without overlapping reads or replaying an action. */
+const noyaruT = window.noyaruT || ((text) => text);
 (() => {
   const root = document.querySelector('[data-activity-list], [data-activity-detail]');
   if (!root) return;
@@ -7,7 +8,7 @@
   const refresh = root.querySelector('[data-refresh-activity]');
   if (!refresh) return;
   const active = status => ['queued', 'running', 'cancel_requested'].includes(status);
-  const labels = {queued:'En attente',running:'En cours',cancel_requested:'Arrêt demandé',done:'Terminé',failed:'En échec',canceled:'Annulé'};
+  const labels = {queued:noyaruT('En attente'),running:noyaruT('En cours'),cancel_requested:noyaruT('Arrêt demandé'),done:noyaruT('Terminé'),failed:noyaruT('En échec'),canceled:noyaruT('Annulé')};
   const rows = () => detail ? [root] : Array.from(root.querySelectorAll('tr[data-job-id]'));
   let busy = false, timer = null, denied = false, interrupted = false;
   const form = root.querySelector('[data-activity-filters]');
@@ -23,7 +24,7 @@
       if (!row.hidden) visible++;
     });
     const count = root.querySelector('[data-activity-count]');
-    count.textContent = visible + ' traitement(s) correspondant(s) sur les ' + rows().length + ' affichés. Périmètre : traitements récents et encore actifs ; cet écran n’est pas un historique exhaustif.';
+    count.textContent = noyaruT('{n} traitement(s) correspondant(s) sur les {total} affichés. Périmètre : traitements récents et encore actifs ; cet écran n’est pas un historique exhaustif.').replace('{n}', visible).replace('{total}', rows().length);
     root.querySelector('[data-filter-empty]').hidden = visible !== 0;
     const url = new URL(location.href);
     ['site','kind','status'].forEach(key => { if (values[key]) url.searchParams.set(key, values[key]); else url.searchParams.delete(key); });
@@ -53,22 +54,22 @@
     const fill = detail ? document.getElementById('progress-fill') : row.querySelector('[data-role="progress-fill"]');
     const text = detail ? document.getElementById('progress-count') : row.querySelector('[data-role="progress-text"]');
     const wrap = detail ? document.getElementById('job-progress') : bar;
-    if (!Number.isFinite(current) || !Number.isFinite(total) || total <= 0) { wrap.hidden = true; text.textContent = 'Avancement non communiqué'; return; }
+    if (!Number.isFinite(current) || !Number.isFinite(total) || total <= 0) { wrap.hidden = true; text.textContent = noyaruT('Avancement non communiqué'); return; }
     const finalizing = active(data.status) && current >= total;
     const percent = Math.max(0, Math.min(finalizing ? 99 : 100, Math.round(current / total * 100)));
     if (!active(data.status)) {
       wrap.hidden = true;
-      if (!detail) text.textContent = current + (value.type === 'crawl' ? ' pages visitées' : value.type === 'autopilot' ? ' sites traités' : ' étapes traitées');
+      if (!detail) text.textContent = current + ' ' + (value.type === 'crawl' ? noyaruT('pages visitées') : value.type === 'autopilot' ? noyaruT('sites traités') : noyaruT('étapes traitées'));
       return;
     }
-    const label = current + '/' + total + (value.type === 'crawl' ? ' pages' : '') + (finalizing ? ' · finalisation…' : ' · ' + percent + '%');
+    const label = current + '/' + total + (value.type === 'crawl' ? ' ' + noyaruT('pages') : '') + ' · ' + (finalizing ? noyaruT('finalisation…') : percent + '%');
     if (text.textContent !== label) text.textContent = label;
     fill.style.setProperty('--p', percent); bar.setAttribute('aria-valuenow', percent); wrap.hidden = false;
   }
   function render(row, data) {
     row.dataset.status = data.status; row.dataset.live = active(data.status) ? '1' : '0';
     const pill = detail ? document.getElementById('job-status-pill') : row.querySelector('[data-role="status"]');
-    const label = labels[data.status] || 'État non reconnu';
+    const label = labels[data.status] || noyaruT('État non reconnu');
     if (pill.textContent !== label) pill.textContent = label;
     pill.className = 'pill ' + (labels[data.status] ? data.status : 'unknown');
     progress(row, data);
@@ -97,15 +98,15 @@
       root.querySelector('[data-job-cancel]').hidden = !active(data.status);
       root.querySelector('[data-job-cancel] button').disabled = data.status === 'cancel_requested';
       root.querySelector('[data-job-retry]').hidden = !['failed','canceled'].includes(data.status);
-      ['stdout','stderr'].forEach(key => { if (typeof data[key] === 'string') document.getElementById('job-' + key).textContent = data[key] || 'Aucune sortie enregistrée.'; });
+      ['stdout','stderr'].forEach(key => { if (typeof data[key] === 'string') document.getElementById('job-' + key).textContent = data[key] || noyaruT('Aucune sortie enregistrée.'); });
       document.getElementById('job-returncode').hidden = data.returncode === null || data.returncode === undefined;
       document.getElementById('job-returncode-val').textContent = data.returncode ?? '';
     }
   }
   function expired() {
     denied = true;
-    const link = document.createElement('a'); link.href = '/auth/login?next=' + encodeURIComponent(location.pathname + location.search); link.textContent = 'Me reconnecter';
-    feedback.replaceChildren(document.createTextNode('Votre session a expiré. '), link);
+    const link = document.createElement('a'); link.href = '/auth/login?next=' + encodeURIComponent(location.pathname + location.search); link.textContent = noyaruT('Me reconnecter');
+    feedback.replaceChildren(document.createTextNode(noyaruT('Votre session a expiré.') + ' '), link);
   }
   async function pollRow(row) {
     const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 10000);
@@ -116,11 +117,11 @@
         row.dataset.live = '0'; row.dataset.status = 'unavailable';
         if (detail) denied = true;
         else {
-          row.querySelector('[data-role="status"]').textContent = 'Suivi indisponible';
+          row.querySelector('[data-role="status"]').textContent = noyaruT('Suivi indisponible');
           row.querySelector('[data-role="progress-bar"]').hidden = true;
-          row.querySelector('[data-role="progress-text"]').textContent = 'État inaccessible';
+          row.querySelector('[data-role="progress-text"]').textContent = noyaruT('État inaccessible');
         }
-        if (detail || !denied) feedback.textContent = 'Un suivi n’est plus accessible. Retrouvez votre activité ou reconnectez-vous avec le compte concerné.';
+        if (detail || !denied) feedback.textContent = noyaruT('Un suivi n’est plus accessible. Retrouvez votre activité ou reconnectez-vous avec le compte concerné.');
         return false;
       }
       if (!response.ok || !(response.headers.get('content-type') || '').includes('application/json')) throw new Error('unavailable');
@@ -138,8 +139,8 @@
       if (results.some(value => !value)) success = false;
     }
     if (!denied) {
-      if (!success) { interrupted = true; feedback.textContent = 'La mise à jour est interrompue. L’état affiché reste le dernier reçu ; actualisez avant de demander une autre action.'; }
-      else if (manual || interrupted) { feedback.textContent = 'Suivi actualisé.'; interrupted = false; }
+      if (!success) { interrupted = true; feedback.textContent = noyaruT('La mise à jour est interrompue. L’état affiché reste le dernier reçu ; actualisez avant de demander une autre action.'); }
+      else if (manual || interrupted) { feedback.textContent = noyaruT('Suivi actualisé.'); interrupted = false; }
     }
     applyFilters();
     if (detail) {
@@ -152,7 +153,7 @@
   root.querySelectorAll('[data-job-cancel], [data-job-retry]').forEach(form => form.addEventListener('submit', event => {
     if (form.dataset.submitting) { event.preventDefault(); return; }
     form.dataset.submitting = '1';
-    const button = form.querySelector('button'); button.disabled = true; button.textContent = 'Envoi de la demande…';
+    const button = form.querySelector('button'); button.disabled = true; button.textContent = noyaruT('Envoi de la demande…');
   }));
   root.querySelector('[data-reload-activity]')?.addEventListener('click', () => location.reload());
   refresh.addEventListener('click', () => poll(true));

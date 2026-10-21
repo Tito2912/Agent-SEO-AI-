@@ -18197,7 +18197,9 @@ def _job_activity(job: Job, user: Any) -> dict[str, Any]:
                             report_url = project_url + "?" + urlencode({"crawl": timestamp})
                     except Exception:
                         pass  # Availability is unknown; do not promise a readable result.
-    return activity.view(job, site_name=site_name, project_url=project_url, report_url=report_url, kind=kind)
+    return activity.view(
+        job, site_name=site_name, project_url=project_url, report_url=report_url, kind=kind, tr=i18n.tr_current
+    )
 
 
 def _activity_return_url(value: str) -> str:

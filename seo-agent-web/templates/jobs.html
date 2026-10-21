@@ -1,12 +1,12 @@
 {% extends "layout.html" %}
-{% block title %}Activité - Noyaru{% endblock %}
+{% block title %}{{ tr("Activité") }} - Noyaru{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/activity.css?v=1" /><script src="/static/activity.js?v=1" defer></script>{% endblock %}
-{% block crumbs %}<a href="/">Mes sites</a><span class="crumb-sep">/</span><span class="crumb-current">Activité</span>{% endblock %}
+{% block crumbs %}<a href="/">{{ tr("Mes sites") }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Activité") }}</span>{% endblock %}
 {% block content %}
 <div class="activity-page" data-activity-list>
-  <div class="page-header"><h1>Activité</h1><p class="muted">Retrouvez les analyses et les autres traitements de vos sites. « Terminé » décrit l’exécution ; ouvrez le suivi pour consulter le bilan disponible.</p></div>
+  <div class="page-header"><h1>{{ tr("Activité") }}</h1><p class="muted">{{ tr("Retrouvez les analyses et les autres traitements de vos sites. « Terminé » décrit l’exécution ; ouvrez le suivi pour consulter le bilan disponible.") }}</p></div>
   {% if not jobs %}
-    <section class="card"><h2>Votre activité commencera avec une analyse</h2><p class="muted">Ajoutez votre site ou retrouvez-le pour demander un premier bilan.</p><a class="btn primary" href="/">Retrouver mes sites</a></section>
+    <section class="card"><h2>{{ tr("Votre activité commencera avec une analyse") }}</h2><p class="muted">{{ tr("Ajoutez votre site ou retrouvez-le pour demander un premier bilan.") }}</p><a class="btn primary" href="/">{{ tr("Retrouver mes sites") }}</a></section>
   {% else %}
     {% set ns = namespace(live=0, done=0, failed=0) %}
     {% for j in jobs %}
@@ -18,53 +18,53 @@
     <div class="stat-strip">
       <div class="stat-strip-item">
         <div class="stat-strip-num" data-count-total>{{ jobs | length }}</div>
-        <div class="stat-strip-lbl">Traitements affichés</div>
+        <div class="stat-strip-lbl">{{ tr("Traitements affichés") }}</div>
       </div>
       {% if ns.live %}
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--warn);" data-count-active>{{ ns.live }}</div>
-          <div class="stat-strip-lbl">En attente ou en cours</div>
+          <div class="stat-strip-lbl">{{ tr("En attente ou en cours") }}</div>
         </div>
       {% endif %}
       <div class="stat-strip-sep"></div>
       <div class="stat-strip-item">
         <div class="stat-strip-num" data-count-done>{{ ns.done }}</div>
-        <div class="stat-strip-lbl">Terminés</div>
+        <div class="stat-strip-lbl">{{ tr("Terminés") }}</div>
       </div>
       {% if ns.failed %}
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--err);" data-count-stopped>{{ ns.failed }}</div>
-          <div class="stat-strip-lbl">Arrêtés ou en échec</div>
+          <div class="stat-strip-lbl">{{ tr("Arrêtés ou en échec") }}</div>
         </div>
       {% endif %}
     </div>
 
     <form class="card activity-filters" data-activity-filters>
-      <div class="activity-filter-field"><label for="activity-filter-site">Site</label><select id="activity-filter-site" name="site"><option value="">Tous les sites affichés</option>{% set choices=namespace(ids=[]) %}{% for j in jobs if j.site_id and j.site_id not in choices.ids %}{% set _=choices.ids.append(j.site_id) %}<option value="{{ j.site_id }}">{{ j.site_name }}</option>{% endfor %}</select></div>
-      <div class="activity-filter-field"><label for="activity-filter-kind">Type</label><select id="activity-filter-kind" name="kind"><option value="">Tous les traitements</option><option value="crawl">Analyse d’un site</option><option value="autopilot">Audit de plusieurs sites</option><option value="other">Autres traitements</option></select></div>
-      <div class="activity-filter-field"><label for="activity-filter-status">État</label><select id="activity-filter-status" name="status"><option value="">Tous les états</option><option value="active">En attente ou en cours</option><option value="done">Terminés</option><option value="failed">En échec</option><option value="canceled">Annulés</option></select></div>
-      <button class="btn" type="reset">Effacer les filtres</button>
+      <div class="activity-filter-field"><label for="activity-filter-site">{{ tr("Site") }}</label><select id="activity-filter-site" name="site"><option value="">{{ tr("Tous les sites affichés") }}</option>{% set choices=namespace(ids=[]) %}{% for j in jobs if j.site_id and j.site_id not in choices.ids %}{% set _=choices.ids.append(j.site_id) %}<option value="{{ j.site_id }}">{{ j.site_name }}</option>{% endfor %}</select></div>
+      <div class="activity-filter-field"><label for="activity-filter-kind">{{ tr("Type") }}</label><select id="activity-filter-kind" name="kind"><option value="">{{ tr("Tous les traitements") }}</option><option value="crawl">{{ tr("Analyse d’un site") }}</option><option value="autopilot">{{ tr("Audit de plusieurs sites") }}</option><option value="other">{{ tr("Autres traitements") }}</option></select></div>
+      <div class="activity-filter-field"><label for="activity-filter-status">{{ tr("État") }}</label><select id="activity-filter-status" name="status"><option value="">{{ tr("Tous les états") }}</option><option value="active">{{ tr("En attente ou en cours") }}</option><option value="done">{{ tr("Terminés") }}</option><option value="failed">{{ tr("En échec") }}</option><option value="canceled">{{ tr("Annulés") }}</option></select></div>
+      <button class="btn" type="reset">{{ tr("Effacer les filtres") }}</button>
     </form>
-    <p class="muted small" data-activity-count>Les filtres portent sur les {{ jobs|length }} traitements affichés : récents et encore actifs. Cet écran n’est pas un historique exhaustif.</p>
-    <div class="activity-refresh"><p id="activity-live-feedback" role="status" aria-live="polite"></p><button class="btn" type="button" data-refresh-activity>Actualiser le suivi</button><button class="btn" type="button" data-reload-activity>Recharger la liste</button></div>
-    <section class="card"><div class="table-wrap" tabindex="0" role="region" aria-label="Activité des sites, tableau à défilement horizontal">
-      <table class="table compact" id="jobs-table"><thead><tr><th scope="col">Site et traitement</th><th scope="col">État</th><th scope="col">Avancement</th><th scope="col">Date de la demande</th><th scope="col">Suivi</th></tr></thead><tbody>
+    <p class="muted small" data-activity-count>{{ tr("Les filtres portent sur les {n} traitements affichés : récents et encore actifs. Cet écran n’est pas un historique exhaustif.", n=jobs|length) }}</p>
+    <div class="activity-refresh"><p id="activity-live-feedback" role="status" aria-live="polite"></p><button class="btn" type="button" data-refresh-activity>{{ tr("Actualiser le suivi") }}</button><button class="btn" type="button" data-reload-activity>{{ tr("Recharger la liste") }}</button></div>
+    <section class="card"><div class="table-wrap" tabindex="0" role="region" aria-label="{{ tr("Activité des sites, tableau à défilement horizontal") }}">
+      <table class="table compact" id="jobs-table"><thead><tr><th scope="col">{{ tr("Site et traitement") }}</th><th scope="col">{{ tr("État") }}</th><th scope="col">{{ tr("Avancement") }}</th><th scope="col">{{ tr("Date de la demande") }}</th><th scope="col">{{ tr("Détails") }}</th></tr></thead><tbody>
       {% for j in jobs %}
         {% set live=j.status in ['queued','running','cancel_requested'] %}
         {% set progress=j.progress or {} %}{% set current=progress.current|default(0)|int %}{% set total=progress.total|default(0)|int %}
         {% set finalizing=live and total > 0 and current >= total %}{% set percent=99 if finalizing else ([100, ((current / total * 100)|round|int)]|min if total else 0) %}
         <tr data-job-id="{{ j.id }}" data-site="{{ j.site_id }}" data-kind="{{ j.kind }}" data-status="{{ j.status }}" data-live="{{ '1' if live else '0' }}"{% if highlight_job_id == j.id %} class="highlight"{% endif %}>
-          <td data-label="Site et traitement"><strong>{{ j.site_name or ('Plusieurs sites' if j.kind == 'autopilot' else 'Traitement') }}</strong><span class="activity-meta muted small">{{ 'Analyse du site' if j.kind == 'crawl' else 'Audit multi-sites' if j.kind == 'autopilot' else 'Traitement' }}</span></td>
-          <td data-label="État"><span class="pill {{ j.status }}" data-role="status">{{ {'queued':'En attente','running':'En cours','cancel_requested':'Arrêt demandé','done':'Terminé','failed':'En échec','canceled':'Annulé'}.get(j.status,'État non reconnu') }}</span></td>
-          <td data-label="Avancement"><span class="muted small" data-role="progress-text">{% if total %}{% if live %}{{ current }}/{{ total }} {{ 'pages' if progress.type == 'crawl' else '' }} · {{ 'finalisation…' if finalizing else percent|string ~ '%' }}{% else %}{{ current }} {{ 'pages visitées' if progress.type == 'crawl' else 'sites traités' if progress.type == 'autopilot' else 'étapes traitées' }}{% endif %}{% else %}Non communiqué{% endif %}</span><div class="progress slim" data-role="progress-bar" role="progressbar" aria-label="Avancement du traitement" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"{% if not total or not live %} hidden{% endif %}><div class="progress-fill" data-role="progress-fill" style="--p:{{ percent }}"></div></div></td>
-          <td data-label="Date"><span{% if j.display_timestamp %} data-ts-datetime="{{ j.display_timestamp }}"{% endif %}>{{ j.timestamp_label or 'Non renseignée' }}</span>{% if j.duration_label %}<span class="activity-meta muted small">{{ j.duration_label }}</span>{% endif %}</td>
-          <td><a class="btn" data-job-link href="/jobs/{{ j.id }}">Voir le suivi<span class="sr-only"> de {{ j.site_name or j.id[:8] }}</span></a></td>
+          <td data-label="{{ tr('Site et traitement') }}"><strong>{{ j.site_name or (tr('Plusieurs sites') if j.kind == 'autopilot' else tr('Traitement')) }}</strong><span class="activity-meta muted small">{{ tr('Analyse du site') if j.kind == 'crawl' else tr('Audit multi-sites') if j.kind == 'autopilot' else tr('Traitement') }}</span></td>
+          <td data-label="{{ tr('État') }}"><span class="pill {{ j.status }}" data-role="status">{{ {'queued':tr('En attente'),'running':tr('En cours'),'cancel_requested':tr('Arrêt demandé'),'done':tr('Terminé'),'failed':tr('En échec'),'canceled':tr('Annulé')}.get(j.status,tr('État non reconnu')) }}</span></td>
+          <td data-label="{{ tr('Avancement') }}"><span class="muted small" data-role="progress-text">{% if total %}{% if live %}{{ current }}/{{ total }} {{ tr('pages') if progress.type == 'crawl' else '' }} · {{ tr('finalisation…') if finalizing else percent|string ~ '%' }}{% else %}{{ current }} {{ tr('pages visitées') if progress.type == 'crawl' else tr('sites traités') if progress.type == 'autopilot' else tr('étapes traitées') }}{% endif %}{% else %}{{ tr('Non communiqué') }}{% endif %}</span><div class="progress slim" data-role="progress-bar" role="progressbar" aria-label="{{ tr('Avancement du traitement') }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"{% if not total or not live %} hidden{% endif %}><div class="progress-fill" data-role="progress-fill" style="--p:{{ percent }}"></div></div></td>
+          <td data-label="{{ tr('Date') }}"><span{% if j.display_timestamp %} data-ts-datetime="{{ j.display_timestamp }}"{% endif %}>{{ j.timestamp_label or tr('Non renseignée') }}</span>{% if j.duration_label %}<span class="activity-meta muted small">{{ j.duration_label }}</span>{% endif %}</td>
+          <td><a class="btn" data-job-link href="/jobs/{{ j.id }}">{{ tr("Voir le suivi") }}<span class="sr-only"> {{ tr("de {site}", site=j.site_name or j.id[:8]) }}</span></a></td>
         </tr>
       {% endfor %}
       </tbody></table>
-    </div><p data-filter-empty hidden>Aucun traitement ne correspond à ces filtres. <button class="btn" type="button" data-clear-activity>Afficher toute l’activité</button></p></section>
+    </div><p data-filter-empty hidden>{{ tr("Aucun traitement ne correspond à ces filtres.") }} <button class="btn" type="button" data-clear-activity>{{ tr("Afficher toute l’activité") }}</button></p></section>
   {% endif %}
 </div>
 {% endblock %}
