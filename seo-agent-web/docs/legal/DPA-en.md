@@ -1,9 +1,10 @@
 # Data Processing Agreement (DPA)
 
 > **DRAFT — NOT PUBLISHED, NOT OPERATIONAL.** This document is neither shown on the website nor
-> offered to customers. It can only be once it has been legally validated, the items marked
-> “TO BE COMPLETED” have been filled in and the acceptance method has been chosen (see
-> `LEGAL-VALIDATION-REQUIRED.md`). French version: `DPA-fr.md` (same clauses).
+> offered to customers. It can only be once it has been legally validated and the items marked
+> “TO BE COMPLETED” have been filled in (see `LEGAL-VALIDATION-REQUIRED.md`). Acceptance method
+> chosen by the owner on 21/10/2026: a checkbox in the service. French version: `DPA-fr.md` (same
+> clauses).
 
 Article 28 of Regulation (EU) 2016/679 (“GDPR”).
 
@@ -16,6 +17,10 @@ Article 28 of Regulation (EU) 2016/679 (“GDPR”).
 
 This agreement supplements the Noyaru Terms and Conditions (noyaru.com/en/terms). In the event of
 a conflict regarding the protection of personal data, this agreement prevails.
+
+The Customer accepts this agreement online, by ticking the box provided for that purpose in the
+service. E-Com Shop keeps a record of the account that accepted it, the date and the version
+accepted. **TO BE COMPLETED**: where the box appears, and how a new version is accepted.
 
 ## 2. Subject matter and duration
 

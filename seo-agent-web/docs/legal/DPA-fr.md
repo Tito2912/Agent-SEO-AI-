@@ -2,7 +2,8 @@
 
 > **BROUILLON — NON PUBLIÉ, NON OPÉRATIONNEL.** Ce document n'est ni affiché sur le site ni proposé
 > aux clients. Il ne pourra l'être qu'après validation juridique, une fois complétés les éléments
-> marqués « À COMPLÉTER » et choisi le mode d'acceptation (voir `LEGAL-VALIDATION-REQUIRED.md`).
+> marqués « À COMPLÉTER » (voir `LEGAL-VALIDATION-REQUIRED.md`). Mode d'acceptation choisi par le
+> propriétaire le 21/10/2026 : une case à cocher dans le service.
 > Version anglaise : `DPA-en.md` (mêmes clauses).
 
 Article 28 du règlement (UE) 2016/679 (« RGPD »).
@@ -16,6 +17,10 @@ Article 28 du règlement (UE) 2016/679 (« RGPD »).
 
 Le présent accord complète les conditions générales d'utilisation de Noyaru (noyaru.com/terms).
 En cas de contradiction sur la protection des données personnelles, il prévaut.
+
+Le Client accepte le présent accord en ligne, en cochant la case prévue à cet effet dans le
+service. E-Com Shop conserve le compte qui l'a accepté, la date et la version acceptée.
+**À COMPLÉTER** : emplacement de la case, et acceptation d'une nouvelle version.
 
 ## 2. Objet et durée
 
