@@ -29,7 +29,7 @@ Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeu
 
 | Engagement | Document | Dépendance |
 | --- | --- | --- |
-| Informer les clients par e-mail avant une modification substantielle des CGU | CGU article 13 (FR/EN) | Le service n'a **pas** de fonction d'envoi automatique pour cela. L'engagement suppose un envoi manuel de votre part à chaque modification substantielle. Confirmez-le, ou demandez-moi d'ajouter cette fonction. |
+| Informer les clients par e-mail au moins 30 jours avant une modification substantielle des CGU ou du service | CGU article 13 (FR/EN) | Le service n'a **pas** de fonction d'envoi automatique pour cela. L'engagement suppose un envoi manuel de votre part à chaque modification substantielle. Un consommateur gêné par une modification du service peut aussi mettre fin au contrat dans les 30 jours, avec remboursement de la période restant à courir (remboursement manuel dans Stripe). |
 | Rembourser une rétractation sous 14 jours | CGU article 5 (FR/EN) | Le remboursement est une opération manuelle dans Stripe (`RUNBOOK.md`, « Rétractation »). La case « Je demande que mon abonnement commence immédiatement » existe bien avant le paiement. |
 | Fournir un accord de traitement des données (DPA) sur demande | Confidentialité § 1, CGU article 11 | Les pages annoncent qu'il « peut être demandé ». Le DPA (`DPA-fr.md`, `DPA-en.md`) est un brouillon non opérationnel, corrigé le 21/10/2026 : il ne peut être proposé aux clients qu'une fois réglés les points de la section 5. Mode d'acceptation choisi le 21/10/2026 : une case à cocher dans le service. |
 | Décrire les garanties de transfert sur demande | Confidentialité § 5 | Suppose d'avoir les justificatifs du point 2. |

@@ -120,6 +120,8 @@ def test_les_clauses_qui_PROTEGENT_sont_dans_les_deux_langues() -> None:
         ("faute lourde ou de dol", "gross negligence or wilful misconduct"),
         ("la version française constitue la version de référence", "the French version shall serve as the reference version"),
         ("ne garantissent pas l'absence d'erreurs", "do not guarantee the absence of errors"),
+        ("au moins 30 jours avant son entrée en vigueur", "at least 30 days before it takes effect"),
+        ("article L224-25-26 du Code de la consommation", "Article L224-25-26 of the French Consumer Code"),
     )
     for francais, anglais in paires:
         assert francais in fr and anglais in en, (francais, anglais)
