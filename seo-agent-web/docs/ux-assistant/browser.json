@@ -1,0 +1,1328 @@
+{
+  "checks": [
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 640
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 640
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 640
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 640
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "width": 740,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 400
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "width": 740,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 400
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    }
+  ],
+  "native_confirmations": [
+    {
+      "lang": "fr",
+      "width": 1440,
+      "clear_cancelled_then_confirmed": true,
+      "no_post": true
+    },
+    {
+      "lang": "en",
+      "width": 1440,
+      "clear_cancelled_then_confirmed": true,
+      "no_post": true
+    },
+    {
+      "lang": "fr",
+      "width": 768,
+      "clear_cancelled_then_confirmed": true,
+      "no_post": true
+    },
+    {
+      "lang": "en",
+      "width": 768,
+      "clear_cancelled_then_confirmed": true,
+      "no_post": true
+    },
+    {
+      "lang": "fr",
+      "width": 390,
+      "clear_cancelled_then_confirmed": true,
+      "no_post": true
+    },
+    {
+      "lang": "en",
+      "width": 390,
+      "clear_cancelled_then_confirmed": true,
+      "no_post": true
+    },
+    {
+      "lang": "fr",
+      "width": 360,
+      "clear_cancelled_then_confirmed": true,
+      "no_post": true
+    },
+    {
+      "lang": "en",
+      "width": 360,
+      "clear_cancelled_then_confirmed": true,
+      "no_post": true
+    }
+  ],
+  "javascript_errors": [],
+  "network": {
+    "external": 0,
+    "posts": 68
+  },
+  "notes": [
+    "Only local synthetic identities, tokens and projects. Provider calls mocked, no external request, site write, email or payment. Legacy history seeded only as a fixture and never attributed to either account."
+  ]
+}

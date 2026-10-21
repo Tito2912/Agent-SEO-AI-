@@ -1,0 +1,23 @@
+{
+  "checks": [
+    {
+      "screen": "refresh-restores-input-focus",
+      "lang": "fr"
+    },
+    {
+      "screen": "refresh-keeps-recovery-focus",
+      "lang": "fr"
+    },
+    {
+      "screen": "refresh-restores-input-focus",
+      "lang": "en"
+    },
+    {
+      "screen": "refresh-keeps-recovery-focus",
+      "lang": "en"
+    }
+  ],
+  "notes": [
+    "Final keyboard recovery; metadata requests only, no model call."
+  ]
+}

@@ -1,0 +1,2322 @@
+{
+  "sample_count": 1412,
+  "minimum_ratio": 9.38,
+  "distinct_samples": [
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "text": "Chargement…",
+      "ratio": 9.38
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "text": "Chargement…",
+      "ratio": 9.88
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "text": "Par quoi devrais-je commencer pour améliorer le SEO ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "text": "Quelle est la différence entre une erreur et un avertissemen",
+      "ratio": 14.59
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "text": "Comment connecter Google Search Console ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "text": "Par quoi devrais-je commencer pour améliorer le SEO ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "text": "Quelle est la différence entre une erreur et un avertissemen",
+      "ratio": 14.59
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "text": "Comment connecter Google Search Console ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "text": "Bilan local",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "text": "<script>window.untrusted=true</script>",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "text": "<img src=x onerror=alert(1)>",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "text": "<img src=x onerror=alert(1)>",
+      "ratio": 10.99
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "text": "Bilan local",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "text": "<script>window.untrusted=true</script>",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "text": "<img src=x onerror=alert(1)>",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "text": "<img src=x onerror=alert(1)>",
+      "ratio": 10.99
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "text": "Par quoi devrais-je commencer pour améliorer le SEO ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "text": "Quelle est la différence entre une erreur et un avertissemen",
+      "ratio": 14.59
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "text": "Comment connecter Google Search Console ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "text": "Chargement…",
+      "ratio": 14.02
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "text": "Chargement…",
+      "ratio": 9.88
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "text": "Erreur: Le service ne répond pas comme prévu. Réessayez dans",
+      "ratio": 13.55
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "text": "Actualiser",
+      "ratio": 10.23
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "text": "Une limite de votre formule est atteinte",
+      "ratio": 13.55
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 10.23
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "text": "Votre choix n’est pas disponible pour le moment. Réessayez d",
+      "ratio": 13.55
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "text": "Assistant temporairement indisponible.",
+      "ratio": 13.55
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "text": "Actualiser",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "text": "Assistant indisponible",
+      "ratio": 9.38
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "text": "Le service ne répond pas comme prévu. Réessayez dans quelque",
+      "ratio": 13.55
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "text": "Actualiser",
+      "ratio": 10.23
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "text": "Assistant indisponible",
+      "ratio": 9.38
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "text": "Votre choix n’est pas disponible pour le moment. Réessayez d",
+      "ratio": 13.55
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "text": "Retrouver mes sites",
+      "ratio": 10.23
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "text": "Erreur: Le service ne répond pas comme prévu. Réessayez dans",
+      "ratio": 13.55
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "text": "Actualiser",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "text": "Assistant indisponible",
+      "ratio": 9.38
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "text": "Votre session n’est plus disponible. Reconnectez-vous avant ",
+      "ratio": 13.55
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "text": "Actualiser",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "text": "Assistant indisponible",
+      "ratio": 9.38
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "text": "Votre session n’est plus disponible. Reconnectez-vous avant ",
+      "ratio": 13.55
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "text": "Actualiser",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "text": "Atelier Bob",
+      "ratio": 9.38
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "text": "Par quoi devrais-je commencer pour améliorer le SEO ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "text": "Quelle est la différence entre une erreur et un avertissemen",
+      "ratio": 14.59
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "text": "Comment connecter Google Search Console ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "text": "Posez une question",
+      "ratio": 9.38
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "text": "Par quoi devrais-je commencer pour améliorer le SEO ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "text": "Quelle est la différence entre une erreur et un avertissemen",
+      "ratio": 14.59
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "text": "Comment connecter Google Search Console ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "text": "Assistant indisponible",
+      "ratio": 9.38
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet ",
+      "ratio": 13.55
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "text": "Connexion",
+      "ratio": 10.23
+    },
+    {
+      "screen": "session-expired",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "text": "Loading…",
+      "ratio": 9.38
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "text": "Loading…",
+      "ratio": 9.88
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "identity-loading",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "text": "Where should I start to improve SEO?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "text": "What is the difference between an error and a warning?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "text": "How do I connect Google Search Console?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "empty-and-legacy-ignored",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "text": "Where should I start to improve SEO?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "text": "What is the difference between an error and a warning?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "text": "How do I connect Google Search Console?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "keyboard-reopen",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "text": "Bilan local",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "text": "<script>window.untrusted=true</script>",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "text": "<img src=x onerror=alert(1)>",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "text": "<img src=x onerror=alert(1)>",
+      "ratio": 10.99
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "reply-escaped-and-recorded",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "text": "Bilan local",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "text": "<script>window.untrusted=true</script>",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "text": "<img src=x onerror=alert(1)>",
+      "ratio": 14.02
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "text": "<img src=x onerror=alert(1)>",
+      "ratio": 10.99
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "reload-same-account",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "text": "Where should I start to improve SEO?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "text": "What is the difference between an error and a warning?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "text": "How do I connect Google Search Console?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "clear-current-conversation",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "text": "Loading…",
+      "ratio": 14.02
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "text": "Loading…",
+      "ratio": 9.88
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "single-pending-request",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "late-reply-without-focus-steal",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "text": "Error: The service is not responding as expected. Try again ",
+      "ratio": 13.55
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "text": "Refresh",
+      "ratio": 10.23
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "provider-error-draft-preserved",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "text": "You have reached a limit of your plan",
+      "ratio": 13.55
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 10.23
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "quota-recovery",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "text": "Your choice is not available right now. Try again in a few m",
+      "ratio": 13.55
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-rate-limit",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "text": "Assistant temporarily unavailable.",
+      "ratio": 13.55
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "text": "Refresh",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unconfigured-with-history",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "text": "Assistant unavailable",
+      "ratio": 9.38
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "text": "The service is not responding as expected. Try again in a fe",
+      "ratio": 13.55
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "text": "Refresh",
+      "ratio": 10.23
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "identity-unavailable",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "verified-draft-recovered",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "text": "Assistant unavailable",
+      "ratio": 9.38
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "text": "Your choice is not available right now. Try again in a few m",
+      "ratio": 13.55
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "text": "Go to my sites",
+      "ratio": 10.23
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "project-access-lost",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "text": "Atelier Alice",
+      "ratio": 9.38
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "text": "Error: The service is not responding as expected. Try again ",
+      "ratio": 13.55
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "text": "Refresh",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "unreadable-response",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "text": "Assistant unavailable",
+      "ratio": 9.38
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "text": "Your session has expired. Log in again before resuming your ",
+      "ratio": 13.55
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "text": "Refresh",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "server-refuses-stale-binding",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "text": "Assistant unavailable",
+      "ratio": 9.38
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "text": "Your session has expired. Log in again before resuming your ",
+      "ratio": 13.55
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "text": "Refresh",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-before-send",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "text": "Atelier Bob",
+      "ratio": 9.38
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "text": "Where should I start to improve SEO?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "text": "What is the difference between an error and a warning?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "text": "How do I connect Google Search Console?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "other-account-empty-same-slug",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "text": "Ask a question",
+      "ratio": 9.38
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "text": "Where should I start to improve SEO?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "text": "What is the difference between an error and a warning?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "text": "How do I connect Google Search Console?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "global-and-project-separated",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "text": "Assistant unavailable",
+      "ratio": 9.38
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen",
+      "ratio": 13.55
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "text": "Log in",
+      "ratio": 10.23
+    },
+    {
+      "screen": "session-expired",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "fr",
+      "text": "Assistant indisponible",
+      "ratio": 9.38
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "fr",
+      "text": "Votre session n’est plus disponible. Reconnectez-vous avant ",
+      "ratio": 13.55
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "fr",
+      "text": "Actualiser",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "text": "Atelier Bob",
+      "ratio": 9.38
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "text": "Par quoi devrais-je commencer pour améliorer le SEO ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "text": "Quelle est la différence entre une erreur et un avertissemen",
+      "ratio": 14.59
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "text": "Comment connecter Google Search Console ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "text": "Voir mon bilan",
+      "ratio": 10.23
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "en",
+      "text": "Assistant unavailable",
+      "ratio": 9.38
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "en",
+      "text": "Your session has expired. Log in again before resuming your ",
+      "ratio": 13.55
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "en",
+      "text": "Refresh",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "account-changed-during-reply",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "text": "Atelier Bob",
+      "ratio": 9.38
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "text": "Where should I start to improve SEO?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "text": "What is the difference between an error and a warning?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "text": "How do I connect Google Search Console?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "text": "View my report",
+      "ratio": 10.23
+    },
+    {
+      "screen": "late-reply-not-reattributed",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "text": "Posez une question",
+      "ratio": 9.38
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "text": "Comment puis-je vous aider ?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "text": "Posez une question sur vos données SEO ou choisissez une sug",
+      "ratio": 9.88
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "text": "Par quoi devrais-je commencer pour améliorer le SEO ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "text": "Quelle est la différence entre une erreur et un avertissemen",
+      "ratio": 14.59
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "text": "Comment connecter Google Search Console ?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "text": "Ask a question",
+      "ratio": 9.38
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "text": "How can I help you?",
+      "ratio": 15.67
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "text": "Ask a question about your SEO data or pick a suggestion.",
+      "ratio": 9.88
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "text": "Where should I start to improve SEO?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "text": "What is the difference between an error and a warning?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "text": "How do I connect Google Search Console?",
+      "ratio": 14.59
+    },
+    {
+      "screen": "short-viewport",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "fr",
+      "text": "Assistant IA",
+      "ratio": 14.88
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "fr",
+      "text": "Posez une question",
+      "ratio": 9.38
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "fr",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "fr",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 10.23
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "en",
+      "text": "AI assistant",
+      "ratio": 14.88
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "en",
+      "text": "Ask a question",
+      "ratio": 9.38
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "en",
+      "text": "Voici une réponse locale. Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "en",
+      "text": "Relisez votre bilan.",
+      "ratio": 14.02
+    },
+    {
+      "screen": "storage-denied-memory-only",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 10.23
+    }
+  ]
+}
