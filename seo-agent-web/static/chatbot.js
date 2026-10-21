@@ -1,68 +1,493 @@
 (() => {
-  const noyaruT = window.noyaruT || ((text) => text);
-  const dock = document.getElementById("assistant-dock");
-  const toggle = document.getElementById("assistant-toggle");
-  const panel = document.getElementById("assistant-panel");
-  const closeBtn = document.getElementById("assistant-close");
-  const clearBtn = document.getElementById("assistant-clear");
-  const form = document.getElementById("assistant-form");
-  const input = document.getElementById("assistant-input");
-  const sendBtn = document.getElementById("assistant-send");
-  const messagesEl = document.getElementById("assistant-messages");
-  const metaEl = document.getElementById("assistant-meta");
-  const dotEl = document.getElementById("assistant-dot");
-  const footEl = document.getElementById("assistant-foot");
+  const noyaruT = window.noyaruT || (text => text);
+  const byId = id => document.getElementById(id);
+  const dock = byId('assistant-dock'),
+    toggle = byId('assistant-toggle'),
+    panel = byId('assistant-panel');
+  const closeBtn = byId('assistant-close'),
+    clearBtn = byId('assistant-clear');
+  const form = byId('assistant-form'),
+    input = byId('assistant-input'),
+    sendBtn = byId('assistant-send');
+  const messagesEl = byId('assistant-messages'),
+    metaEl = byId('assistant-meta'),
+    dotEl = byId('assistant-dot'),
+    footEl = byId('assistant-foot');
+  if (![dock, toggle, panel, form, input, sendBtn, messagesEl, metaEl, dotEl, footEl].every(Boolean)) return;
 
-  if (!dock || !toggle || !panel || !form || !input || !sendBtn || !messagesEl || !metaEl || !dotEl || !footEl) {
-    return;
-  }
-
-  const ctx = (window.SEO_AUDIT_ASSISTANT_CONTEXT && typeof window.SEO_AUDIT_ASSISTANT_CONTEXT === "object")
-    ? window.SEO_AUDIT_ASSISTANT_CONTEXT
-    : {};
-
-  const projectSlug = (ctx.project && typeof ctx.project === "object" && ctx.project.slug) ? String(ctx.project.slug) : "";
-  const projectName = (ctx.project && ctx.project.site_name) ? String(ctx.project.site_name) : "";
-  const historyKey = `seo-audit-assistant:history:${projectSlug || "global"}`;
-  const openKey = `seo-audit-assistant:open`;
-
-  let meta = null;
-  let history = loadHistory();
-  let isOpen = false;
-  let closeTimer = null;
-  let liveTypingEl = null;
-
-  // ── Context-aware suggestions ─────────────────────────────────────────────
-  function getSuggestions() {
-    if (projectSlug) {
-      return [
-        noyaruT("Quels sont les problèmes critiques sur ce site ?"),
-        noyaruT("Par quoi devrais-je commencer pour améliorer le SEO ?"),
-        noyaruT("Résume les anomalies les plus importantes"),
-      ];
-    }
-    return [
-      noyaruT("Comment fonctionne le crawl SEO ?"),
-      noyaruT("Quelle est la différence entre une erreur et un avertissement ?"),
-      noyaruT("Comment connecter Google Search Console ?"),
-    ];
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  // Une reponse d'erreur commence par « Erreur: » (« Error: » en anglais) : c'est ce qui la
-  // distingue a l'affichage, y compris dans un historique ecrit dans l'autre langue.
+  const style = document.createElement('link');
+  style.rel = 'stylesheet';
+  style.href = '/static/assistant-journey.css?v=1';
+  document.head.appendChild(style);
+  dock.classList.add('assistant-journey');
+  const ctx = window.SEO_AUDIT_ASSISTANT_CONTEXT || {};
+  const projectSlug = String(ctx.project && ctx.project.slug || '');
+  const projectName = String(ctx.project && ctx.project.site_name || '');
+  const returnPath = projectSlug ? '/projects/' + encodeURIComponent(projectSlug) : '/';
+  const loginPath = '/auth/login?next=' + encodeURIComponent(returnPath);
   const errorPrefix = noyaruT("Erreur:");
-  function isErrorText(content) {
-    const s = String(content || "").trim().toLowerCase();
-    return s.startsWith("erreur:") || s.startsWith(errorPrefix.toLowerCase());
+  const statusEl = document.createElement('p'),
+    actionsEl = document.createElement('div'),
+    linksEl = document.createElement('nav');
+  statusEl.className = 'assistant-status';
+  statusEl.setAttribute('role', 'status');
+  actionsEl.className = 'assistant-recovery';
+  linksEl.className = 'assistant-links';
+  linksEl.setAttribute('aria-label', noyaruT("Aide"));
+
+  function link(label, href) {
+    const a = document.createElement('a');
+    a.textContent = label;
+    a.href = href;
+    return a;
+  }
+  if (projectSlug) linksEl.appendChild(link(noyaruT("Voir mon bilan"), returnPath));
+  linksEl.appendChild(link(noyaruT("Aide"), document.documentElement.lang === 'en' ? '/en/docs' : '/docs'));
+  footEl.replaceChildren(statusEl, actionsEl, linksEl);
+  messagesEl.setAttribute('role', 'log');
+  messagesEl.setAttribute('aria-relevant', 'additions text');
+  messagesEl.setAttribute('aria-atomic', 'false');
+
+  let scope = '',
+    history = [],
+    ready = false,
+    configured = false,
+    isOpen = false,
+    interacted = false,
+    busy = false;
+  let generation = 0,
+    metaPromise = null,
+    needsReload = false,
+    cooldownUntil = 0,
+    cooldownTimer = null,
+    deferredDraft = null;
+  let pendingRow = null,
+    typingRow = null,
+    statusKind = 'checking';
+
+  function historyKey() {
+    return 'seo-audit-assistant:v2:history:' + scope;
   }
 
-  function normalizeAssistantText(content) {
-    let s = String(content || "").trim();
-    s = s.replace(/^(Erreur|Error):\s*(?:RuntimeError|Exception|Error):\s*/i, "$1: ");
-    s = s.replace(/^RuntimeError:\s*/i, "");
-    return s.slice(0, 4000);
+  function openKey() {
+    return 'seo-audit-assistant:v2:open:' + scope;
   }
+
+  function setStatus(text, kind = '', action = '') {
+    statusKind = kind;
+    statusEl.textContent = text;
+    statusEl.hidden = !text;
+    statusEl.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    actionsEl.replaceChildren();
+    dotEl.classList.toggle('err', kind === 'error');
+    dotEl.classList.remove('ok');
+    if (action === 'login') actionsEl.appendChild(link(noyaruT("Connexion"), loginPath));
+    if (action === 'reload') actionsEl.appendChild(link(noyaruT("Actualiser"), returnPath));
+    if (action === 'billing') actionsEl.appendChild(link(noyaruT("Consulter mon abonnement"), '/billing'));
+    if (action === 'sites') actionsEl.appendChild(link(noyaruT("Retrouver mes sites"), '/'));
+    if (action === 'refresh') {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = noyaruT("Actualiser");
+      button.addEventListener('click', () => refreshMeta(true));
+      actionsEl.appendChild(button);
+    }
+  }
+
+  function syncControls() {
+    const blocked = busy || !ready || !configured || needsReload || Date.now() < cooldownUntil;
+    input.disabled = busy || !ready || needsReload;
+    sendBtn.disabled = blocked || !input.value.trim();
+    if (clearBtn) clearBtn.disabled = busy || !ready || history.length === 0;
+    messagesEl.querySelectorAll('.assistant-suggestion').forEach(button => {
+      button.disabled = blocked;
+    });
+    actionsEl.querySelectorAll('button').forEach(button => {
+      button.disabled = busy || Boolean(metaPromise);
+    });
+    messagesEl.setAttribute('aria-busy', busy ? 'true' : 'false');
+  }
+
+  function loadHistory() {
+    try {
+      const values = JSON.parse(localStorage.getItem(historyKey()) || '[]');
+      if (!Array.isArray(values)) return [];
+      return values.slice(-24).filter(m => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string')
+        .map(m => ({
+          role: m.role,
+          content: m.content.trim().slice(0, 4000)
+        })).filter(m => m.content);
+    } catch {
+      return [];
+    }
+  }
+
+  function saveHistory() {
+    if (!ready || !scope || needsReload) return;
+    try {
+      localStorage.setItem(historyKey(), JSON.stringify(history.slice(-24)));
+    } catch {
+      /* Conversation still works in memory. */ }
+  }
+
+  function clearPending() {
+    if (pendingRow) pendingRow.remove();
+    if (typingRow) typingRow.remove();
+    pendingRow = typingRow = null;
+  }
+
+  function renderMessage(role, content) {
+    const row = document.createElement('div');
+    row.className = 'assistant-msg ' + role;
+    const bubble = document.createElement('div');
+    bubble.className = 'assistant-bubble';
+    if (role === 'assistant') bubble.innerHTML = buildBubbleHtml(content);
+    else bubble.textContent = content;
+    row.appendChild(bubble);
+    return row;
+  }
+
+  function renderHistory() {
+    clearPending();
+    messagesEl.replaceChildren();
+    if (!history.length) {
+      const empty = document.createElement('div');
+      empty.className = 'assistant-empty';
+      const title = document.createElement('p');
+      title.className = 'assistant-empty-title';
+      title.textContent = noyaruT("Comment puis-je vous aider ?");
+      const description = document.createElement('p');
+      description.className = 'assistant-empty-sub';
+      description.textContent = noyaruT("Posez une question sur vos données SEO ou choisissez une suggestion.");
+      const choices = document.createElement('div');
+      choices.className = 'assistant-suggestions';
+      for (const question of [noyaruT("Par quoi devrais-je commencer pour améliorer le SEO ?"), noyaruT("Quelle est la différence entre une erreur et un avertissement ?"), noyaruT("Comment connecter Google Search Console ?")]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'assistant-suggestion';
+        button.textContent = question;
+        button.addEventListener('click', () => sendMessage(question));
+        choices.appendChild(button);
+      }
+      empty.append(title, description, choices);
+      messagesEl.appendChild(empty);
+    } else history.forEach(m => messagesEl.appendChild(renderMessage(m.role, m.content)));
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    syncControls();
+  }
+
+  function setOpen(next, {
+    focus = true,
+    restoreFocus = true
+  } = {}) {
+    const hadFocus = panel.contains(document.activeElement);
+    isOpen = Boolean(next);
+    toggle.setAttribute('aria-expanded', String(isOpen));
+    panel.inert = !isOpen;
+    panel.hidden = !isOpen;
+    dock.classList.toggle('assistant-mounted', isOpen);
+    dock.classList.toggle('assistant-open', isOpen);
+    if (ready && scope) {
+      try {
+        localStorage.setItem(openKey(), isOpen ? '1' : '0');
+      } catch {
+        /* Optional storage. */ }
+    }
+    if (isOpen) {
+      if (focus) input.focus();
+      refreshMeta();
+    } else if (restoreFocus && hadFocus) toggle.focus();
+  }
+  async function readJson(url, options = {}, timeout = 15000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+      let data = null;
+      try {
+        data = await response.json();
+      } catch {
+        /* A non-JSON response is a recoverable failure. */ }
+      return {
+        response,
+        data
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function invalidate(message, action = 'refresh') {
+    if (scope && input.value) deferredDraft = {
+      scope,
+      message: input.value
+    };
+    input.value = '';
+    ready = false;
+    configured = false;
+    generation++;
+    history = [];
+    renderHistory();
+    metaEl.textContent = noyaruT("Assistant indisponible");
+    setStatus(message, 'error', action);
+    syncControls();
+  }
+
+  function changedIdentity() {
+    needsReload = true;
+    deferredDraft = null;
+    input.value = '';
+    invalidate(noyaruT("Votre session n’est plus disponible. Reconnectez-vous avant de reprendre votre travail."), 'reload');
+  }
+  async function refreshMeta(explicit = false) {
+    if (needsReload) return false;
+    if (metaPromise) return metaPromise;
+    const returnFocus = explicit && actionsEl.contains(document.activeElement);
+    if (explicit || !scope) {
+      metaEl.textContent = noyaruT("Chargement…");
+      setStatus(noyaruT("Chargement…"), 'checking');
+    }
+    metaPromise = (async () => {
+      try {
+        const {
+          response,
+          data
+        } = await readJson('/api/assistant/meta' + (projectSlug ? '?slug=' + encodeURIComponent(projectSlug) : ''), {
+          headers: {
+            Accept: 'application/json'
+          }
+        });
+        if (response.status === 401) {
+          invalidate(noyaruT("Votre session a expiré. Reconnectez-vous pour reprendre cet écran."), 'login');
+          return false;
+        }
+        if (response.status === 403 || response.status === 404) {
+          invalidate(noyaruT("Votre choix n’est pas disponible pour le moment. Réessayez dans quelques instants."), 'sites');
+          return false;
+        }
+        if (!response.ok || !data || data.ok !== true || !/^[a-f0-9]{64}$/.test(data.history_scope || '')) throw new Error('metadata');
+        if (scope && scope !== data.history_scope) {
+          changedIdentity();
+          return false;
+        }
+        const first = !scope,
+          restore = !ready;
+        scope = data.history_scope;
+        ready = true;
+        configured = data.configured === true;
+        if (restore) {
+          history = loadHistory();
+          renderHistory();
+        }
+        if (deferredDraft && deferredDraft.scope === scope && !input.value) {
+          input.value = deferredDraft.message;
+          deferredDraft = null;
+        }
+        metaEl.textContent = projectName || noyaruT("Posez une question");
+        if (!configured) setStatus(noyaruT("Assistant temporairement indisponible."), 'error', 'refresh');
+        else if (explicit || ['checking', 'unavailable'].includes(statusKind)) setStatus('');
+        if (first && !interacted) {
+          try {
+            if (localStorage.getItem(openKey()) === '1') setOpen(true, {
+              focus: false
+            });
+          } catch {
+            /* Optional storage. */ }
+        }
+        syncControls();
+        return true;
+      } catch {
+        invalidate(noyaruT("Le service ne répond pas comme prévu. Réessayez dans quelques instants."));
+        return false;
+      }
+    })();
+    try {
+      return await metaPromise;
+    } finally {
+      metaPromise = null;
+      syncControls();
+      if (returnFocus && isOpen && !busy && document.activeElement === document.body) {
+        const target = ready && configured ? input : actionsEl.querySelector('a,button');
+        if (target) target.focus();
+      }
+    }
+  }
+
+  function startCooldown(response) {
+    const seconds = Number(response.headers.get('Retry-After'));
+    if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 3600) return;
+    cooldownUntil = Date.now() + seconds * 1000;
+    if (cooldownTimer) clearInterval(cooldownTimer);
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+      sendBtn.setAttribute('aria-label', noyaruT("Envoyer") + (remaining ? ' · ' + remaining + ' s' : ''));
+      sendBtn.title = remaining ? noyaruT("Réessayer") + ' · ' + remaining + ' s' : noyaruT("Envoyer");
+      syncControls();
+      if (!remaining) {
+        clearInterval(cooldownTimer);
+        cooldownTimer = null;
+      }
+    };
+    tick();
+    cooldownTimer = setInterval(tick, 1000);
+  }
+  async function sendMessage(text) {
+    const message = String(text || '').trim().slice(0, 2000);
+    if (!message || busy || needsReload || Date.now() < cooldownUntil) return;
+    busy = true;
+    syncControls();
+    let submittedScope = '',
+      started = 0;
+    try {
+      if (!await refreshMeta() || !configured) return;
+      submittedScope = scope;
+      started = generation;
+      setStatus(noyaruT("Chargement…"), 'pending');
+      messagesEl.querySelector('.assistant-empty')?.remove();
+      pendingRow = renderMessage('user', message);
+      typingRow = renderMessage('assistant', noyaruT("Chargement…"));
+      typingRow.classList.add('assistant-pending');
+      typingRow.setAttribute('aria-hidden', 'true');
+      messagesEl.append(pendingRow, typingRow);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      input.value = '';
+      const {
+        response,
+        data
+      } = await readJson('/api/assistant/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({
+          message,
+          history: history.slice(-20),
+          context: ctx,
+          history_scope: submittedScope
+        })
+      }, 120000);
+      if (response.status === 409 && data && data.error_code === 'context_changed') {
+        changedIdentity();
+        return;
+      }
+      if (!await refreshMeta() || generation !== started || scope !== submittedScope) {
+        if (!needsReload) deferredDraft = {
+          scope: submittedScope,
+          message
+        };
+        return;
+      }
+      clearPending();
+      if (response.status === 401) {
+        deferredDraft = {
+          scope: submittedScope,
+          message
+        };
+        invalidate(noyaruT("Votre session a expiré. Reconnectez-vous pour reprendre cet écran."), 'login');
+        return;
+      }
+      if (response.status === 402) {
+        setStatus(noyaruT("Une limite de votre formule est atteinte"), 'error', 'billing');
+        input.value = message;
+        return;
+      }
+      if (response.status === 429) {
+        startCooldown(response);
+        setStatus(noyaruT("Votre choix n’est pas disponible pour le moment. Réessayez dans quelques instants."), 'error');
+        input.value = message;
+        return;
+      }
+      if (response.status === 403) {
+        setStatus(noyaruT("Votre session n’est plus disponible. Reconnectez-vous avant de reprendre votre travail."), 'error', 'reload');
+        input.value = message;
+        return;
+      }
+      if (!response.ok || !data || data.ok !== true || typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('reply');
+      const answer = data.reply.trim().slice(0, 4000);
+      history.push({
+        role: 'user',
+        content: message
+      }, {
+        role: 'assistant',
+        content: answer
+      });
+      history = history.slice(-24);
+      saveHistory();
+      messagesEl.append(renderMessage('user', message), renderMessage('assistant', answer));
+      setStatus('');
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    } catch {
+      clearPending();
+      if (submittedScope && !needsReload && await refreshMeta() && scope === submittedScope && generation === started) {
+        input.value = message;
+        setStatus(errorPrefix + ' ' + noyaruT("Le service ne répond pas comme prévu. Réessayez dans quelques instants."), 'error', 'refresh');
+      } else if (submittedScope && !needsReload) deferredDraft = {
+        scope: submittedScope,
+        message
+      };
+    } finally {
+      clearPending();
+      busy = false;
+      syncControls();
+      const canReturnFocus = [document.body, sendBtn, input].includes(document.activeElement);
+      if (isOpen && ready && !needsReload && !input.disabled && canReturnFocus) input.focus();
+    }
+  }
+
+  toggle.addEventListener('click', () => {
+    interacted = true;
+    setOpen(!isOpen);
+  });
+  if (closeBtn) closeBtn.addEventListener('click', () => {
+    interacted = true;
+    setOpen(false);
+  });
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    if (busy || !ready || !window.confirm(noyaruT("Effacer la conversation ?"))) return;
+    history = [];
+    deferredDraft = null;
+    try {
+      localStorage.removeItem(historyKey());
+    } catch {
+      /* Memory only. */ }
+    renderHistory();
+    setStatus('');
+    if (isOpen) input.focus();
+  });
+  input.addEventListener('input', syncControls);
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    sendMessage(input.value);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && isOpen) {
+      event.preventDefault();
+      setOpen(false);
+    }
+  });
+  document.addEventListener('click', event => {
+    if (isOpen && !event.composedPath().includes(dock)) setOpen(false, {
+      restoreFocus: false
+    });
+  });
+  window.addEventListener('focus', () => {
+    if (isOpen) refreshMeta();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isOpen) refreshMeta();
+  });
+  setOpen(false, {
+    focus: false,
+    restoreFocus: false
+  });
+  renderHistory();
+  refreshMeta();
 
   function escapeHtml(s) {
     return String(s)
@@ -86,7 +511,10 @@
     let listTag = "";
 
     const closeList = () => {
-      if (listTag) { html += `</${listTag}>`;  listTag = ""; }
+      if (listTag) {
+        html += `</${listTag}>`;
+        listTag = "";
+      }
     };
 
     for (const raw of lines) {
@@ -95,10 +523,18 @@
       const blank = raw.trim() === "";
 
       if (bulletM) {
-        if (listTag !== "ul") { closeList(); html += "<ul>"; listTag = "ul"; }
+        if (listTag !== "ul") {
+          closeList();
+          html += "<ul>";
+          listTag = "ul";
+        }
         html += `<li>${inlineFormat(bulletM[1])}</li>`;
       } else if (orderedM) {
-        if (listTag !== "ol") { closeList(); html += "<ol>"; listTag = "ol"; }
+        if (listTag !== "ol") {
+          closeList();
+          html += "<ol>";
+          listTag = "ol";
+        }
         html += `<li>${inlineFormat(orderedM[1])}</li>`;
       } else {
         closeList();
@@ -114,269 +550,5 @@
     return html.replace(/^(<br>)+/, "");
   }
 
-  // ── History ───────────────────────────────────────────────────────────────
-  function loadHistory() {
-    try {
-      const raw = localStorage.getItem(historyKey);
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .filter((m) => m && typeof m === "object")
-        .map((m) => ({
-          role: m.role === "assistant" ? "assistant" : "user",
-          content: String(m.content || "").trim().slice(0, 4000),
-        }))
-        .filter((m) => m.content);
-    } catch {
-      return [];
-    }
-  }
 
-  function saveHistory() {
-    try {
-      localStorage.setItem(historyKey, JSON.stringify(history.slice(-24)));
-    } catch { /* ignore */ }
-  }
-
-  // ── Open / close ──────────────────────────────────────────────────────────
-  function setOpen(next, opts) {
-    const instant = Boolean(opts && opts.instant);
-    isOpen = Boolean(next);
-    toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-
-    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
-
-    try { localStorage.setItem(openKey, isOpen ? "1" : "0"); } catch { /* ignore */ }
-
-    if (isOpen) {
-      panel.hidden = false;
-      dock.classList.add("assistant-mounted");
-      if (instant) {
-        dock.classList.add("assistant-open");
-      } else {
-        requestAnimationFrame(() => dock.classList.add("assistant-open"));
-      }
-      render();
-      input.focus();
-      input.select();
-      return;
-    }
-
-    dock.classList.remove("assistant-open");
-    if (instant) {
-      panel.hidden = true;
-      dock.classList.remove("assistant-mounted");
-      return;
-    }
-    closeTimer = window.setTimeout(() => {
-      panel.hidden = true;
-      dock.classList.remove("assistant-mounted");
-      closeTimer = null;
-    }, 190);
-  }
-
-  // ── Render ────────────────────────────────────────────────────────────────
-  function renderMessage(role, content) {
-    const row = document.createElement("div");
-    row.className = `assistant-msg ${role}`;
-    const isError = role === "assistant" && isErrorText(content);
-    if (isError) row.classList.add("error");
-
-    const bubble = document.createElement("div");
-    bubble.className = "assistant-bubble";
-
-    if (role === "assistant" && !isError) {
-      bubble.innerHTML = buildBubbleHtml(content);
-    } else {
-      bubble.textContent = content;
-    }
-
-    row.appendChild(bubble);
-    return row;
-  }
-
-  function renderTypingIndicator() {
-    const row = document.createElement("div");
-    row.className = "assistant-msg assistant";
-    const bubble = document.createElement("div");
-    bubble.className = "assistant-bubble assistant-typing";
-    bubble.innerHTML = "<span></span><span></span><span></span>";
-    row.appendChild(bubble);
-    return row;
-  }
-
-  function renderEmptyState() {
-    const el = document.createElement("div");
-    el.className = "assistant-empty";
-
-    const iconBox = document.createElement("div");
-    iconBox.className = "assistant-empty-icon";
-    const iconImg = document.createElement("img");
-    iconImg.src = "/static/assistant-icon.svg";
-    iconImg.alt = "";
-    iconImg.width = 38;
-    iconImg.height = 38;
-    iconBox.appendChild(iconImg);
-    el.appendChild(iconBox);
-
-    const title = document.createElement("div");
-    title.className = "assistant-empty-title";
-    title.textContent = projectName ? `${noyaruT("Assistant")} — ${projectName}` : noyaruT("Comment puis-je vous aider ?");
-
-    const sub = document.createElement("div");
-    sub.className = "assistant-empty-sub";
-    sub.textContent = noyaruT("Posez une question sur vos données SEO ou choisissez une suggestion.");
-
-    const chips = document.createElement("div");
-    chips.className = "assistant-suggestions";
-
-    for (const q of getSuggestions()) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "assistant-suggestion";
-      btn.textContent = q;
-      btn.addEventListener("click", () => sendMessage(q));
-      chips.appendChild(btn);
-    }
-
-    el.appendChild(title);
-    el.appendChild(sub);
-    el.appendChild(chips);
-    return el;
-  }
-
-  function render() {
-    messagesEl.innerHTML = "";
-    liveTypingEl = null;
-
-    if (history.length === 0) {
-      messagesEl.appendChild(renderEmptyState());
-    } else {
-      for (const m of history) {
-        messagesEl.appendChild(renderMessage(m.role, m.content));
-      }
-    }
-
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-
-    if (meta && meta.configured === false) {
-      footEl.textContent = noyaruT("Assistant temporairement indisponible.");
-    } else {
-      footEl.textContent = "";
-    }
-  }
-
-  // ── Status dot ────────────────────────────────────────────────────────────
-  function setDot(status) {
-    dotEl.classList.remove("ok", "err");
-    if (status === "ok") dotEl.classList.add("ok");
-    if (status === "err") dotEl.classList.add("err");
-  }
-
-  // ── Meta ──────────────────────────────────────────────────────────────────
-  async function refreshMeta() {
-    metaEl.textContent = "…";
-    setDot();
-    try {
-      const resp = await fetch("/api/assistant/meta", { headers: { "Accept": "application/json" } });
-      const data = await resp.json();
-      meta = data && typeof data === "object" ? data : null;
-    } catch {
-      meta = null;
-    }
-
-    if (!meta || meta.ok !== true) {
-      metaEl.textContent = noyaruT("Assistant indisponible");
-      setDot("err");
-      return;
-    }
-
-    const configured = Boolean(meta.configured);
-
-    metaEl.textContent = configured ? noyaruT("En ligne") : noyaruT("Indisponible");
-    setDot(configured ? "ok" : "err");
-    if (isOpen) render();
-  }
-
-  // ── Send ──────────────────────────────────────────────────────────────────
-  async function sendMessage(text) {
-    const message = String(text || "").trim();
-    if (!message) return;
-
-    const historyForServer = history.slice(-20);
-    history.push({ role: "user", content: message });
-    saveHistory();
-    render();
-
-    // Live typing indicator (not stored in history)
-    liveTypingEl = renderTypingIndicator();
-    messagesEl.appendChild(liveTypingEl);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-
-    input.value = "";
-    input.focus();
-    input.disabled = true;
-    sendBtn.disabled = true;
-
-    try {
-      const resp = await fetch("/api/assistant/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ message, history: historyForServer, context: ctx }),
-      });
-      const data = await resp.json();
-      if (!data || data.ok !== true) {
-        throw new Error((data && data.error) ? data.error : noyaruT("Erreur inconnue"));
-      }
-      history.push({ role: "assistant", content: String(data.reply || "").trim() || "—" });
-      saveHistory();
-      await refreshMeta();
-      render();
-    } catch (e) {
-      const msg = (e && e.message) ? e.message : String(e || noyaruT("Erreur"));
-      history.push({ role: "assistant", content: normalizeAssistantText(`${errorPrefix} ${msg}`) });
-      saveHistory();
-      setDot("err");
-      render();
-    } finally {
-      liveTypingEl = null;
-      input.disabled = false;
-      sendBtn.disabled = false;
-      input.focus();
-    }
-  }
-
-  // ── Events ────────────────────────────────────────────────────────────────
-  toggle.addEventListener("click", () => setOpen(!isOpen));
-  if (closeBtn) closeBtn.addEventListener("click", () => setOpen(false));
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => {
-      if (!window.confirm(noyaruT("Effacer la conversation ?"))) return;
-      history = [];
-      saveHistory();
-      render();
-      input.focus();
-    });
-  }
-
-  form.addEventListener("submit", (ev) => {
-    ev.preventDefault();
-    sendMessage(input.value);
-  });
-
-  document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape" && isOpen) setOpen(false);
-  });
-
-  document.addEventListener("click", (ev) => {
-    if (!isOpen) return;
-    const t = ev.target;
-    if (!(t instanceof Node)) return;
-    if (dock.contains(t)) return;
-    setOpen(false);
-  });
-
-  try { isOpen = localStorage.getItem(openKey) === "1"; } catch { isOpen = false; }
-  setOpen(isOpen, { instant: true });
-  refreshMeta();
 })();

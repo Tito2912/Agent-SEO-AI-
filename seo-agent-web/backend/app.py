@@ -16480,14 +16480,33 @@ def delete_projects(request: Request, slugs: list[str] = Form(default=[])) -> Re
     return RedirectResponse(url="/", status_code=303)
 
 
+def _assistant_json(payload: dict[str, Any], *, status_code: int = 200, headers: dict[str, str] | None = None) -> JSONResponse:
+    return JSONResponse(payload, status_code=status_code,
+                        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer", **(headers or {})})
+
+
+def _assistant_history_scope(request: Request, slug: str = "") -> str:
+    """An opaque storage namespace, never a substitute for project authorization."""
+    user = request.state.user
+    project_id = "global"
+    if slug:
+        project_id = str(_db_project_or_404(request, slug).id)
+    payload = json.dumps([str(user.id), project_id], separators=(",", ":")).encode("utf-8")
+    secret = _safe_env("SEO_AGENT_SECRET_KEY")
+    if not secret:
+        raise HTTPException(status_code=503, detail="Assistant temporairement indisponible.")
+    return hmac.new(secret.encode("utf-8"), b"noyaru-assistant-history-v2:" + payload, hashlib.sha256).hexdigest()
+
+
 @app.get("/api/assistant/meta")
-def assistant_meta(request: Request) -> JSONResponse:
+def assistant_meta(request: Request, slug: str = "") -> JSONResponse:
     if not getattr(request.state, "user", None):
-        return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
+        return _assistant_json({"ok": False, "error": "auth_required"}, status_code=401)
     effective = _assistant_effective_provider()
     configured = effective != "none"
     # Return only what the frontend needs — do not expose provider names to users
-    return JSONResponse({"ok": True, "configured": configured})
+    return _assistant_json({"ok": True, "configured": configured,
+                            "history_scope": _assistant_history_scope(request, str(slug or "").strip())})
 
 
 @app.post("/api/assistant/chat")
@@ -16495,15 +16514,28 @@ async def assistant_chat(request: Request) -> JSONResponse:
     try:
         payload = await request.json()
     except Exception:
-        return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
+        return _assistant_json({"ok": False, "error": "Invalid JSON"}, status_code=400)
 
     user = getattr(request.state, "user", None)
     if not user:
-        return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
+        return _assistant_json({"ok": False, "error": "auth_required"}, status_code=401)
+
+    context = payload.get("context") if isinstance(payload, dict) else None
+    # New widgets bind the transmitted history to the identity verified just before sending.
+    # Existing API clients without this field retain their request format.
+    if isinstance(payload, dict) and "history_scope" in payload:
+        project = context.get("project") if isinstance(context, dict) else None
+        slug = str(project.get("slug") or "").strip() if isinstance(project, dict) else ""
+        expected = _assistant_history_scope(request, slug)
+        given = payload.get("history_scope")
+        if not isinstance(given, str) or not re.fullmatch(r"[a-f0-9]{64}", given) or not hmac.compare_digest(given, expected):
+            return _assistant_json({"ok": False, "error_code": "context_changed",
+                                    "error": "Votre session n’est plus disponible. Reconnectez-vous avant de reprendre votre travail."},
+                                   status_code=409)
 
     message = payload.get("message") if isinstance(payload, dict) else None
     if not isinstance(message, str) or not message.strip():
-        return JSONResponse({"ok": False, "error": "Missing message"}, status_code=400)
+        return _assistant_json({"ok": False, "error": "Missing message"}, status_code=400)
     message = message.strip()[:2000]
     retry_after = _rate_limit_retry_after(
         bucket="assistant_chat_user",
@@ -16512,7 +16544,7 @@ async def assistant_chat(request: Request) -> JSONResponse:
         window_s=60,
     )
     if isinstance(retry_after, int):
-        return JSONResponse(
+        return _assistant_json(
             {"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."},
             status_code=429,
             headers={"Retry-After": str(retry_after)},
@@ -16528,17 +16560,16 @@ async def assistant_chat(request: Request) -> JSONResponse:
             )
             if not ok:
                 msg = "Quota Assistant IA mensuel atteint. Va sur Abonnement pour upgrade."
-                return JSONResponse(
+                return _assistant_json(
                     {"ok": False, "error": msg, "billing_url": "/billing", "remaining": remaining}, status_code=402
                 )
 
     history = _assistant_clean_history(payload.get("history") if isinstance(payload, dict) else None)
-    context = payload.get("context") if isinstance(payload, dict) else None
     system = _assistant_system_prompt(context if isinstance(context, dict) else None)
 
     provider = _assistant_effective_provider()
     if provider == "none":
-        return JSONResponse(
+        return _assistant_json(
             {
                 "ok": False,
                 "error": "Assistant temporairement indisponible.",
@@ -16565,10 +16596,11 @@ async def assistant_chat(request: Request) -> JSONResponse:
             contents.append({"role": "user", "content": message})
             reply = _assistant_gemini_chat(contents, system=system, model=model)
     except Exception as e:
-        # Keep client errors clean (no Python exception class names), but log full details server-side.
-        print(f"[ASSISTANT] {provider} error: {type(e).__name__}: {e}")
-        err = str(e).strip() or "Erreur assistant"
-        return JSONResponse({"ok": False, "error": err, "provider": provider}, status_code=502)
+        logger.error("[ASSISTANT] %s error: %s: %s", provider, type(e).__name__, e)
+        return _assistant_json({"ok": False, "error": "Assistant temporairement indisponible."}, status_code=502)
+    if not isinstance(reply, str) or not reply.strip():
+        logger.error("[ASSISTANT] %s returned an empty reply", provider)
+        return _assistant_json({"ok": False, "error": "Assistant temporairement indisponible."}, status_code=502)
 
     try:
         with DB.session() as db:
@@ -16582,7 +16614,7 @@ async def assistant_chat(request: Request) -> JSONResponse:
     except Exception as e:
         logger.error("[BILLING] assistant usage error: %s: %s", type(e).__name__, e)
 
-    return JSONResponse({"ok": True, "reply": reply, "provider": provider, "model": model})
+    return _assistant_json({"ok": True, "reply": reply, "provider": provider, "model": model})
 
 
 @app.get("/projects/{slug}/gsc/oauth/connect")

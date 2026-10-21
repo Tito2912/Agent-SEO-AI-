@@ -1,0 +1,38 @@
+/* Only the assistant is restyled; shared layouts and page interactions keep their contracts. */
+.assistant-journey { --muted: #b9c2bd; }
+.assistant-journey .assistant-panel { width: min(440px, calc(100vw - 32px)); max-height: min(78dvh, 700px); background: #141718; transform: none; transition: opacity .16s ease; }
+.assistant-journey .assistant-head { padding: 14px; flex-shrink: 0; }
+.assistant-journey .assistant-title { font-size: 16px; }
+.assistant-journey .assistant-meta { font-size: 13px; overflow-wrap: anywhere; }
+.assistant-journey .assistant-head-icon { display: none; }
+.assistant-journey .assistant-clear, .assistant-journey .assistant-close { width: 44px; height: 44px; color: #b9c2bd; }
+.assistant-journey .assistant-hero { display: none; }
+.assistant-journey .assistant-messages { min-height: 100px; padding: 16px 14px; overscroll-behavior: contain; }
+.assistant-journey .assistant-empty { padding: 12px 0; gap: 12px; }
+.assistant-journey .assistant-empty-title { margin: 0; font-size: 17px; }
+.assistant-journey .assistant-empty-sub { font-size: 14px; max-width: none; margin: 0; }
+.assistant-journey .assistant-suggestions { max-width: none; }
+.assistant-journey .assistant-suggestion { font-size: 14px; min-height: 44px; padding: 12px; line-height: 1.5; text-wrap: balance; }
+.assistant-journey .assistant-suggestion:disabled { cursor: not-allowed; }
+.assistant-journey .assistant-bubble { font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
+.assistant-journey .assistant-msg.user .assistant-bubble { background: #244a37; color: #f3f5f4; }
+.assistant-journey .assistant-msg.assistant .assistant-bubble { background: #202627; color: #f3f5f4; }
+.assistant-journey .assistant-pending { color: var(--muted); }
+.assistant-journey .assistant-form { padding: 12px 14px; flex-shrink: 0; }
+.assistant-journey .assistant-input { min-width: 0; font-size: 16px; height: 46px; }
+.assistant-journey .assistant-send { width: 46px; height: 46px; background: #65b588; color: #0f2118; box-shadow: none; }
+.assistant-journey .assistant-foot { padding: 0 14px 12px; font-size: 14px; flex-shrink: 0; overflow-wrap: anywhere; max-height: 35dvh; overflow: auto; }
+.assistant-journey .assistant-status { margin: 0; line-height: 1.6; }
+.assistant-journey .assistant-status[role=alert] { padding: 10px; border: 1px solid #a86767; border-radius: 10px; background: #352322; color: #f3f5f4; }
+.assistant-journey .assistant-links, .assistant-journey .assistant-recovery { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.assistant-journey .assistant-links a, .assistant-journey .assistant-recovery :is(a,button) { display: inline-flex; align-items: center; min-height: 44px; color: #82d4a6; font-size: 14px; }
+.assistant-journey .assistant-recovery button { background: transparent; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
+.assistant-journey :is(a,button,input):focus-visible { outline: 3px solid #82d4a6; outline-offset: 3px; }
+@media(max-width: 600px) {
+  .assistant-journey .assistant-panel { position: fixed; inset: auto 12px 78px; width: auto; max-width: none; max-height: calc(100dvh - 102px); }
+  .assistant-journey .assistant-head { gap: 8px; }
+  .assistant-journey .assistant-messages { min-height: 64px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .assistant-journey *, .assistant-journey *::before { animation: none !important; transition: none !important; }
+}
