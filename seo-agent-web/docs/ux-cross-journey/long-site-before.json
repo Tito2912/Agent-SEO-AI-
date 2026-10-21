@@ -1,0 +1,13 @@
+{
+  "base_commit": "d7f4f24",
+  "path": "/billing?project=atelier&lang=fr",
+  "width": 360,
+  "overflowing_elements": [
+    {
+      "tag": "A",
+      "cls": "btn",
+      "text": "Revenir à Atelier de réparation & services",
+      "right": 380.828125
+    }
+  ]
+}

@@ -69,6 +69,7 @@
         .pub-nav-links a { white-space: nowrap; padding: 9px 10px; }
       }
     </style>
+    <link rel="stylesheet" href="/static/navigation-feedback.css?v=1" />
     {# Image de partage (12/10/2026) : le site n'en declarait aucune — 33 pages en « Open Graph
        incomplet » et 7 sans carte X chez Ahrefs comme chez Noyaru. Posee ICI une seule fois :
        aucune page ne declare d'image, donc aucun doublon possible. La carte X passe en grand
@@ -90,6 +91,7 @@
     {% block head_extra %}{% endblock %}
   </head>
   <body>
+    <a class="skip-link" href="#main-content">{{ tr("Aller au contenu") }}</a>
     <header class="pub-nav">
       <a href="{{ campaign_link(request, '/') }}" class="pub-nav-brand" aria-label="{{ app_name }} - {{ tr('Accueil') }}">
         <picture>
@@ -122,7 +124,7 @@
       </div>
     </header>
 
-    <main class="container">
+    <main class="container public-main" id="main-content" tabindex="-1">
       {% block content %}{% endblock %}
     </main>
 
@@ -140,27 +142,11 @@
       </div>
     </footer>
 
-    <!-- Cookie consent banner -->
-    <div id="cookie-banner" role="dialog" aria-label="{{ tr('Politique de cookies') }}" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#111;color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;font-size:14px;">
-      <span>{{ tr("Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun cookie publicitaire.") }} <a href="{{ campaign_link(request, '/privacy') }}" style="color:#aaa;text-decoration:underline;">{{ tr("En savoir plus") }}</a></span>
-      <button id="cookie-accept" type="button" style="background:#fff;color:#111;border:none;border-radius:4px;padding:7px 18px;font-weight:600;cursor:pointer;white-space:nowrap;">{{ tr("Fermer") }}</button>
-    </div>
-    <script>
-      (() => {
-        const banner = document.getElementById("cookie-banner");
-        const btn = document.getElementById("cookie-accept");
-        if (!banner) return;
-        if (localStorage.getItem("cookie_consent") !== "1") {
-          banner.style.display = "flex";
-        } else {
-          banner.remove();
-        }
-        if (btn) btn.addEventListener("click", () => {
-          localStorage.setItem("cookie_consent", "1");
-          banner.remove();
-        });
-      })();
-    </script>
+    <aside id="cookie-banner" class="cookie-notice" aria-label="{{ tr('Politique de cookies') }}">
+      <span>{{ tr("Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun cookie publicitaire.") }} <a href="{{ campaign_link(request, '/privacy') }}">{{ tr("En savoir plus") }}</a></span>
+      <button id="cookie-accept" type="button" hidden>{{ tr("Fermer") }}</button>
+    </aside>
+    <script src="/static/public-navigation.js?v=1" defer></script>
     <script>
       (() => {
         function autoHideAlerts() {

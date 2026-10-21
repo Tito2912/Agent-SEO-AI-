@@ -1,0 +1,617 @@
+{
+  "visited_at": "2026-10-21T15:49:00.192590+00:00",
+  "source_revision": "inconnue en production",
+  "checks": [
+    {
+      "path": "/",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/pricing",
+      "html_lang": "fr",
+      "overflow": false,
+      "faq_mentions_wordpress": true
+    },
+    {
+      "path": "/support",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/support",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/status",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/status",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/docs",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/docs",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/terms",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/terms",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/privacy",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/login?lang=fr",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/login",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/signup?lang=fr",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/signup",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/forgot?lang=fr",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/forgot",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/reset?lang=fr",
+      "lang": "fr",
+      "width": 1440,
+      "status": 400,
+      "final_path": "/auth/reset",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/verify?lang=fr",
+      "lang": "fr",
+      "width": 1440,
+      "status": 400,
+      "final_path": "/auth/verify",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/verify/resend?lang=fr",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/verify/resend",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/en/",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "html_lang": "en",
+      "overflow": false,
+      "faq_mentions_wordpress": true
+    },
+    {
+      "path": "/en/support",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/support",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/status",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/status",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/docs",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/terms",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/login?lang=en",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/login",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/signup?lang=en",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/signup",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/forgot?lang=en",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/forgot",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/reset?lang=en",
+      "lang": "en",
+      "width": 1440,
+      "status": 400,
+      "final_path": "/auth/reset",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/verify?lang=en",
+      "lang": "en",
+      "width": 1440,
+      "status": 400,
+      "final_path": "/auth/verify",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/verify/resend?lang=en",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "final_path": "/auth/verify/resend",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/pricing",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/pricing",
+      "html_lang": "fr",
+      "overflow": false,
+      "faq_mentions_wordpress": true
+    },
+    {
+      "path": "/support",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/support",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/status",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/status",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/docs",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/docs/demarrer",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/docs/demarrer",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/terms",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/terms",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/privacy",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/privacy",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/mentions-legales",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/mentions-legales",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/ressources-seo",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/ressources-seo",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/login?lang=fr",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/auth/login",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/signup?lang=fr",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/auth/signup",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/forgot?lang=fr",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/auth/forgot",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/reset?lang=fr",
+      "lang": "fr",
+      "width": 390,
+      "status": 400,
+      "final_path": "/auth/reset",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/verify?lang=fr",
+      "lang": "fr",
+      "width": 390,
+      "status": 400,
+      "final_path": "/auth/verify",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/verify/resend?lang=fr",
+      "lang": "fr",
+      "width": 390,
+      "status": 200,
+      "final_path": "/auth/verify/resend",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/en/",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/pricing",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/pricing",
+      "html_lang": "en",
+      "overflow": false,
+      "faq_mentions_wordpress": true
+    },
+    {
+      "path": "/en/support",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/support",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/status",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/status",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/docs",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/docs/demarrer",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/docs/demarrer",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/terms",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/terms",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/privacy",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/privacy",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/mentions-legales",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/mentions-legales",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/en/ressources-seo",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/en/ressources-seo",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/login?lang=en",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/auth/login",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/signup?lang=en",
+      "lang": "en",
+      "width": 390,
+      "error": "Page.goto: Timeout 25000ms exceeded.\nCall log:\n  - navigating to \"https://noyaru.com/auth/signup?lang=en\", waiting until \"load\"\n"
+    },
+    {
+      "path": "/auth/forgot?lang=en",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/auth/forgot",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/reset?lang=en",
+      "lang": "en",
+      "width": 390,
+      "status": 400,
+      "final_path": "/auth/reset",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/verify?lang=en",
+      "lang": "en",
+      "width": 390,
+      "status": 400,
+      "final_path": "/auth/verify",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/verify/resend?lang=en",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "final_path": "/auth/verify/resend",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/settings/accounts",
+      "status": 200,
+      "final_path": "/auth/login",
+      "anonymous_guard_observed": true
+    },
+    {
+      "path": "/settings/system",
+      "status": 200,
+      "final_path": "/auth/login",
+      "anonymous_guard_observed": true
+    }
+  ],
+  "javascript_errors": [],
+  "blocked_requests": [],
+  "notes": [
+    "Lecture anonyme de production ; uniquement GET/HEAD autorisés. Aucun compte créé, formulaire soumis, OAuth ou paiement.",
+    "Les liens invalides de réinitialisation/confirmation peuvent répondre 400 ; le statut est conservé.",
+    "Les pages authentifiées de production ne sont pas parcourues."
+  ],
+  "retry_checks": [
+    {
+      "path": "/auth/signup?lang=en",
+      "lang": "en",
+      "width": 390,
+      "status": 200,
+      "html_lang": "en",
+      "overflow": false,
+      "load_completed": true,
+      "visited_at": "2026-10-21T16:03:53.307202+00:00",
+      "javascript_errors": [],
+      "blocked_requests": []
+    }
+  ],
+  "tested_code_commit": "unknown-production-revision"
+}

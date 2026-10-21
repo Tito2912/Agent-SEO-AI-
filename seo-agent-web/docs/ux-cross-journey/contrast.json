@@ -1,0 +1,1451 @@
+{
+  "samples": [
+    {
+      "text": "Tarifs",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Guides SEO",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Se connecter",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Commencer →",
+      "ratio": 7.249910838012806,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun coo",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "En savoir plus",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Tarifs",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Guides SEO",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Tableau de bord",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Se déconnecter",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun coo",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "En savoir plus",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 13.50403982396177,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Revenir à Atelier de réparation & services",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Pricing",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "SEO guides",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Log in",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Get started →",
+      "ratio": 7.249910838012806,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "This site only uses cookies required for the service to work. No advertising cookies. Lear",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Learn more",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Close",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Pricing",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "SEO guides",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Dashboard",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Log out",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "This site only uses cookies required for the service to work. No advertising cookies. Lear",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Learn more",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Close",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Close",
+      "ratio": 13.50403982396177,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Back to Atelier de réparation & services",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Tarifs",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Guides SEO",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Se connecter",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Commencer →",
+      "ratio": 7.249910838012806,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun coo",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 66.390625,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "En savoir plus",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Tarifs",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Guides SEO",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Tableau de bord",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Se déconnecter",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun coo",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 66.390625,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "En savoir plus",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 13.50403982396177,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Revenir à Atelier de réparation & services",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Pricing",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "SEO guides",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Log in",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Get started →",
+      "ratio": 7.249910838012806,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "This site only uses cookies required for the service to work. No advertising cookies. Lear",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Learn more",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Close",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Pricing",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "SEO guides",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Dashboard",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Log out",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "This site only uses cookies required for the service to work. No advertising cookies. Lear",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Learn more",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Close",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Close",
+      "ratio": 13.50403982396177,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Back to Atelier de réparation & services",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Tarifs",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Guides SEO",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Se connecter",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Commencer →",
+      "ratio": 7.249910838012806,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun coo",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 88.78125,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "En savoir plus",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Tarifs",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Guides SEO",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Tableau de bord",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Se déconnecter",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun coo",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 88.78125,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "En savoir plus",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 13.50403982396177,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Revenir à Atelier de réparation & services",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 57,
+      "lang": "fr",
+      "width": 390,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Pricing",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "SEO guides",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Log in",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Get started →",
+      "ratio": 7.249910838012806,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "This site only uses cookies required for the service to work. No advertising cookies. Lear",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 88.78125,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Learn more",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Close",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Pricing",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "SEO guides",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Dashboard",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Log out",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "This site only uses cookies required for the service to work. No advertising cookies. Lear",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 88.78125,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Learn more",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Close",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Close",
+      "ratio": 13.50403982396177,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Back to Atelier de réparation & services",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 57,
+      "lang": "en",
+      "width": 390,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Tarifs",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Guides SEO",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Se connecter",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Commencer →",
+      "ratio": 7.249910838012806,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun coo",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 88.78125,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "En savoir plus",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Tarifs",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Guides SEO",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Tableau de bord",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Se déconnecter",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun coo",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 88.78125,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "En savoir plus",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Fermer",
+      "ratio": 13.50403982396177,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Revenir à Atelier de réparation & services",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 57,
+      "lang": "fr",
+      "width": 360,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Pricing",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "SEO guides",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Log in",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Get started →",
+      "ratio": 7.249910838012806,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "This site only uses cookies required for the service to work. No advertising cookies. Lear",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 88.78125,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Learn more",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Close",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-anonymous"
+    },
+    {
+      "text": "Pricing",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Documentation",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "SEO guides",
+      "ratio": 4.681579503389212,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Support",
+      "ratio": 16.728754718586263,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Dashboard",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Log out",
+      "ratio": 15.422744270922252,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "This site only uses cookies required for the service to work. No advertising cookies. Lear",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 88.78125,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Learn more",
+      "ratio": 10.353669353755956,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Close",
+      "ratio": 18.883060964594996,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "public-connected"
+    },
+    {
+      "text": "Close",
+      "ratio": 13.50403982396177,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "screen": "billing-return-and-confirmation"
+    },
+    {
+      "text": "Back to Atelier de réparation & services",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 57,
+      "lang": "en",
+      "width": 360,
+      "screen": "billing-return-and-confirmation"
+    }
+  ],
+  "minimum_text_ratio": 4.681579503389212,
+  "failures": [],
+  "notes": [
+    "Échantillons des textes de navigation commune, information cookies, bouton de retour long et fermeture de confirmation. Pas un audit WCAG complet.",
+    "Couleurs calculées dans Chromium avec composition des fonds RGBA. Aucun dégradé dans les échantillons. Cible texte 4,5:1 ; boutons/liens modifiés au moins 44 px."
+  ],
+  "tested_code_commit": "af9f55139cf1a4bb027f1c2c29ad20661e9f0874"
+}
