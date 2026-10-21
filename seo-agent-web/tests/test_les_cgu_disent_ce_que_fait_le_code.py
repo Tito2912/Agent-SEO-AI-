@@ -91,16 +91,17 @@ def test_l_analyse_des_concurrents_respecte_TOUJOURS_robots_txt(monkeypatch) -> 
 
 def test_la_date_est_celle_du_DOCUMENT_et_le_modele_a_disparu() -> None:
     page = _cgu()
-    assert "Mise à jour le 30 septembre 2026" in page
+    assert "Mise à jour le %s" % m.legal.updated("terms", "fr") in page
     assert "modèle de base à compléter" not in page
     assert datetime.now(UTC).strftime("%Y-%m-%d") not in page
 
 
-def test_l_editeur_est_DECLARE(monkeypatch) -> None:
+def test_l_editeur_est_NOMME_meme_sans_variable(monkeypatch) -> None:
+    """L'éditeur vient de backend/legal.py (audit d'octobre 2026) : une variable LEGAL_ENTITY
+    vide faisait disparaître la phrase qui le nomme."""
     monkeypatch.delenv("LEGAL_ENTITY", raising=False)
-    assert "est édité par" not in _cgu()
-    monkeypatch.setenv("LEGAL_ENTITY", "Exemple SAS, 1 rue de Test, 75000 Paris")
-    assert "est édité par Exemple SAS, 1 rue de Test" in _cgu()
+    assert "est édité par %s" % m.legal.identity() in _cgu()
+    assert "is published by %s" % m.legal.identity() in TestClient(m.app).get("/en/terms").text
 
 
 def test_les_cgu_renvoient_aux_TARIFS_et_a_la_CONFIDENTIALITE() -> None:

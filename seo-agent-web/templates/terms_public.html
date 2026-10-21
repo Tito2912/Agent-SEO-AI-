@@ -18,37 +18,27 @@
    que la loi leur doit : prix TTC, retractation de 14 jours et son formulaire, garantie legale de
    conformite, resiliation nommee (bouton « Resilier mon abonnement » + e-mail de confirmation),
    mediateur, juridiction. La responsabilite n'est plafonnee qu'envers les professionnels : envers
-   un consommateur, la clause serait abusive (art. R212-1, 6° du Code de la consommation). #}
-<style>
-body > footer { max-width: 1160px !important; }
-main.container { max-width: 900px; }
-.cgu { padding: 64px 0 80px; }
-.cgu h1 { margin: 0; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 650; letter-spacing: -.035em; line-height: 1.08; }
-.cgu-date { margin: 12px 0 0; font-size: 13.5px; color: var(--muted); }
-.cgu h2 { margin: 48px 0 12px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); scroll-margin-top: 90px; }
-.cgu p, .cgu li { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.66); }
-.cgu ul { padding-left: 20px; margin: 10px 0; }
-.cgu li { margin: 5px 0; }
-.cgu strong { color: var(--text); font-weight: 600; }
-.cgu-formulaire { margin: 14px 0 0; padding: 18px 20px; border: 1px solid var(--border-2); border-radius: var(--radius-lg); background: var(--surface-card-2); }
-.cgu-formulaire p { margin: 0 0 8px; font-size: 14px; }
-.cgu-formulaire p:last-child { margin-bottom: 0; }
-</style>
+   un consommateur, la clause serait abusive (art. R212-1, 6° du Code de la consommation).
+   20/10/2026 : corrections de l'audit juridique (docs/legal/LEGAL-CHANGES.md) — TVA, limites des
+   controles automatiques, contenus produits par IA, reserves de responsabilite, droit applicable,
+   modifications, langue. La version anglaise (terms_public_en.html) porte les memes droits et
+   obligations ; l'editeur et le mediateur viennent de backend/legal.py. #}
+{% include "_legal_styles.html" %}
 {% endblock %}
 
 {% block content %}
 <article class="cgu">
   <h1>Conditions générales d'utilisation</h1>
-  <p class="cgu-date">Mise à jour le 30 septembre 2026</p>
+  <p class="cgu-date">Mise à jour le {{ updated.terms }}</p>
 
   <h2>1. Éditeur et objet</h2>
   <p>
-    {% if legal_entity %}{{ app_name }} est édité par {{ legal_entity }}.{% else %}{{ app_name }} est joignable à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.{% endif %}
-    Voir aussi les <a href="/mentions-legales">mentions légales</a>.
+    {{ app_name }} est édité par {{ publisher_identity }}{% if publisher.share_capital %}, au capital de {{ publisher.share_capital }}{% endif %}.
+    Voir aussi les <a href="{{ campaign_link(request, '/mentions-legales') }}">mentions légales</a>.
     Ces conditions encadrent l'utilisation du service : l'analyse technique des sites que vous
-    ajoutez, la correction de leur code par pull request sur votre dépôt, la rédaction de pages,
-    l'analyse de vos concurrents, la recherche d'opportunités de liens, l'assistant et les exports.
-    En créant un compte, vous les acceptez.
+    ajoutez, la correction de leur code par pull request sur votre dépôt ou dans votre site
+    WordPress, la rédaction de pages, l'analyse de vos concurrents, la recherche d'opportunités de
+    liens, l'assistant et les exports. En créant un compte, vous les acceptez.
   </p>
   <p>
     Le service s'adresse aux professionnels comme aux particuliers. Quand une règle ne vaut que
@@ -64,15 +54,16 @@ main.container { max-width: 900px; }
 
   <h2>3. Plans, prix, quotas et paiement</h2>
   <ul>
-    <li>Les plans, leurs prix et leurs quotas sont ceux de la page <a href="/pricing">Tarifs</a> au moment de votre souscription. Le plan Free ne demande aucun moyen de paiement.</li>
-    <li>Les prix sont indiqués en euros, <strong>toutes taxes comprises</strong> : le montant affiché est celui que vous payez.{% if tva_detaillee %} Chaque facture détaille la TVA. Un professionnel établi dans un autre pays de l'Union européenne qui indique un numéro de TVA intracommunautaire valide paie le même montant, sans TVA (autoliquidation).{% endif %}</li>
+    <li>Les plans, leurs prix et leurs quotas sont ceux de la page <a href="{{ campaign_link(request, '/pricing') }}">Tarifs</a> au moment de votre souscription. Le plan Free ne demande aucun moyen de paiement.</li>
+    <li>Les prix sont indiqués en euros. Pour les consommateurs, ils s'entendent <strong>toutes taxes comprises</strong>.</li>
+    <li>Les prix applicables sont ceux affichés lors de la commande. Les taxes sont déterminées selon les règles fiscales applicables, notamment en fonction du pays du client, de sa qualité de professionnel ou de consommateur et des informations fiscales fournies.{% if tva_detaillee %} Lorsqu'une opération relève du mécanisme d'autoliquidation de la TVA, la facture est établie selon les règles correspondantes.{% endif %} Le montant total à payer est présenté avant la validation définitive de la commande.</li>
     <li>Les quotas sont <strong>mensuels et se renouvellent le 1er de chaque mois</strong> (heure UTC). Un quota non utilisé n'est pas reporté.</li>
-    <li>Une correction décomptée est un fichier de votre dépôt écrit par un modèle d'intelligence artificielle ; les réécritures mécaniques, qui n'en appellent aucun, ne sont pas décomptées. Un article rédigé est décompté une fois par langue.</li>
+    <li>Une correction décomptée est un fichier de votre dépôt, ou un texte de votre site WordPress, écrit par un modèle d'intelligence artificielle ; les réécritures mécaniques, qui n'en appellent aucun, ne sont pas décomptées. Un article rédigé est décompté une fois par langue.</li>
     <li>Le paiement est traité par Stripe. Les abonnements sont mensuels et sans engagement.</li>
     <li>Un passage au plan supérieur est immédiat : la différence pour la période en cours est facturée le jour même. Un retour au plan inférieur prend effet à la fin de la période déjà payée.</li>
   </ul>
 
-  <h2 id="resiliation">4. Résiliation</h2>
+  <h2 id="resiliation">4. Résiliation de l'abonnement</h2>
   <ul>
     <li>Vous résiliez à tout moment depuis la page Abonnement, avec le bouton <strong>« Résilier mon abonnement »</strong>, ou en nous écrivant à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
     <li>La résiliation prend effet à la fin de la période déjà payée : d'ici là, vous gardez votre plan et ses quotas ; ensuite, plus rien n'est prélevé et votre compte passe au plan Free.</li>
@@ -87,10 +78,18 @@ main.container { max-width: 900px; }
   </p>
   <p>
     Au moment de souscrire, vous demandez expressément que l'abonnement commence immédiatement, en
-    cochant la case prévue avant le paiement. Si vous vous rétractez ensuite, nous vous remboursons
-    le montant payé, moins la part correspondant au service fourni jusqu'à votre rétractation,
-    calculée au prorata des jours écoulés. Le remboursement intervient au plus tard 14 jours après
-    réception de votre rétractation, par le moyen de paiement utilisé.
+    cochant la case prévue avant le paiement. Cette demande ne vous fait pas perdre votre droit de
+    rétractation : elle permet seulement au service de commencer pendant le délai. Si vous vous
+    rétractez ensuite, nous vous remboursons le montant payé, moins la part correspondant au service
+    fourni jusqu'à votre rétractation, calculée au prorata des jours écoulés. Le remboursement
+    intervient au plus tard 14 jours après réception de votre rétractation, par le moyen de paiement
+    utilisé.
+  </p>
+  <p>
+    La rétractation et la résiliation sont deux démarches distinctes. La rétractation, ouverte aux
+    consommateurs pendant 14 jours, met fin au contrat et donne lieu au remboursement décrit
+    ci-dessus. La résiliation (article 4), ouverte à tous et à tout moment, arrête l'abonnement à la
+    fin de la période déjà payée.
   </p>
   <p>
     Pour vous rétracter, envoyez-nous une déclaration dénuée d'ambiguïté à
@@ -98,21 +97,30 @@ main.container { max-width: 900px; }
   </p>
   <div class="cgu-formulaire">
     <p><strong>Formulaire de rétractation</strong> (à compléter et à renvoyer uniquement si vous souhaitez vous rétracter)</p>
-    <p>À l'attention de {{ legal_entity or app_name }} — <a href="mailto:{{ support_email }}">{{ support_email }}</a> :</p>
+    <p>À l'attention de {{ publisher.name }} — <a href="mailto:{{ support_email }}">{{ support_email }}</a> :</p>
     <p>Je vous notifie par la présente ma rétractation du contrat portant sur la prestation de services ci-dessous :</p>
     <p>— Abonnement souscrit (plan) :<br />— Souscrit le :<br />— Nom du consommateur :<br />— Adresse du consommateur :<br />— Adresse e-mail du compte :<br />— Signature du consommateur (uniquement en cas d'envoi sur papier) :<br />— Date :</p>
   </div>
 
-  <h2>6. Votre dépôt et les pull requests</h2>
+  <h2>6. Votre dépôt, votre site et les modifications</h2>
   <ul>
-    <li>Pour corriger votre code ou publier une page, vous nous donnez accès à votre dépôt GitHub. Vous pouvez retirer cet accès à tout moment, depuis vos paramètres ou depuis GitHub.</li>
-    <li>Chaque modification arrive dans une <strong>pull request</strong>, sur une branche dédiée. Par défaut, <strong>rien n'est fusionné sans votre validation</strong>.</li>
-    <li>Si vous activez une fusion automatique — le mode « Full Access » des corrections, ou la publication automatique du mode de rédaction —, les pull requests concernées sont fusionnées dès que les vérifications de votre dépôt passent. Ce choix vous appartient, et vous pouvez le retirer.</li>
-    <li>Les textes et corrections écrits par un modèle sont plausibles, pas vérifiés : chiffres, noms, prix et promesses sont à relire. <strong>Vous restez responsable de ce qui est publié sur votre site.</strong></li>
-    <li>Vous êtes libre d'utiliser, de modifier ou de refuser les corrections et contenus produits pour vos sites.</li>
+    <li>Pour corriger votre code ou publier une page, vous nous donnez accès à votre dépôt GitHub ; pour corriger un site WordPress, vous nous confiez un mot de passe d'application. Vous pouvez retirer ces accès à tout moment, depuis Mon compte et les réglages de votre site, ou depuis GitHub et WordPress.</li>
+    <li>Lorsqu'une modification passe par GitHub, elle arrive dans une <strong>pull request</strong>, sur une branche dédiée. Par défaut, <strong>rien n'est fusionné sans votre validation</strong>.</li>
+    <li>Dans WordPress, une modification n'est enregistrée qu'après votre demande d'application, page par page ou pour les pages que vous avez retenues ; elle peut ensuite être rétablie depuis son suivi.</li>
+    <li>Si vous activez une fusion automatique — le mode « Full Access » des corrections, ou la publication automatique du mode de rédaction —, les pull requests concernées sont fusionnées dès que les vérifications de votre dépôt passent, sans relecture humaine préalable. Ce choix vous appartient, et vous pouvez le retirer.</li>
+    <li>Les vérifications automatisées réalisées avant la proposition ou l'application d'une correction réduisent certains risques techniques, mais ne garantissent pas l'absence d'erreurs, de régressions fonctionnelles, de problèmes de compatibilité ou de conséquences sur le référencement naturel. Le client est informé de ces limites lorsqu'il choisit d'activer un mode de fusion ou de publication automatique. Cette information ne prive pas le client des garanties et droits impératifs applicables.</li>
   </ul>
 
-  <h2>7. Utilisation acceptable</h2>
+  <h2>7. Contenus et corrections produits par intelligence artificielle</h2>
+  <ul>
+    <li>Les corrections, textes et réponses produits par un modèle d'intelligence artificielle sont plausibles, pas vérifiés : ils peuvent contenir des erreurs factuelles, des informations inexactes ou incomplètes, ou des formulations inadaptées à votre activité.</li>
+    <li>Vérifiez les informations importantes avant toute publication — chiffres, noms, prix, promesses, mentions réglementaires. <strong>Vous restez responsable de ce qui est publié sur votre site.</strong></li>
+    <li>Vous êtes libre d'utiliser, de modifier ou de refuser les corrections et contenus produits pour vos sites. Un contenu produit par un modèle peut ressembler à des textes existants : nous ne pouvons pas garantir qu'il est original ni qu'il ne reprend aucun élément protégé. Avant de le publier, assurez-vous qu'il ne porte pas atteinte aux droits de tiers, notamment aux droits d'auteur et aux marques.</li>
+    <li>Aucun contenu ni aucune correction ne garantit un classement sur Google ou sur un autre moteur de recherche (article 9).</li>
+    <li>Lorsqu'une fusion ou une publication automatique est activée, ces contenus peuvent être mis en ligne sans relecture humaine préalable (article 6).</li>
+  </ul>
+
+  <h2>8. Utilisation acceptable</h2>
   <ul>
     <li>N'analysez et ne modifiez que des sites et des dépôts que vous possédez ou que vous êtes autorisé à gérer.</li>
     <li>L'analyse des concurrents ne lit que leurs pages publiques, et respecte toujours leurs règles d'exploration (robots.txt).</li>
@@ -120,33 +128,41 @@ main.container { max-width: 900px; }
     <li>En cas de manquement, nous pouvons suspendre ou fermer le compte concerné, après vous en avoir informé sauf urgence.</li>
   </ul>
 
-  <h2>8. Ce que nous faisons, et ce que nous ne promettons pas</h2>
+  <h2>9. Ce que nous faisons, et ce que nous ne promettons pas</h2>
   <ul>
     <li>Nous mettons en œuvre les moyens raisonnables pour que le service fonctionne et reste disponible, sans garantir une disponibilité ininterrompue ; il peut évoluer.</li>
     <li>Aucune position dans les moteurs de recherche, aucun trafic ni aucun résultat commercial n'est garanti.</li>
     <li>Une correction n'est proposée qu'après ses propres contrôles ; elle peut néanmoins être inadaptée à votre site. La relecture et la décision de fusion vous reviennent, sauf fusion automatique activée par vous.</li>
   </ul>
 
-  <h2>9. Responsabilité et garanties</h2>
+  <h2>10. Responsabilité et garanties</h2>
   <ul>
-    <li><strong>Si vous êtes un professionnel</strong> : notre responsabilité est limitée aux dommages directs et prévisibles, dans la limite des sommes que vous nous avez payées au cours des <strong>12 mois</strong> précédant le fait qui l'engage. Les dommages indirects — perte de chiffre d'affaires, de trafic, de clientèle, de données ou d'image — sont exclus.</li>
-    <li><strong>Si vous êtes un consommateur</strong> : notre responsabilité s'apprécie selon le droit commun, sans limitation par ces conditions. Vous bénéficiez de la <strong>garantie légale de conformité</strong> des contenus et services numériques (articles L224-25-12 et suivants du Code de la consommation) pendant toute la durée de votre abonnement : en cas de défaut de conformité, vous pouvez obtenir la mise en conformité du service ou, à défaut, une réduction du prix ou la résolution du contrat.</li>
+    <li><strong>Si vous êtes un professionnel</strong> : notre responsabilité est limitée aux dommages directs et prévisibles, dans la limite des sommes que vous nous avez payées au cours des <strong>12 mois</strong> précédant le fait qui l'engage. Les dommages indirects — perte de chiffre d'affaires, de trafic, de clientèle, de données ou d'image — sont exclus. Ces limitations s'appliquent dans la mesure permise par la loi : elles ne valent pas en cas de faute lourde ou de dol, ni pour les responsabilités qu'une règle impérative interdit d'exclure ou de limiter.</li>
+    <li><strong>Si vous êtes un consommateur</strong> : notre responsabilité s'apprécie selon le droit commun, sans limitation par ces conditions. Vous bénéficiez de la <strong>garantie légale de conformité</strong> des contenus et services numériques (articles L224-25-12 et suivants du Code de la consommation) pendant toute la durée de votre abonnement : en cas de défaut de conformité, vous pouvez obtenir la mise en conformité du service ou, à défaut, une réduction du prix ou la résolution du contrat. Rien dans ces conditions ne limite les droits que la loi vous accorde.</li>
   </ul>
 
-  <h2>10. Données personnelles</h2>
-  <p>Leur traitement est décrit dans la <a href="/privacy">politique de confidentialité</a>.</p>
+  <h2>11. Données personnelles</h2>
+  <p>Leur traitement est décrit dans la <a href="{{ campaign_link(request, '/privacy') }}">politique de confidentialité</a>, qui précise aussi les cas où nous agissons comme sous-traitant d'un client professionnel.</p>
 
-  <h2>11. Litiges et droit applicable</h2>
+  <h2>12. Litiges et droit applicable</h2>
   <ul>
-    <li>Ces conditions sont soumises au droit français.</li>
-    <li><strong>Si vous êtes un consommateur</strong> : adressez d'abord votre réclamation par écrit à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.{% if mediateur %} Si elle n'aboutit pas, vous pouvez recourir gratuitement au médiateur de la consommation : {{ mediateur }}.{% endif %} Vous pouvez saisir la juridiction de votre domicile ou toute autre juridiction compétente selon la loi ; si vous résidez dans un autre pays de l'Union européenne, vous gardez la protection des règles impératives de votre pays.</li>
+    <li>Les présentes conditions sont régies par le droit français, sans préjudice des dispositions impératives de protection du consommateur qui seraient applicables en vertu du droit de son pays de résidence habituelle. Les litiges sont portés devant les juridictions compétentes conformément aux règles de compétence applicables. Les clauses particulières relatives aux clients professionnels s'appliquent uniquement dans la mesure où elles sont légalement valables et opposables.</li>
+    <li><strong>Si vous êtes un consommateur</strong> : adressez d'abord votre réclamation par écrit à <a href="mailto:{{ support_email }}">{{ support_email }}</a>. Si elle n'aboutit pas, vous pouvez recourir gratuitement au médiateur de la consommation : {{ mediator.name }}, {{ mediator.address }}, <a href="{{ mediator.url }}" rel="noopener">{{ mediator.url }}</a>. Vous pouvez aussi saisir la juridiction de votre domicile ou toute autre juridiction compétente selon la loi.</li>
     <li><strong>Si vous êtes un professionnel</strong> : tout litige relève de la compétence des tribunaux de Paris.</li>
   </ul>
 
-  <h2>12. Modifications</h2>
-  <p>Toute modification de ces conditions est publiée sur cette page, avec sa date.</p>
+  <h2>13. Modifications des conditions</h2>
+  <ul>
+    <li>Chaque version de ces conditions est datée en haut de cette page.</li>
+    <li>En cas de modification substantielle, nous en informons les clients concernés par e-mail, à l'adresse de leur compte, avant son entrée en vigueur.</li>
+    <li>Une modification s'applique à compter de son entrée en vigueur : elle ne remet en cause ni les commandes déjà passées, ni les périodes d'abonnement déjà payées.</li>
+    <li>Si vous n'acceptez pas une modification, vous pouvez résilier votre abonnement à tout moment (article 4), sans préjudice des droits que la loi vous accorde.</li>
+  </ul>
 
-  <h2>13. Contact</h2>
+  <h2>14. Langue</h2>
+  <p>Les présentes conditions sont disponibles en français et en anglais. En cas de divergence d'interprétation, la version française constitue la version de référence, sous réserve des dispositions impératives du droit applicable. Aucune stipulation relative à la langue ne peut priver un consommateur des droits dont il bénéficie légalement.</p>
+
+  <h2>15. Contact</h2>
   <p>Pour toute question : <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
 </article>
 {% endblock %}

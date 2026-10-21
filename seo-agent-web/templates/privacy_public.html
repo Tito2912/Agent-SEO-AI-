@@ -17,56 +17,45 @@
    visite.
    30/09/2026 : Amazon Web Services nomme. Le code range les sauvegardes (backup.py) et, s'il a un
    bucket, les rapports d'analyse (object_store.py) dans S3 via boto3 — aucune URL en clair, donc
-   invisible au releve des hotes : c'est `import boto3` que le test lit. #}
-<style>
-body > footer { max-width: 1160px !important; }
-main.container { max-width: 900px; }
-.conf { padding: 64px 0 80px; }
-.conf h1 { margin: 0; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 650; letter-spacing: -.035em; line-height: 1.08; }
-.conf-date { margin: 12px 0 0; font-size: 13.5px; color: var(--muted); }
-.conf-resume { margin: 28px 0 0; padding: 20px 22px; border: 1px solid var(--border-2); border-radius: var(--radius-lg); background: var(--surface-card-2); font-size: 15px; line-height: 1.65; color: rgba(255,255,255,.75); }
-.conf h2 { margin: 52px 0 14px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); }
-.conf p, .conf li { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.66); }
-.conf ul { padding-left: 20px; margin: 10px 0; }
-.conf li { margin: 4px 0; }
-.conf strong { color: var(--text); font-weight: 600; }
-.conf-tableau { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 14px; }
-.conf table { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
-.conf th, .conf td { padding: 12px 16px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; line-height: 1.55; }
-.conf thead th { font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
-.conf tbody th { font-weight: 600; color: var(--text); white-space: nowrap; }
-.conf td { color: rgba(255,255,255,.66); }
-.conf tr:last-child th, .conf tr:last-child td { border-bottom: 0; }
-</style>
+   invisible au releve des hotes : c'est `import boto3` que le test lit.
+   20/10/2026 : corrections de l'audit juridique (docs/legal/LEGAL-CHANGES.md) — roles RGPD,
+   mecanismes de transfert, IA, conservation, securite, reclamations, cookies releves dans le code
+   (seo_agent_session, seo_agent_csrf, noyaru_lang ; aucun cookie Google). La version anglaise
+   (privacy_public_en.html) porte les memes informations. #}
+{% include "_legal_styles.html" %}
 {% endblock %}
 
 {% block content %}
 <article class="conf">
   <h1>Politique de confidentialité</h1>
-  <p class="conf-date">Mise à jour le 18 octobre 2026</p>
+  <p class="conf-date">Mise à jour le {{ updated.privacy }}</p>
 
   <p class="conf-resume">
     En bref : {{ app_name }} traite les données nécessaires pour analyser votre site, corriger votre
     code et vous facturer. L'application est hébergée aux <strong>États-Unis</strong>, et plusieurs
     prestataires — dont les fournisseurs d'intelligence artificielle — y sont établis. Vos données ne
     sont ni vendues, ni utilisées pour vous cibler publicitairement. Vous pouvez supprimer votre compte à tout
-    moment depuis vos paramètres.
+    moment depuis Mon compte.
   </p>
 
-  <h2>1. Responsable du traitement</h2>
+  <h2>1. Qui traite vos données</h2>
   <p>
-    {% if legal_entity %}{{ legal_entity }}, qui édite {{ app_name }}.{% else %}{{ app_name }}.{% endif %}
+    {{ publisher_identity }}, qui édite {{ app_name }}.
     Pour toute question sur vos données : <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
   </p>
+  <ul>
+    <li><strong>Responsable du traitement</strong> — {{ publisher.name }} décide de l'usage des données liées à votre compte, à votre abonnement, à la facturation, au support et à la sécurité du service. Cette politique décrit ces traitements.</li>
+    <li><strong>Sous-traitant</strong> — lorsqu'un client professionnel nous fait analyser ou corriger son site, son dépôt ou ses données de recherche, et que ces éléments contiennent des données personnelles, {{ publisher.name }} peut les traiter pour le compte de ce client, sur ses instructions. Toutes les données des sites analysés ne sont pas des données personnelles. Pour ces traitements, le client reste responsable du traitement ; un accord de traitement des données (article 28 du RGPD) en fixe les conditions et peut être demandé à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
+  </ul>
 
   <h2>2. Les données que nous traitons</h2>
   <div class="conf-tableau">
     <table>
       <thead><tr><th scope="col">Catégorie</th><th scope="col">Ce que c'est</th></tr></thead>
       <tbody>
-        <tr><th scope="row">Compte</th><td>Adresse e-mail ; mot de passe, stocké uniquement sous forme d'empreinte (PBKDF2) ; identifiant Google si vous vous connectez avec Google ; pays de résidence que vous déclarez, modifiable dans vos préférences ; préférences comme le fuseau horaire. Le pays n’est pas déduit de votre adresse IP, de votre langue ou de votre adresse e-mail.</td></tr>
+        <tr><th scope="row">Compte</th><td>Adresse e-mail ; mot de passe, stocké uniquement sous forme d'empreinte (PBKDF2) ; identifiant Google si vous vous connectez avec Google ; pays de résidence que vous déclarez, modifiable dans vos préférences ; préférences comme le fuseau horaire et la langue d'affichage. Le pays n’est pas déduit de votre adresse IP, de votre langue ou de votre adresse e-mail.</td></tr>
         <tr><th scope="row">Projets</th><td>Adresses des sites analysés, réglages, résultats des analyses — c'est-à-dire le contenu public des pages lues sur ces sites.</td></tr>
-        <tr><th scope="row">Connexions</th><td>Jetons d'accès que vous nous confiez (GitHub, Google Search Console, clé Bing Webmaster), chiffrés au repos.</td></tr>
+        <tr><th scope="row">Connexions</th><td>Jetons et clés d'accès que vous nous confiez (GitHub, Google Search Console, clé Bing Webmaster, Netlify, mot de passe d'application WordPress), chiffrés au repos.</td></tr>
         <tr><th scope="row">Contenus produits</th><td>Corrections proposées, pages rédigées, messages envoyés à l'assistant et ses réponses.</td></tr>
         <tr><th scope="row">Équipe</th><td>Adresses e-mail des collaborateurs que vous invitez.</td></tr>
         <tr><th scope="row">Facturation</th><td>Plan, identifiants client et abonnement Stripe, factures. Le paiement se fait sur une page Stripe : aucune donnée de carte ne passe par nos serveurs.</td></tr>
@@ -83,7 +72,7 @@ main.container { max-width: 900px; }
     <li><strong>Vous écrire</strong> — vérification d'adresse, mot de passe oublié, validation d'une page rédigée : exécution du contrat.</li>
     <li><strong>Sécuriser le service</strong> — limitation des abus, protection des comptes, diagnostic des erreurs : notre intérêt légitime à faire fonctionner un service sûr.</li>
     <li><strong>Améliorer le parcours client</strong> — statistiques des premières étapes du service : notre intérêt légitime à repérer les difficultés d’utilisation. Les résultats présentés sont des compteurs agrégés.</li>
-    <li id="signup-attribution"><strong>Mesurer les campagnes qui font connaître Noyaru</strong> — uniquement avec votre consentement facultatif, demandé par une case non cochée à l’inscription. Nous relions les trois libellés du lien de campagne à vos premières étapes dans le service. Aucun cookie de suivi, pixel publicitaire ou identifiant de clic n’est utilisé pour cette mesure. Ces données ne sont envoyées à aucune plateforme publicitaire. Vous pouvez retirer votre accord et effacer cette origine à tout moment dans <a href="/settings/accounts#signup-attribution">Comptes &amp; connexions</a>. Votre compte et les fonctions du service restent accessibles si vous refusez ou retirez votre accord.</li>
+    <li id="signup-attribution"><strong>Mesurer les campagnes qui font connaître Noyaru</strong> — uniquement avec votre consentement facultatif, demandé par une case non cochée à l’inscription. Nous relions les trois libellés du lien de campagne à vos premières étapes dans le service. Aucun cookie de suivi, pixel publicitaire ou identifiant de clic n’est utilisé pour cette mesure. Ces données ne sont envoyées à aucune plateforme publicitaire. Vous pouvez retirer votre accord et effacer cette origine à tout moment dans <a href="/settings/accounts#signup-attribution">Mon compte → Vie privée</a>. Votre compte et les fonctions du service restent accessibles si vous refusez ou retirez votre accord.</li>
   </ul>
 
   <h2>4. Nos prestataires, et où ils se trouvent</h2>
@@ -112,50 +101,78 @@ main.container { max-width: 900px; }
 
   <h2>5. Transferts hors de l'Union européenne</h2>
   <p>
-    Plusieurs prestataires sont établis aux États-Unis, dont notre hébergeur. Ces transferts
-    reposent sur les clauses contractuelles types adoptées par la Commission européenne, ou sur le
-    cadre de protection des données UE–États-Unis lorsque le prestataire y est certifié.
+    Plusieurs prestataires sont établis hors de l'Union européenne, notamment aux États-Unis, dont
+    notre hébergeur. Selon le prestataire, ces transferts reposent sur l'un des mécanismes prévus par
+    le RGPD :
+  </p>
+  <ul>
+    <li>une <strong>décision d'adéquation</strong> de la Commission européenne, dont le cadre de protection des données UE–États-Unis, pour les entreprises certifiées dans ce cadre ;</li>
+    <li>à défaut, les <strong>clauses contractuelles types</strong> adoptées par la Commission européenne, accompagnées, lorsque c'est nécessaire, de mesures supplémentaires.</li>
+  </ul>
+  <p>
+    Vous pouvez obtenir la description des garanties applicables à un prestataire en nous écrivant à
+    <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
   </p>
 
   <h2>6. Ce qui est envoyé aux modèles d'intelligence artificielle</h2>
   <p>
-    Pour écrire une correction ou une page, nous transmettons au modèle le contenu public des pages
-    concernées et les extraits de fichiers de votre dépôt nécessaires ; pour l'assistant, votre
-    question et les données de votre projet qui s'y rapportent. Les conditions d'utilisation par API
-    d'Anthropic et d'OpenAI{% if gemini_actif %} (et de Google pour Gemini){% endif %} excluent, par défaut, l'utilisation de ces données pour entraîner leurs
-    modèles. N'écrivez pas de données personnelles dans vos questions si elles ne sont pas utiles.
+    Nous transmettons au modèle les données nécessaires à la fonction que vous utilisez : pour écrire
+    une correction ou une page, le contenu public des pages concernées et les extraits de fichiers de
+    votre dépôt nécessaires ; pour l'assistant, votre question et les données de votre projet qui s'y
+    rapportent. Selon leurs conditions applicables aux API à la date de mise à jour de cette
+    politique, Anthropic et OpenAI n'utilisent pas, par défaut, les données transmises par leurs API
+    pour entraîner leurs modèles{% if gemini_actif %} ; pour Google Gemini, cette exclusion dépend de l'offre utilisée{% endif %}.
+    Ces conditions relèvent de chaque fournisseur et peuvent évoluer. N'écrivez pas de données
+    personnelles dans vos questions si elles ne sont pas utiles.
   </p>
 
   <h2>7. Combien de temps</h2>
   <ul>
     <li><strong>Compte, projets et contenus</strong> — tant que votre compte existe.</li>
     <li><strong>Origine de l’inscription</strong> — jusqu’au retrait de votre accord ou à la suppression du compte. Le retrait efface l’association à la campagne et la date d’accord dans la base active ; les statistiques sont recalculées sans cette attribution. Les sauvegardes antérieures disparaissent au terme de leurs 30 jours de conservation.</li>
-    <li><strong>À la suppression du compte</strong> — l'abonnement Stripe est résilié et le client Stripe supprimé, les accès Search Console révoqués, le compte et ses projets effacés ; dans le journal d'audit, votre identité est retirée des événements. Les sauvegardes qui les contiennent encore disparaissent au terme de leurs 30 jours de conservation.</li>
+    <li><strong>À la suppression du compte</strong> — l'abonnement Stripe est résilié et le client Stripe supprimé, les accès Search Console révoqués, le compte et ses projets effacés ; dans le journal d'audit, votre identité est retirée des événements. Les sauvegardes qui les contiennent encore disparaissent au terme de leurs 30 jours de conservation. Restent seulement les données qu'une obligation légale impose de garder, comme les factures.</li>
     <li><strong>Factures</strong> — le temps des obligations comptables (dix ans en France), chez Stripe.</li>
-    <li><strong>Journaux techniques</strong> — la durée de conservation de notre hébergeur.</li>
+    <li><strong>Journaux techniques</strong> — la durée de conservation appliquée par notre hébergeur, Render, selon l'offre utilisée.</li>
   </ul>
 
-  <h2>8. Cookies</h2>
+  <h2 id="cookies">8. Cookies et stockage dans le navigateur</h2>
   <p>
-    Nous n'utilisons que des cookies strictement nécessaires : votre session, une protection contre
-    la falsification de requêtes, et un cookie temporaire pendant une connexion avec Google. Aucun
-    cookie publicitaire ni de mesure d'audience. Le navigateur garde aussi, localement, quelques
-    préférences d'affichage — votre choix sur le bandeau de cookies, par exemple.
+    Nous n'utilisons que des cookies strictement nécessaires au service ou à une préférence que vous
+    choisissez. Aucun cookie publicitaire ni de mesure d'audience.
+  </p>
+  <div class="conf-tableau">
+    <table>
+      <thead><tr><th scope="col">Nom</th><th scope="col">Rôle</th><th scope="col">Durée</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">seo_agent_session</th><td>Vous garder connecté à votre compte</td><td>30 jours, ou jusqu'à la déconnexion</td></tr>
+        <tr><th scope="row">seo_agent_csrf</th><td>Protéger vos actions contre la falsification de requêtes</td><td>30 jours</td></tr>
+        <tr><th scope="row">noyaru_lang</th><td>Mémoriser la langue d'affichage que vous avez choisie (français ou anglais)</td><td>1 an</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Le navigateur garde aussi, localement et sans nous les envoyer, votre choix sur le bandeau de
+    cookies, l'historique de vos conversations avec l'assistant jusqu'à ce que vous l'effaciez, et,
+    le temps de l'onglet, les derniers résultats d'une recherche de concurrents.
   </p>
 
   <h2>9. Sécurité</h2>
   <p>
     Connexions chiffrées (HTTPS), mots de passe stockés sous forme d'empreinte, jetons et clés
-    d'accès chiffrés au repos. Les modifications de votre dépôt passent par des pull requests que
-    vous relisez.
+    d'accès chiffrés au repos. Lorsque les modifications sont réalisées au moyen de pull requests,
+    elles sont soumises à validation du client par défaut. Certaines fonctionnalités peuvent
+    permettre une fusion automatique après activation volontaire par le client.
   </p>
 
   <h2>10. Vos droits</h2>
   <p>
     Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition
-    et de portabilité. La suppression se fait vous-même, dans vos paramètres (« Supprimer mon
+    et de portabilité. La suppression se fait vous-même, dans Mon compte (« Supprimer mon
     compte ») ; pour le reste, écrivez à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
-    Vous pouvez aussi adresser une réclamation à la <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">CNIL</a>.
+    Vous disposez également du droit d'introduire une réclamation auprès de la
+    <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">CNIL</a> ou, dans les conditions prévues
+    par la réglementation applicable, d'une autre autorité de contrôle compétente, notamment dans
+    l'État membre de votre résidence habituelle ou de votre lieu de travail.
   </p>
 
   <h2>11. Modifications</h2>

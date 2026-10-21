@@ -3,8 +3,10 @@
 
 30/09/2026. noyaru.com n'avait pas de page de mentions légales, alors qu'un site professionnel
 doit nommer son éditeur, son directeur de la publication et son hébergeur (LCEN, art. 6 III).
-L'identité de l'éditeur est une DÉCLARATION du propriétaire (variables `LEGAL_*` sur Render) :
-une valeur absente fait disparaître sa ligne, jamais un libellé vide.
+Audit juridique d'octobre 2026 : l'identité de l'éditeur était une déclaration (variables
+`LEGAL_*` sur Render) dont l'absence effaçait une mention obligatoire. Elle est désormais écrite
+dans backend/legal.py ; seule une valeur encore inconnue (None) n'est pas affichée, et elle est
+nommée dans docs/legal/LEGAL-VALIDATION-REQUIRED.md.
 
 Même jour : la politique de confidentialité ne nommait pas Amazon Web Services, alors que les
 sauvegardes (backup.py) et, quand le service a un bucket, les rapports d'analyse (object_store.py)
@@ -58,24 +60,30 @@ def test_la_page_reste_publique_quand_l_acces_BETA_est_ferme(monkeypatch) -> Non
     _page()
 
 
-def test_l_editeur_DECLARE_est_affiche_en_entier(monkeypatch) -> None:
-    for k, v in LEGAL.items():
-        monkeypatch.setenv(k, v)
-    page = _page()
-    for v in LEGAL.values():
-        assert v in page, v
-    assert 'href="tel:0612345678"' in page, "un lien tel: sans espace"
+def test_chaque_mention_connue_est_affichee_dans_les_DEUX_langues() -> None:
+    for chemin in ("/mentions-legales", "/en/mentions-legales"):
+        page = _page(chemin)
+        for cle, valeur in m.legal.PUBLISHER.items():
+            if valeur:
+                assert valeur in page, (chemin, cle)
+        assert 'href="tel:%s"' % m.legal.phone_link(m.legal.PUBLISHER["phone"]) in page, "un lien tel: sans espace"
+        assert 'href="mailto:%s"' % m._support_email() in page
 
 
-def test_une_valeur_ABSENTE_fait_disparaitre_sa_ligne(monkeypatch) -> None:
+def test_une_variable_LEGAL_vide_n_efface_PLUS_rien(monkeypatch) -> None:
     for k in LEGAL:
         monkeypatch.delenv(k, raising=False)
     page = _page()
-    assert "TVA intracommunautaire" not in page
-    assert "Directeur de la publication" not in page
-    assert 'href="tel:' not in page
-    assert "<dd>%s</dd>" % m._app_name() in page, "sans déclaration, l'éditeur est le produit"
-    assert 'href="mailto:%s"' % m._support_email() in page
+    for libelle in ("Dénomination sociale", "Siège social", "Immatriculation", "TVA intracommunautaire",
+                    "Directeur de la publication", "Téléphone"):
+        assert libelle in page, libelle
+
+
+def test_une_valeur_INCONNUE_n_est_pas_inventee_et_bloque_la_publication(monkeypatch) -> None:
+    monkeypatch.setitem(m.legal.PUBLISHER, "share_capital", None)
+    assert "Capital social" not in _page() and "share_capital" in m.legal.missing()
+    monkeypatch.setitem(m.legal.PUBLISHER, "share_capital", "1 000 €")
+    assert "<dd>1 000 €</dd>" in _page() and "Share Capital" in _page("/en/mentions-legales")
 
 
 def test_l_hebergeur_est_celui_que_Render_declare() -> None:

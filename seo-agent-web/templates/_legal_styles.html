@@ -1,0 +1,39 @@
+{# La mise en forme des pages juridiques (CGU, confidentialité, mentions légales), en français et
+   en anglais. Reprise telle quelle des trois pages d'origine (.cgu, .conf, .ml) : un seul fichier
+   pour que les deux langues ne puissent pas diverger. #}
+<style>
+body > footer { max-width: 1160px !important; }
+main.container { max-width: 900px; }
+.cgu, .conf, .ml { padding: 64px 0 80px; }
+.cgu h1, .conf h1, .ml h1 { margin: 0; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 650; letter-spacing: -.035em; line-height: 1.08; }
+.cgu-date, .conf-date, .ml-date { margin: 12px 0 0; font-size: 13.5px; color: var(--muted); }
+.cgu h2 { margin: 48px 0 12px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); scroll-margin-top: 90px; }
+.cgu p, .cgu li { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.66); }
+.cgu ul { padding-left: 20px; margin: 10px 0; }
+.cgu li { margin: 5px 0; }
+.cgu strong { color: var(--text); font-weight: 600; }
+.cgu-formulaire { margin: 14px 0 0; padding: 18px 20px; border: 1px solid var(--border-2); border-radius: var(--radius-lg); background: var(--surface-card-2); }
+.cgu-formulaire p { margin: 0 0 8px; font-size: 14px; }
+.cgu-formulaire p:last-child { margin-bottom: 0; }
+.conf-resume { margin: 28px 0 0; padding: 20px 22px; border: 1px solid var(--border-2); border-radius: var(--radius-lg); background: var(--surface-card-2); font-size: 15px; line-height: 1.65; color: rgba(255,255,255,.75); }
+.conf h2 { margin: 52px 0 14px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); scroll-margin-top: 90px; }
+.conf p, .conf li { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.66); }
+.conf ul { padding-left: 20px; margin: 10px 0; }
+.conf li { margin: 4px 0; }
+.conf strong { color: var(--text); font-weight: 600; }
+.conf-tableau { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 14px; }
+.conf table { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.conf th, .conf td { padding: 12px 16px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; line-height: 1.55; }
+.conf thead th { font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+.conf tbody th { font-weight: 600; color: var(--text); white-space: nowrap; }
+.conf td { color: rgba(255,255,255,.66); }
+.conf tr:last-child th, .conf tr:last-child td { border-bottom: 0; }
+.ml h2 { margin: 48px 0 14px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); }
+.ml p { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.66); }
+.ml dl { margin: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.ml dl > div { display: grid; grid-template-columns: 220px 1fr; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.ml dl > div:last-child { border-bottom: 0; }
+.ml dt { font-size: 14px; font-weight: 600; color: var(--text); }
+.ml dd { margin: 0; font-size: 14px; line-height: 1.55; color: rgba(255,255,255,.66); overflow-wrap: anywhere; }
+@media (max-width: 640px) { .ml dl > div { grid-template-columns: 1fr; gap: 2px; } }
+</style>

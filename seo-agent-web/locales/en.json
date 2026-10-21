@@ -15,9 +15,9 @@
   "Guides SEO": "SEO guides",
   "Support": "Support",
   "Statut": "Status",
-  "CGU": "Terms",
-  "Confidentialité": "Privacy",
-  "Mentions légales": "Legal notice",
+  "CGU": "Terms and Conditions",
+  "Confidentialité": "Privacy Policy",
+  "Mentions légales": "Legal Notice",
   "Audit SEO Intelligent": "Smart SEO audit",
   "erreur": "error",
   "Email": "Email",
@@ -32,7 +32,6 @@
   "Auditez vos sites et suivez votre SEO au quotidien.": "Audit your sites and track your SEO day to day.",
   "Pays déclaré par vous, modifiable dans vos préférences.": "Country you declare yourself; you can change it in your preferences.",
   "J’accepte que Noyaru relie la campagne qui m’a amené ici à mes premiers résultats.": "I agree that Noyaru may link the campaign that brought me here to my first results.",
-  "Facultatif, sans effet sur votre compte. Retrait à tout moment dans « Comptes & connexions ».": "Optional, with no effect on your account. You can withdraw at any time in “Accounts & connections”.",
   "Inscriptions fermées.": "Sign-ups are closed.",
   "Code d'invitation": "Invitation code",
   "Minimum 10 caractères.": "At least 10 characters.",
@@ -2850,5 +2849,11 @@
   "Sur cette page": "On this page",
   "Mettre ce guide en pratique": "Put this guide into practice",
   "Ouvrir le tableau de bord": "Open the dashboard",
-  "Guides SEO, tutoriels et checklists pour auditer un site, prioriser les corrections, suivre Google Search Console et améliorer le référencement naturel.": "SEO guides, tutorials and checklists to audit a site, prioritize fixes, follow Google Search Console and improve your organic rankings."
+  "Guides SEO, tutoriels et checklists pour auditer un site, prioriser les corrections, suivre Google Search Console et améliorer le référencement naturel.": "SEO guides, tutorials and checklists to audit a site, prioritize fixes, follow Google Search Console and improve your organic rankings.",
+  "Non utilisé actuellement": "Not currently used",
+  "Union européenne (Allemagne)": "European Union (Germany)",
+  "États-Unis": "United States",
+  "Précisée sur demande": "Available on request",
+  "États-Unis (Virginie du Nord)": "United States (Northern Virginia)",
+  "Facultatif, sans effet sur votre compte. Retrait à tout moment dans « Mon compte → Vie privée ».": "Optional, with no effect on your account. You can withdraw at any time in “My account → Privacy”."
 }

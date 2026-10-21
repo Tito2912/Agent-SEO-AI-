@@ -1,0 +1,169 @@
+{% extends "public_layout.html" %}
+
+{% block title %}Privacy Policy - {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<meta name="description" content="What data {{ app_name }} processes, why, with which service providers and where, for how long, and how to exercise your rights." />
+<link rel="canonical" href="{{ canonical_url }}" />
+<meta property="og:title" content="Privacy Policy - {{ app_name }}" />
+<meta property="og:description" content="The data {{ app_name }} processes, why, with which service providers, for how long, and how to exercise your rights." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ canonical_url }}" />
+{# Version anglaise de privacy_public.html : memes rubriques, memes prestataires, memes durees.
+   Toute modification de l'une se reporte dans l'autre dans le meme changement. #}
+{% include "_legal_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<article class="conf">
+  <h1>Privacy Policy</h1>
+  <p class="conf-date">Last updated: {{ updated.privacy }}</p>
+
+  <p class="conf-resume">
+    In short: {{ app_name }} processes the data needed to analyze your site, fix your code and bill
+    you. The application is hosted in the <strong>United States</strong>, and several service
+    providers — including the artificial intelligence providers — are established there. Your data
+    is neither sold nor used to target you with advertising. You can delete your account at any time
+    from My account.
+  </p>
+
+  <h2>1. Who processes your data</h2>
+  <p>
+    {{ publisher_identity }}, which publishes {{ app_name }}.
+    For any question about your data: <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
+  </p>
+  <ul>
+    <li><strong>Data Controller</strong> — {{ publisher.name }} decides how the data relating to your account, your subscription, billing, support and the security of the service is used. This policy describes that processing.</li>
+    <li><strong>Data Processor</strong> — when a business customer has us analyze or fix its site, its repository or its search data, and these contain personal data, {{ publisher.name }} may process them on that customer's behalf and on its instructions. Not all the data of the analyzed sites is personal data. For this processing, the customer remains the data controller; a data processing agreement (Article 28 GDPR) sets out its terms and can be requested at <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
+  </ul>
+
+  <h2>2. The data we process</h2>
+  <div class="conf-tableau">
+    <table>
+      <thead><tr><th scope="col">Category</th><th scope="col">What it is</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Account</th><td>Email address; password, stored only as a hash (PBKDF2); Google identifier if you sign in with Google; country of residence you declare, editable in your preferences; preferences such as the time zone and the display language. The country is not inferred from your IP address, your language or your email address.</td></tr>
+        <tr><th scope="row">Projects</th><td>Addresses of the analyzed sites, settings, analysis results — that is, the public content of the pages read on those sites.</td></tr>
+        <tr><th scope="row">Connections</th><td>Access tokens and keys you entrust to us (GitHub, Google Search Console, Bing Webmaster key, Netlify, WordPress application password), encrypted at rest.</td></tr>
+        <tr><th scope="row">Generated content</th><td>Suggested fixes, written pages, messages sent to the assistant and its replies.</td></tr>
+        <tr><th scope="row">Team</th><td>Email addresses of the collaborators you invite.</td></tr>
+        <tr><th scope="row">Billing</th><td>Plan, Stripe customer and subscription identifiers, invoices. Payment takes place on a Stripe page: no card data passes through our servers.</td></tr>
+        <tr><th scope="row">Technical data</th><td>Server logs (IP address, browser, requested addresses), used for security and troubleshooting.</td></tr>
+        <tr><th scope="row">Customer journey</th><td>Dates of the first steps reached: account created, site added, usable analysis and verified fix. With your optional consent at sign-up: source, medium and name of the originating campaign, and the date of your consent.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>3. Why, and on what legal basis</h2>
+  <ul>
+    <li><strong>Providing the service</strong> — analyses, fixes, writing, quotas: performance of the contract between us.</li>
+    <li><strong>Billing</strong> — performance of the contract, and accounting and tax obligations.</li>
+    <li><strong>Writing to you</strong> — address verification, forgotten password, approval of a written page: performance of the contract.</li>
+    <li><strong>Securing the service</strong> — preventing abuse, protecting accounts, troubleshooting errors: our legitimate interest in running a secure service.</li>
+    <li><strong>Improving the customer journey</strong> — statistics on the first steps of the service: our legitimate interest in identifying usability difficulties. The results presented are aggregated counts.</li>
+    <li id="signup-attribution"><strong>Measuring the campaigns that make Noyaru known</strong> — only with your optional consent, requested through an unticked box at sign-up. We link the three labels of the campaign link to your first steps in the service. No tracking cookie, advertising pixel or click identifier is used for this measurement. This data is not sent to any advertising platform. You can withdraw your consent and erase this origin at any time in <a href="/settings/accounts#signup-attribution">My account → Privacy</a>. Your account and the features of the service remain available if you refuse or withdraw your consent.</li>
+  </ul>
+
+  <h2>4. Our service providers, and where they are</h2>
+  <p>These service providers process data on our behalf, each for the role indicated.</p>
+  <div class="conf-tableau">
+    <table>
+      <thead><tr><th scope="col">Provider</th><th scope="col">Role</th><th scope="col">Data concerned</th><th scope="col">Location</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Render</th><td>Hosting of the application and the database</td><td>All the data above</td><td>United States</td></tr>
+        <tr><th scope="row">Brevo</th><td>Sending emails</td><td>Email address, content of emails</td><td>France</td></tr>
+        <tr><th scope="row">Stripe</th><td>Payment and invoicing</td><td>Email, billing, means of payment</td><td>Ireland, United States</td></tr>
+        <tr><th scope="row">Anthropic</th><td>Artificial intelligence: fixes, writing, assistant</td><td>Public content of the analyzed pages, relevant excerpts of the files in your repository, questions asked to the assistant</td><td>United States</td></tr>
+        <tr><th scope="row">OpenAI</th><td>Artificial intelligence, as a backup to Anthropic</td><td>The same</td><td>United States</td></tr>
+        <tr><th scope="row">GitHub</th><td>Reading and writing your repository, with your authorization</td><td>Content of the connected repository</td><td>United States</td></tr>
+        <tr><th scope="row">Google</th><td>Sign-in with Google, Search Console, PageSpeed measurement</td><td>Google identity, Search Console data, addresses of the measured pages</td><td>United States</td></tr>
+        <tr><th scope="row">Microsoft Bing</th><td>Bing Webmaster data, with your key</td><td>Performance data of your site</td><td>United States</td></tr>
+        <tr><th scope="row">SerpAPI</th><td>Google searches to find your competitors and link opportunities</td><td>Search queries derived from your site</td><td>United States</td></tr>
+        <tr><th scope="row">Netlify</th><td>If you connect your account: reading your sites and their deployments</td><td>List of Netlify sites and deployments</td><td>United States</td></tr>
+        {% if ahrefs_actif %}<tr><th scope="row">Ahrefs</th><td>Backlink data</td><td>Domains of the analyzed sites</td><td>Singapore</td></tr>{% endif %}
+        {% if gemini_actif %}<tr><th scope="row">Google (Gemini)</th><td>Artificial intelligence for the assistant</td><td>Questions asked to the assistant and the project data relating to them</td><td>United States</td></tr>{% endif %}
+        <tr><th scope="row">Sentry</th><td>Tracking technical errors</td><td>Error traces, without IP address or account identifier</td><td>{{ sentry_localisation }}</td></tr>
+        <tr><th scope="row">Amazon Web Services (S3)</th><td>Backups: daily copies of the database, kept for 30 days{% if rapports_s3 %}; storage of analysis reports{% endif %}</td><td>All the data in the database</td><td>{{ sauvegarde_localisation }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>5. International Data Transfers</h2>
+  <p>
+    Several service providers are established outside the European Union, in particular in the
+    United States, including our host. Depending on the provider, these transfers rely on one of the
+    mechanisms provided for by the GDPR:
+  </p>
+  <ul>
+    <li>an <strong>adequacy decision</strong> of the European Commission, including the EU–US Data Privacy Framework, for companies certified under that framework;</li>
+    <li>otherwise, the <strong>standard contractual clauses</strong> adopted by the European Commission, supplemented, where necessary, by additional measures.</li>
+  </ul>
+  <p>
+    You can obtain a description of the safeguards that apply to a given provider by writing to us at
+    <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
+  </p>
+
+  <h2>6. What is sent to artificial intelligence models</h2>
+  <p>
+    We send the model the data needed for the feature you use: to write a fix or a page, the public
+    content of the pages concerned and the necessary excerpts of files from your repository; for the
+    assistant, your question and the data of your project relating to it. Under their API terms
+    applicable on the date this policy was last updated, Anthropic and OpenAI do not, by default, use
+    data sent through their APIs to train their models{% if gemini_actif %}; for Google Gemini, this exclusion depends on the plan used{% endif %}.
+    These terms are set by each provider and may change. Do not write personal data in your
+    questions if it is not useful.
+  </p>
+
+  <h2>7. Data Retention</h2>
+  <ul>
+    <li><strong>Account, projects and content</strong> — as long as your account exists.</li>
+    <li><strong>Sign-up origin</strong> — until you withdraw your consent or delete your account. Withdrawal erases the link to the campaign and the date of consent in the live database; the statistics are recalculated without this attribution. Earlier backups disappear at the end of their 30-day retention period.</li>
+    <li><strong>On account deletion</strong> — the Stripe subscription is cancelled and the Stripe customer deleted, Search Console access is revoked, the account and its projects are erased; in the audit log, your identity is removed from the events. Backups that still contain them disappear at the end of their 30-day retention period. Only the data that a legal obligation requires us to keep remains, such as invoices.</li>
+    <li><strong>Invoices</strong> — for the duration of accounting obligations (ten years in France), at Stripe.</li>
+    <li><strong>Technical logs</strong> — the retention period applied by our host, Render, under the plan used.</li>
+  </ul>
+
+  <h2 id="cookies">8. Cookies and browser storage</h2>
+  <p>
+    We only use cookies that are strictly necessary for the service or for a preference you choose.
+    No advertising or audience measurement cookie.
+  </p>
+  <div class="conf-tableau">
+    <table>
+      <thead><tr><th scope="col">Name</th><th scope="col">Purpose</th><th scope="col">Duration</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">seo_agent_session</th><td>Keeping you signed in to your account</td><td>30 days, or until you log out</td></tr>
+        <tr><th scope="row">seo_agent_csrf</th><td>Protecting your actions against request forgery</td><td>30 days</td></tr>
+        <tr><th scope="row">noyaru_lang</th><td>Remembering the display language you chose (French or English)</td><td>1 year</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Your browser also keeps, locally and without sending them to us, your choice on the cookie
+    banner, the history of your conversations with the assistant until you clear it, and, for the
+    duration of the tab, the latest results of a competitor search.
+  </p>
+
+  <h2>9. Security</h2>
+  <p>
+    Encrypted connections (HTTPS), passwords stored as hashes, access tokens and keys encrypted at
+    rest. Where changes are made through pull requests, they require customer approval by default.
+    Certain features may allow automatic merging after the customer has voluntarily enabled that
+    functionality.
+  </p>
+
+  <h2>10. Your rights</h2>
+  <p>
+    You have the right of access, rectification, erasure, restriction, objection and portability.
+    You delete your account yourself, in My account (“Delete my account”); for anything else, write
+    to <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
+    You also have the right to lodge a complaint with the
+    <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">CNIL</a>, the French data protection
+    authority, or, where provided by applicable law, another competent supervisory authority,
+    including in the EU Member State of your habitual residence or place of work.
+  </p>
+
+  <h2>11. Changes</h2>
+  <p>Any change to this policy is dated at the top of this page.</p>
+</article>
+{% endblock %}

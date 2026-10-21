@@ -1,0 +1,52 @@
+{% extends "public_layout.html" %}
+
+{% block title %}Legal Notice - {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<meta name="description" content="{{ app_name }} Legal Notice: the publishing company, the publication director, the hosting provider of the website and how to contact us." />
+<link rel="canonical" href="{{ canonical_url }}" />
+<meta property="og:title" content="Legal Notice - {{ app_name }}" />
+<meta property="og:description" content="The publishing company, the publication director, the hosting provider and the contact details of {{ app_name }}." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ canonical_url }}" />
+{# Version anglaise de legal_notice_public.html : memes mentions, venues de backend/legal.py. Les
+   denominations officielles francaises (SASU, R.C.S.) sont gardees telles quelles. #}
+{% include "_legal_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<article class="ml">
+  <h1>Legal Notice</h1>
+  <p class="ml-date">Last updated: {{ updated.legal_notice }}</p>
+
+  <h2>Website Publisher</h2>
+  <dl>
+    <div><dt>Company name</dt><dd>{{ publisher.name }}</dd></div>
+    <div><dt>Legal form</dt><dd>{{ publisher.form }} (French simplified joint-stock company with a sole shareholder)</dd></div>
+    {% if publisher.share_capital %}<div><dt>Share Capital</dt><dd>{{ publisher.share_capital }}</dd></div>{% endif %}
+    <div><dt>Registered Office</dt><dd>{{ publisher.address }}</dd></div>
+    <div><dt>Company Registration Number</dt><dd>{{ publisher.registration }}</dd></div>
+    <div><dt>EU VAT Identification Number</dt><dd>{{ publisher.vat_number }}</dd></div>
+    <div><dt>Telephone</dt><dd><a href="tel:{{ publisher_phone_link }}">{{ publisher.phone }}</a></dd></div>
+    <div><dt>Email</dt><dd><a href="mailto:{{ support_email }}">{{ support_email }}</a></dd></div>
+  </dl>
+
+  <h2>Publication Director</h2>
+  <p>{{ publisher.publication_director }}</p>
+
+  <h2>Hosting Provider</h2>
+  <dl>
+    <div><dt>Company</dt><dd>{{ host.name }}</dd></div>
+    <div><dt>Address</dt><dd>{{ host.address }}, United States</dd></div>
+    <div><dt>Telephone</dt><dd>{{ host.phone }}</dd></div>
+    <div><dt>Website</dt><dd><a href="{{ host.url }}" rel="noopener">render.com</a></dd></div>
+  </dl>
+
+  <h2>Personal Data and terms</h2>
+  <p>
+    The data processed, the service providers and your rights are described in the
+    <a href="{{ campaign_link(request, '/privacy') }}">Privacy Policy</a>. Use of the service is governed by the
+    <a href="{{ campaign_link(request, '/terms') }}">Terms and Conditions</a>.
+  </p>
+</article>
+{% endblock %}
