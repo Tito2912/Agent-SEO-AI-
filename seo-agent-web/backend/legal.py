@@ -79,12 +79,16 @@ def share_capital(lang: str) -> str | None:
     return f"{amount:,}".replace(",", "\u00a0") + "\u00a0€"
 
 
-def updated(document: str, lang: str) -> str:
-    """La date d'un document, écrite dans sa langue : « 20 octobre 2026 », "October 20, 2026"."""
-    day = UPDATED[document]
+def format_date(day: date, lang: str) -> str:
+    """Une date écrite dans sa langue : « 20 octobre 2026 », "October 20, 2026"."""
     if lang == "en":
         return f"{_MONTHS[day.month - 1]} {day.day}, {day.year}"
     return f"{'1er' if day.day == 1 else day.day} {_MOIS[day.month - 1]} {day.year}"
+
+
+def updated(document: str, lang: str) -> str:
+    """La date d'un document, écrite dans sa langue."""
+    return format_date(UPDATED[document], lang)
 
 
 def phone_link(number: str) -> str:

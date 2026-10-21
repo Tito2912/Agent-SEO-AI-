@@ -3135,5 +3135,6 @@
   "GitHub non connecté. Connectez-le dans « Mon compte → Connexions ».": "GitHub is not connected. Connect it in “My account → Connections”.",
   "Format invalide. Saisissez le dépôt sous la forme compte/nom-du-dépôt.": "Invalid format. Enter the repository as account/repository-name.",
   "Votre jeton GitHub n’a pas les droits d’écriture sur ce dépôt. Utilisez un jeton avec la portée « repo ».": "Your GitHub token cannot write to this repository. Use a token with the “repo” scope.",
-  "Dépôt introuvable ou inaccessible : {detail}": "Repository not found or not accessible: {detail}"
+  "Dépôt introuvable ou inaccessible : {detail}": "Repository not found or not accessible: {detail}",
+  "Annonces aux clients": "Customer notices"
 }

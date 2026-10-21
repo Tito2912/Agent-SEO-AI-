@@ -38358,4 +38358,9 @@ try:
 except ImportError:
     from activation_routes import router as activation_router
 app.include_router(activation_router)
+try:
+    from .legal_notice_routes import router as legal_notice_router
+except ImportError:
+    from legal_notice_routes import router as legal_notice_router
+app.include_router(legal_notice_router)
 app.include_router(first_audit.router)
