@@ -14,7 +14,7 @@ idna==3.19
 urllib3==2.8.0
 beautifulsoup4==4.14.3
 reportlab==4.5.1
-pillow==12.3.0
+pillow==13.0.0
 sqlalchemy==2.0.50
 alembic==1.18.4
 psycopg[binary]==3.3.4
