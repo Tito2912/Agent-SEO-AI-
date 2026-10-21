@@ -5,7 +5,7 @@ description: "Crawl vide ou incomplet, Search Console qui ne remonte rien, bouto
 kind: "Dépannage"
 section: "Compte et facturation"
 order: 52
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "Tous les plans"
 keywords: ["dépannage", "erreurs", "crawl vide", "problème"]
 app_href: "/"
@@ -35,7 +35,7 @@ Commencez par vérifier les liens et le périmètre réellement analysé.
 Trois pistes à vérifier dans le suivi de l’analyse, accessible depuis **Activité** :
 
 1. **Limite de pages atteinte** — celle du projet, celle du plan, ou le quota mensuel.
-2. **Délai maximal du job dépassé** — un site lent, ou beaucoup de pages.
+2. **Délai maximal de l’analyse dépassé** — un site lent, ou beaucoup de pages.
 3. **L'hôte a refusé les requêtes** — 403 ou 429. Réduisez les connexions simultanées dans les options d’exploration, puis relisez le suivi avant de relancer.
 
 Dans le troisième cas, ces refus ne sont **pas** comptés comme des erreurs de votre site : ils

@@ -5,9 +5,9 @@ description: "Faire tourner les crawls sans y penser, corriger toutes les erreur
 kind: "Documentation"
 section: "Aller plus loin"
 order: 42
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "Tous les plans"
-keywords: ["automatisation", "monitoring SEO", "crawl planifié", "jobs"]
+keywords: ["automatisation", "monitoring SEO", "crawl planifié", "activité"]
 app_href: "/jobs"
 related: ["corrections-automatiques", "verifier-une-correction", "lancer-un-crawl"]
 faq:
@@ -16,25 +16,28 @@ faq:
   - question: "Un crawl automatique consomme-t-il mon quota de pages ?"
     answer: "Oui, exactement comme un crawl lancé à la main. C'est la raison pour laquelle la limite de pages par crawl mérite d'être réglée avant d'automatiser quoi que ce soit."
   - question: "Puis-je annuler un traitement en cours ?"
-    answer: "Oui, depuis la page Jobs. Un crawl annulé conserve ce qu'il a déjà collecté, mais son rapport est partiel : traitez-le comme un sondage, pas comme un audit."
+    answer: "Oui : ouvrez son suivi dans Activité, puis « Demander l’arrêt ». Le traitement termine son étape en cours avant de s’arrêter. Un arrêt ne garantit pas qu’un rapport partiel soit disponible ; les bilans précédents restent accessibles depuis le site."
 ---
 
 Un audit ponctuel donne une photo. Une routine montre les tendances — et surtout, elle attrape
 les régressions dans les jours qui suivent le déploiement qui les a introduites, plutôt que six
 mois plus tard.
 
-## La page Jobs
+## L’écran Activité
 
-Tous les traitements du compte, en cours et passés : crawls, corrections, analyses de
-concurrents, recherches d'opportunités.
+**Activité**, dans la barre latérale, rassemble les traitements récents et ceux encore actifs
+de vos sites : analyses d’un site, audits de plusieurs sites et autres traitements. Ce n’est pas
+un historique complet. Les filtres Site, Type et État s’appliquent à cette liste.
 
-Chaque job affiche son état, sa durée, ses journaux, et deux boutons :
+**Voir le suivi** ouvre le détail d’un traitement : son état, son avancement et, dans
+**Détails techniques et journaux**, ses journaux. Les actions se trouvent sur ce suivi :
 
-- **Annuler** — arrête un traitement en cours. Ce qui a été collecté est conservé.
-- **Relancer** — rejoue le même traitement avec les mêmes paramètres. Utile après une panne
-  réseau ou un site momentanément indisponible.
+- **Demander l’arrêt** — arrête un traitement actif, une fois son étape en cours terminée.
+- **Demander une nouvelle analyse** — après un échec ou un arrêt, crée une nouvelle demande,
+  soumise au quota du compte qui gère le site. Utile après une panne réseau ou un site
+  momentanément indisponible.
 
-C'est la page à ouvrir quand quelque chose semble bloqué. Un crawl « en cours » depuis trois
+C'est l'écran à ouvrir quand quelque chose semble bloqué. Une analyse « En cours » depuis trois
 heures sur un site de 40 pages a un problème, et ses journaux le nomment.
 
 ## Faire tourner les crawls régulièrement

@@ -5,7 +5,7 @@ description: "A project's Performance page: Search Console data, PageSpeed measu
 kind: "Documentation"
 section: "Search Console and keywords"
 order: 32
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "All plans"
 keywords: ["Core Web Vitals", "LCP", "INP", "CLS", "PageSpeed"]
 app_href: "/"
@@ -73,12 +73,14 @@ URL — and limited in the number of calls per day, a limit shared by the whole 
 
 Hence a cap on the URLs measured per crawl, whose size depends on your plan.
 
-This sample is yours to choose. Measuring the first twenty URLs in alphabetical order
-teaches you nothing; measuring the home page, a category page, a product page, an article and a
-contact page gives you the state of each of your templates.
+You choose how many pages are measured, not which ones: {{app_name}} takes the first valid
+HTML pages (status 200), in alphabetical order of their addresses. A measurement is reused as
+long as the page has not changed. If an important template is missing from the sample, raise
+the number of pages to test, within your plan's limit.
 
-You set it in the [analysis settings](/docs/lancer-un-crawl), along with the choice of mobile or
-desktop strategy. Choose mobile: it's the index Google uses.
+You turn it on in the [analysis settings](/docs/lancer-un-crawl), **Extra data** section,
+**Core Web Vitals** module: device tested (mobile or desktop), number of pages to test, maximum
+wait and simultaneous requests. Choose mobile: it's the index Google uses.
 
 ## What a measurement doesn't tell you
 

@@ -17018,7 +17018,7 @@ def github_repos(request: Request, slug: str = "") -> JSONResponse:
     if not token:
         return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
     if source != "user":
-        return JSONResponse({"ok": False, "error": "Connecte ton propre compte GitHub pour lister tes dépôts."}, status_code=400)
+        return JSONResponse({"ok": False, "error": "Connectez votre propre compte GitHub pour lister vos dépôts."}, status_code=400)
     try:
         repos: list[dict[str, Any]] = []
         page = 1
@@ -17177,7 +17177,7 @@ def netlify_sites(request: Request) -> JSONResponse:
     if not token:
         return JSONResponse({"ok": False, "error": "Netlify non connecté."}, status_code=400)
     if source != "user":
-        return JSONResponse({"ok": False, "error": "Connecte ton propre compte Netlify pour lister tes sites."}, status_code=400)
+        return JSONResponse({"ok": False, "error": "Connectez votre propre compte Netlify pour lister vos sites."}, status_code=400)
 
     try:
         sites: list[dict[str, Any]] = []
@@ -17841,7 +17841,7 @@ def bing_sites(request: Request) -> JSONResponse:
         return JSONResponse({"ok": False, "error": "Bing non connecté."}, status_code=400)
     if auth.get("source") != "user":
         return JSONResponse(
-            {"ok": False, "error": "Connecte ton propre compte Bing pour lister et importer tes sites."},
+            {"ok": False, "error": "Connectez votre propre compte Bing pour lister et importer vos sites."},
             status_code=400,
         )
 
@@ -18245,7 +18245,9 @@ def _job_activity(job: Job, user: Any) -> dict[str, Any]:
                             report_url = project_url + "?" + urlencode({"crawl": timestamp})
                     except Exception:
                         pass  # Availability is unknown; do not promise a readable result.
-    return activity.view(job, site_name=site_name, project_url=project_url, report_url=report_url, kind=kind)
+    return activity.view(
+        job, site_name=site_name, project_url=project_url, report_url=report_url, kind=kind, tr=i18n.tr_current
+    )
 
 
 def _activity_return_url(value: str) -> str:
@@ -19515,11 +19517,11 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
         return JSONResponse({"ok": True, "connected": False, "repo": "", "mode": "review"})
     token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
     if not token or source != "user":
-        return JSONResponse({"ok": False, "error": "GitHub non connecté. Va dans Comptes & connexions pour connecter GitHub."}, status_code=400)
+        return JSONResponse({"ok": False, "error": "GitHub non connecté. Connectez-le dans « Mon compte → Connexions »."}, status_code=400)
     repo = (body.repo or "").strip()
     repo_parts = _github_repo_parts(repo)
     if repo_parts is None:
-        return JSONResponse({"ok": False, "error": "Format invalide. Utilise owner/repo."}, status_code=400)
+        return JSONResponse({"ok": False, "error": "Format invalide. Saisissez le dépôt sous la forme compte/nom-du-dépôt."}, status_code=400)
     owner, repo_name = repo_parts
     repo = f"{owner}/{repo_name}"
     try:
@@ -19528,7 +19530,7 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
         return JSONResponse({"ok": False, "error": f"Dépôt introuvable ou inaccessible : {e}"}, status_code=400)
     perms = repo_info.get("permissions") if isinstance(repo_info.get("permissions"), dict) else {}
     if not perms.get("push"):
-        return JSONResponse({"ok": False, "error": "Ton token GitHub n'a pas les droits d'écriture sur ce dépôt. Utilise un token avec scope 'repo'."}, status_code=400)
+        return JSONResponse({"ok": False, "error": "Votre jeton GitHub n’a pas les droits d’écriture sur ce dépôt. Utilisez un jeton avec la portée « repo »."}, status_code=400)
     mode = body.mode if body.mode in ("review", "auto") else "review"
     branch = (body.branch or repo_info.get("default_branch") or "main").strip()
     if not _github_branch_allowed(branch):

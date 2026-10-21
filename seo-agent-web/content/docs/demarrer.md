@@ -5,7 +5,7 @@ description: "Le parcours complet du premier compte au premier correctif : crée
 kind: "Prise en main"
 section: "Prise en main"
 order: 10
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "Nouveau compte"
 keywords: ["prise en main", "démarrer", "premier crawl", "onboarding"]
 app_href: "/"
@@ -14,7 +14,7 @@ faq:
   - question: "Faut-il connecter GitHub pour utiliser {{app_name}} ?"
     answer: "Non. L'audit, le rapport, les anomalies et les exports fonctionnent sans aucune connexion. GitHub n'est nécessaire que pour la correction automatique du code en pull request. Sans dépôt, vous pouvez télécharger un fix-pack et appliquer les correctifs à la main."
   - question: "Combien de temps dure un premier crawl ?"
-    answer: "De quelques minutes pour un site vitrine à plusieurs heures pour un gros catalogue. Le crawl s'exécute en arrière-plan : vous pouvez fermer l'onglet, le job continue et la page Jobs affiche l'avancement."
+    answer: "De quelques minutes pour un site vitrine à plusieurs heures pour un gros catalogue. Le crawl s'exécute en arrière-plan : vous pouvez fermer l'onglet, l'analyse continue et l'écran Activité affiche son avancement."
   - question: "Le crawl peut-il ralentir mon site ?"
     answer: "Le crawler respecte robots.txt et la directive crawl-delay, et limite le nombre de requêtes simultanées par hôte. Vous pouvez encore réduire la cadence dans les réglages de l’analyse du projet si votre hébergement est fragile."
 ---
@@ -45,7 +45,7 @@ Détails et cas particuliers : [Ajouter un projet](/docs/ajouter-un-projet).
 Sur la page du projet, bouton **Lancer la première analyse**. Vous n'avez rien à régler pour le premier
 passage : les valeurs par défaut conviennent à la quasi-totalité des sites.
 
-Le crawl part en tâche de fond. Suivez-le sur **Jobs**, ou revenez plus tard : vous recevez
+Le crawl part en tâche de fond. Suivez-le dans **Activité**, ou revenez plus tard : vous recevez
 le rapport dans tous les cas.
 
 Ce que le crawler collecte, et comment le brider : [Lancer un crawl](/docs/lancer-un-crawl).

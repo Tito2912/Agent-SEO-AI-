@@ -1,40 +1,40 @@
 {% extends "layout.html" %}
 {% from '_correction_progress.html' import steps %}
-{% block title %}{{ activity.title if activity else 'Suivi introuvable' }} - Noyaru{% endblock %}
+{% block title %}{{ activity.title if activity else tr('Suivi introuvable') }} - Noyaru{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/activity.css?v=1" /><link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/activity.js?v=1" defer></script>{% endblock %}
-{% block crumbs %}<a href="/">Mes sites</a><span class="crumb-sep">/</span><a href="{{ activity_return or '/jobs' }}">Activité</a><span class="crumb-sep">/</span><span class="crumb-current">Suivi</span>{% endblock %}
+{% block crumbs %}<a href="/">{{ tr('Mes sites') }}</a><span class="crumb-sep">/</span><a href="{{ activity_return or '/jobs' }}">{{ tr('Activité') }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr('Suivi du traitement') }}</span>{% endblock %}
 {% block content %}
 {% if not job %}
-  <section class="card"><h1>Ce suivi n’est pas accessible</h1><p class="muted">Le traitement n’existe plus ou n’est pas disponible dans votre compte.</p><a class="btn primary" href="/jobs">Retrouver mon activité</a></section>
+  <section class="card"><h1>{{ tr("Ce suivi n’est pas accessible") }}</h1><p class="muted">{{ tr("Le traitement n’existe plus ou n’est pas disponible dans votre compte.") }}</p><a class="btn primary" href="/jobs">{{ tr("Retrouver mon activité") }}</a></section>
 {% else %}
 <div class="activity-page" data-activity-detail data-job-id="{{ job.id }}" data-status="{{ job.status }}" data-kind="{{ activity.kind }}">
-  <div class="page-header"><h1>{{ activity.title }}</h1><p class="muted">Suivez cette demande et retrouvez son résultat lorsqu’il est disponible.</p></div>
+  <div class="page-header"><h1>{{ activity.title }}</h1><p class="muted">{{ tr("Suivez cette demande et retrouvez son résultat lorsqu’il est disponible.") }}</p></div>
   {% if activity.active or job.status == 'done' %}{{ steps(activity.stage, complete=false, labels=['Demandé','En cours','Finaliser','Consulter'], aria_label="Progression de l’analyse") }}{% endif %}
   <section class="card activity-state">
-    <span class="pill {{ job.status }}" id="job-status-pill" role="status">{{ {'queued':'En attente','running':'En cours','cancel_requested':'Arrêt demandé','done':'Terminé','failed':'En échec','canceled':'Annulé'}.get(job.status,'État non reconnu') }}</span>
+    <span class="pill {{ job.status }}" id="job-status-pill" role="status">{{ {'queued':tr('En attente'),'running':tr('En cours'),'cancel_requested':tr('Arrêt demandé'),'done':tr('Terminé'),'failed':tr('En échec'),'canceled':tr('Annulé')}.get(job.status,tr('État non reconnu')) }}</span>
     <h2 id="activity-headline">{{ activity.headline }}</h2><p id="activity-message">{{ activity.message }}</p>
     {% set current=(job.progress or {}).get('current',0)|int %}{% set total=(job.progress or {}).get('total',0)|int %}
     {% set percent=99 if activity.active and total > 0 and current >= total else ([100, (current / total * 100)|round|int]|min if total else 0) %}
     <div id="job-progress"{% if not activity.active or not (job.progress and job.progress.total) %} hidden{% endif %}>
-      <p id="progress-count" class="muted small">{% if job.progress and job.progress.total %}{{ job.progress.current }}/{{ job.progress.total }}{% if job.progress.type == 'crawl' %} pages{% endif %}{% endif %}</p>
-      <div class="progress slim" id="progress-bar" role="progressbar" aria-label="Avancement du traitement" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"><div class="progress-fill" id="progress-fill" style="--p:{{ percent }}"></div></div>
+      <p id="progress-count" class="muted small">{% if job.progress and job.progress.total %}{{ job.progress.current }}/{{ job.progress.total }}{% if job.progress.type == 'crawl' %} {{ tr('pages') }}{% endif %}{% endif %}</p>
+      <div class="progress slim" id="progress-bar" role="progressbar" aria-label="{{ tr('Avancement du traitement') }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"><div class="progress-fill" id="progress-fill" style="--p:{{ percent }}"></div></div>
     </div>
     <div class="activity-actions">
-      <a class="btn primary" id="job-result-link" href="{{ activity.report_url or '#' }}"{% if not activity.report_ready %} hidden{% endif %}>Consulter le bilan de cette analyse</a>
-      {% if activity.project_url %}<a class="btn" href="{{ activity.project_url }}">Revenir au site</a>{% endif %}
-      <form action="/jobs/{{ job.id }}/cancel" method="post" data-job-cancel{% if not activity.active %} hidden{% endif %}><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn danger" type="submit"{% if job.status == 'cancel_requested' %} disabled{% endif %}>Demander l’arrêt</button></form>
-      <form action="/jobs/{{ job.id }}/retry" method="post" data-job-retry{% if job.status not in ['failed','canceled'] %} hidden{% endif %}><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn primary" type="submit">{{ 'Demander une nouvelle analyse' if activity.kind == 'crawl' else 'Relancer ce traitement' }}</button></form>
-      <a class="btn" href="{{ activity_return or '/jobs' }}">Retrouver mon activité</a>
+      <a class="btn primary" id="job-result-link" href="{{ activity.report_url or '#' }}"{% if not activity.report_ready %} hidden{% endif %}>{{ tr("Consulter le bilan de cette analyse") }}</a>
+      {% if activity.project_url %}<a class="btn" href="{{ activity.project_url }}">{{ tr("Revenir au site") }}</a>{% endif %}
+      <form action="/jobs/{{ job.id }}/cancel" method="post" data-job-cancel{% if not activity.active %} hidden{% endif %}><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn danger" type="submit"{% if job.status == 'cancel_requested' %} disabled{% endif %}>{{ tr('Demander l’arrêt') }}</button></form>
+      <form action="/jobs/{{ job.id }}/retry" method="post" data-job-retry{% if job.status not in ['failed','canceled'] %} hidden{% endif %}><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn primary" type="submit">{{ tr('Demander une nouvelle analyse') if activity.kind == 'crawl' else tr('Relancer ce traitement') }}</button></form>
+      <a class="btn" href="{{ activity_return or '/jobs' }}">{{ tr('Retrouver mon activité') }}</a>
     </div>
   </section>
-  <div class="activity-refresh"><p id="activity-live-feedback" role="status" aria-live="polite"></p><button class="btn" type="button" data-refresh-activity>Actualiser l’état</button></div>
-  <details class="card screen-options" id="activity-technical"><summary>Détails techniques et journaux</summary>
-    <p class="muted small">Identifiant : <code>{{ job.id }}</code></p>
-    {% if job.command %}<p class="muted small">Commande : <code>{{ job.command }}</code></p>{% endif %}
-    <p id="job-returncode" class="muted small"{% if job.returncode is none %} hidden{% endif %}>Code de retour : <span id="job-returncode-val">{{ job.returncode if job.returncode is not none else '' }}</span></p>
-    <h2>Journal du traitement</h2><pre id="job-stdout">{{ job.stdout or 'Aucune sortie disponible.' }}</pre>
-    <h2>Messages d’erreur</h2><pre id="job-stderr">{{ job.stderr or 'Aucun message d’erreur enregistré.' }}</pre>
-    {% if activity.report_ready and job.result %}<p class="small">{% if job.result.report_md %}<a href="/file?path={{ job.result.report_md|urlencode }}">Rapport en texte (Markdown)</a>{% endif %}{% if job.result.report_json %} · <a href="/file?path={{ job.result.report_json|urlencode }}">Données du rapport (JSON)</a>{% endif %}</p>{% endif %}
+  <div class="activity-refresh"><p id="activity-live-feedback" role="status" aria-live="polite"></p><button class="btn" type="button" data-refresh-activity>{{ tr("Actualiser l’état") }}</button></div>
+  <details class="card screen-options" id="activity-technical"><summary>{{ tr("Détails techniques et journaux") }}</summary>
+    <p class="muted small">{{ tr("Identifiant :") }} <code>{{ job.id }}</code></p>
+    {% if job.command %}<p class="muted small">{{ tr("Commande :") }} <code>{{ job.command }}</code></p>{% endif %}
+    <p id="job-returncode" class="muted small"{% if job.returncode is none %} hidden{% endif %}>{{ tr("Code de retour :") }} <span id="job-returncode-val">{{ job.returncode if job.returncode is not none else '' }}</span></p>
+    <h2>{{ tr('Journal du traitement') }}</h2><pre id="job-stdout">{{ job.stdout or tr('Aucune sortie disponible.') }}</pre>
+    <h2>{{ tr('Messages d’erreur') }}</h2><pre id="job-stderr">{{ job.stderr or tr('Aucun message d’erreur enregistré.') }}</pre>
+    {% if activity.report_ready and job.result %}<p class="small">{% if job.result.report_md %}<a href="/file?path={{ job.result.report_md|urlencode }}">{{ tr("Rapport en texte (Markdown)") }}</a>{% endif %}{% if job.result.report_json %} · <a href="/file?path={{ job.result.report_json|urlencode }}">{{ tr("Données du rapport (JSON)") }}</a>{% endif %}</p>{% endif %}
     {% if latest %}<h2>Dernier audit multi-sites de la plateforme</h2>{% if latest.sites_summary_md %}<a href="/file?path={{ latest.sites_summary_md|urlencode }}">Synthèse des sites</a>{% endif %}{% if latest.interlinking_md %} · <a href="/file?path={{ latest.interlinking_md|urlencode }}">Plan des liens</a>{% endif %}{% endif %}
   </details>
         {% if corrections_plan %}
