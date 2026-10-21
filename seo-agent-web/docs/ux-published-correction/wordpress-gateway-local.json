@@ -1,0 +1,13 @@
+{
+  "transport": "loopback HTTP; public DNS/TLS and Noyaru online remain untested",
+  "wordpress": "6.9.10",
+  "yoast": "28.7",
+  "checks": [
+    "Manifest protected; canonical HTTPS URL and disposable credentials",
+    "Native WordPress authentication and both Yoast abilities through gateway",
+    "Insufficient permissions refused without a write",
+    "Both metadata values written by native Yoast and present in public HTML",
+    "Raw original metadata restored, including a missing description"
+  ],
+  "code_revision": "e2b98caf3964231527ba3761cad462025647b349"
+}

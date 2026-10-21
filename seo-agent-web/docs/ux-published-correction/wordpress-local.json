@@ -1,0 +1,23 @@
+{
+  "wordpress": "6.9.10",
+  "yoast": "28.7",
+  "checks": [
+    "Identité, droits et schémas Yoast natifs",
+    "Compte sans droits refusé",
+    "meta_description : aperçu sans écriture",
+    "meta_description : une seule écriture, résultat visible dans le HTML WordPress",
+    "meta_description : résolution confirmée à partir du HTML réel",
+    "meta_description : rétablissement confirmé dans le CMS et la page",
+    "seo_title : aperçu sans écriture",
+    "seo_title : une seule écriture, résultat visible dans le HTML WordPress",
+    "seo_title : résolution confirmée à partir du HTML réel",
+    "seo_title : rétablissement confirmé dans le CMS et la page",
+    "Modification externe : aperçu périmé bloqué sans écriture supplémentaire",
+    "Déconnexion : anciens aperçus bloqués"
+  ],
+  "native_api_requests": 32,
+  "native_api_writes": 6,
+  "scope": "WordPress local réel ; transport loopback de test, aucun site client ni HTTPS public",
+  "outcome": "passed",
+  "code_revision": "e2b98caf3964231527ba3761cad462025647b349"
+}

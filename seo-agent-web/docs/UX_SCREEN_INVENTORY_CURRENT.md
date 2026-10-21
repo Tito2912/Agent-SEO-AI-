@@ -1,8 +1,8 @@
 # Inventaire courant des écrans et interactions Noyaru
 
-Généré par `python seo-agent-web/ops/ux_inventory.py`. Révision du code : `af9f55139cf1a4bb027f1c2c29ad20661e9f0874`. Date UTC : 2026-10-21 16:07. Le [relevé initial et ses compléments](UX_SCREEN_INVENTORY.md) sont conservés.
+Généré par `python seo-agent-web/ops/ux_inventory.py`. Révision du code : `e87f884dca6c853bc73aec21ec4c8147c7e10a34`. Date UTC : 2026-10-21 18:16. Le [relevé initial et ses compléments](UX_SCREEN_INVENTORY.md) sont conservés.
 
-195 déclarations de routes ; 54 templates repérés dans les gestionnaires de routes ; 88 templates HTML au total (inclusions et anciens templates compris). 3 routes automatiques FastAPI complètent les déclarations, soit 198 déclarations et routes automatiques, hors montage statique. Les alias de langue du middleware ne sont pas des déclarations supplémentaires.
+198 déclarations de routes ; 55 templates repérés dans les gestionnaires de routes ; 89 templates HTML au total (inclusions et anciens templates compris). 3 routes automatiques FastAPI complètent les déclarations, soit 201 déclarations et routes automatiques, hors montage statique. Les alias de langue du middleware ne sont pas des déclarations supplémentaires.
 
 Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs états ou rediriger. Les droits sont déterminés par les middlewares et les contrôles de projet/compte, pas par cette extraction. Une référence littérale ou une variante du résolveur juridique n’atteste pas son exécution. Les rendus entièrement dynamiques peuvent ne pas être attribués à une route par cette extraction. Voir [le bilan transversal](UX_CROSS_JOURNEY_LOT16.md) pour les vérifications et leurs limites.
 
@@ -110,7 +110,7 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/projects/add` | POST | — | [backend/app.py:16327](../backend/app.py#L16327) · `add_project` |
 | `/projects/crawl-batch` | POST | — | [backend/app.py:18641](../backend/app.py#L18641) · `crawl_projects_batch` |
 | `/projects/delete` | POST | — | [backend/app.py:16457](../backend/app.py#L16457) · `delete_projects` |
-| `/projects/first-audit` | POST | — | [backend/first_audit.py:132](../backend/first_audit.py#L132) · `start` |
+| `/projects/first-audit` | POST | — | [backend/first_audit.py:136](../backend/first_audit.py#L136) · `start` |
 | `/projects/{slug}` | GET | project_overview.html | [backend/app.py:18903](../backend/app.py#L18903) · `project_overview` |
 | `/projects/{slug}/automation` | GET | project_automation.html | [backend/app.py:31427](../backend/app.py#L31427) · `project_automation` |
 | `/projects/{slug}/backlinks` | GET | backlinks.html | [backend/app.py:36002](../backend/app.py#L36002) · `project_backlinks` |
@@ -191,6 +191,9 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/settings/activation/accounts/{account_id}/export.csv` | GET | — | [backend/activation_routes.py:154](../backend/activation_routes.py#L154) · `account_profile_csv` |
 | `/settings/activation/acquisition.csv` | GET | — | [backend/activation_routes.py:204](../backend/activation_routes.py#L204) · `acquisition_csv` |
 | `/settings/activation/campaigns` | POST | — | [backend/activation_routes.py:221](../backend/activation_routes.py#L221) · `create_campaign` |
+| `/settings/legal-notices` | GET | settings_legal_notices.html | [backend/legal_notice_routes.py:31](../backend/legal_notice_routes.py#L31) · `legal_notices_page` |
+| `/settings/legal-notices` | POST | — | [backend/legal_notice_routes.py:59](../backend/legal_notice_routes.py#L59) · `announce` |
+| `/settings/legal-notices/{notice_id}/resume` | POST | — | [backend/legal_notice_routes.py:81](../backend/legal_notice_routes.py#L81) · `resume` |
 | `/settings/operations` | GET | settings_operations.html | [backend/app.py:16002](../backend/app.py#L16002) · `settings_operations` |
 | `/settings/system` | GET | settings_system.html | [backend/app.py:16027](../backend/app.py#L16027) · `settings_system` |
 | `/settings/system` | POST | — | [backend/app.py:16259](../backend/app.py#L16259) · `settings_system_save` |
@@ -585,12 +588,14 @@ Référence repérée dans un gestionnaire de route ou sa variante juridique.
 
 Référence repérée dans un gestionnaire de route ou sa variante juridique.
 
-- Ligne 18 : `<form method="post" action="/projects/{{ slug }}/crawl">`
-- Ligne 64 : `<form method="post" action="/projects/{{ slug }}/crawl">`
-- Ligne 82 : `<form method="post" action="/projects/{{ slug }}/first-correction">`
-- Ligne 107 : `<form method="post" action="/projects/{{ slug }}/first-correction">`
-- Ligne 134 : `<details class="cms-help">`
-- Ligne 147 : `<form method="post" action="/projects/{{ slug }}/first-correction">`
+- Ligne 11 : `<form method="post" action="/projects/{{ slug }}/crawl">`
+- Ligne 26 : `<details class="screen-options first-correction-retry">`
+- Ligne 80 : `<form method="post" action="/projects/{{ slug }}/crawl">`
+- Ligne 98 : `<form method="post" action="/projects/{{ slug }}/first-correction">`
+- Ligne 123 : `<form method="post" action="/projects/{{ slug }}/first-correction">`
+- Ligne 141 : `<details class="screen-options" data-correction-instructions>`
+- Ligne 155 : `<details class="cms-help">`
+- Ligne 166 : `<form method="post" action="/projects/{{ slug }}/first-correction">`
 
 ### home_public.html
 
@@ -668,9 +673,9 @@ Inclusion, gabarit partagé, rendu dynamique ou ancien template sans référence
 
 - Ligne 85 : `<details class="nav-group" {% if '/performance' in request.url.path or '/keywords' in request.url.path or '/competitors' in request.url.path or '/backlinks' in request.url.path or '/netlinking' in request.url.path %}open{% endif %}>`
 - Ligne 112 : `<details class="nav-group" {% if '/settings/search' in request.url.path or '/settings/crawl' in request.url.path or '/automation' in request.url.path or '/crawls' in request.url.path or request.url.path == project_path ~ '/cms' %}open{% endif %}>`
-- Ligne 209 : `<form method="post" action="/auth/logout">`
-- Ligne 256 : `<form class="assistant-form" id="assistant-form">`
-- Ligne 290 : `<form action="/settings/account/country" method="post">`
+- Ligne 213 : `<form method="post" action="/auth/logout">`
+- Ligne 260 : `<form class="assistant-form" id="assistant-form">`
+- Ligne 294 : `<form action="/settings/account/country" method="post">`
 
 ### legal_notice_public.html
 
@@ -818,6 +823,13 @@ Référence repérée dans un gestionnaire de route ou sa variante juridique.
 - Ligne 17 : `<form class="card account-filters" action="/settings/activation/accounts" method="get">`
 - Ligne 33 : `<details>`
 - Ligne 46 : `<details class="card account-method">`
+
+### settings_legal_notices.html
+
+Référence repérée dans un gestionnaire de route ou sa variante juridique.
+
+- Ligne 19 : `<form method="post" action="/settings/legal-notices" class="stack">`
+- Ligne 58 : `<form method="post" action="/settings/legal-notices/{{ notice.id }}/resume">`
 
 ### settings_operations.html
 

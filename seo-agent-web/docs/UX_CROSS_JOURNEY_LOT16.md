@@ -102,3 +102,5 @@ Suites ordonnées, sans élargir cette PR :
 5. **P2 — juridique et i18n** : coordination avec Claude pour les suites documentaires ; aucune publication du DPA ou modification contractuelle par ce lot.
 
 L’inventaire et les bilans couvrent le périmètre examiné et les améliorations livrées. Les validations ci-dessus restent ouvertes ; aucune déclaration d’achèvement global ni de conformité intégrale n’est faite.
+
+Complément ultérieur : le [lot 17](UX_PUBLISHED_CORRECTION_LOT17.md) apporte une première recette authentifiée sur le site témoin fourni par le propriétaire : connexions existantes consultées, analyse réelle de 127 pages, résultat ancien non confirmé conservé, décompte et reprise vérifiés. Il ne certifie pas tous les accès réels listés ci-dessus : les consentements OAuth ne sont pas rejoués et une nouvelle publication GitHub reste à éprouver. Le nouvel inventaire comprend les annonces juridiques de Claude, soit 201 routes et 89 templates.

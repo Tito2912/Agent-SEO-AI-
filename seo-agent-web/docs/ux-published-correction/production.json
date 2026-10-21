@@ -1,0 +1,138 @@
+{
+  "tested_on": "2026-10-21",
+  "source_revision": "unknown-deployed-revision",
+  "site": "voiceoverstudioai.com",
+  "session": {
+    "owner_authenticated_in_dedicated_browser": true,
+    "expected_identity_confirmed": true,
+    "credentials_in_evidence": false
+  },
+  "registered_connections": {
+    "google": true,
+    "bing": true,
+    "github": true
+  },
+  "search_results": [
+    {
+      "source": "gsc",
+      "days": 28,
+      "from": "2026-09-21",
+      "to": "2026-10-18",
+      "rows": 0,
+      "ui_reports_data_received": true
+    },
+    {
+      "source": "bing",
+      "days": 28,
+      "from": "2026-09-21",
+      "to": "2026-10-18",
+      "rows": 0,
+      "ui_reports_data_received": true
+    }
+  ],
+  "existing_fix": {
+    "page": "https://voiceoverstudioai.com/about-de",
+    "existing_pull_request_merged": true,
+    "public_html_status": 200,
+    "public_html_lang": "de",
+    "canonical_and_german_hreflang_match": true
+  },
+  "state_actions": [
+    "declare-existing-published-correction",
+    "start-one-real-verification-crawl"
+  ],
+  "analysis": {
+    "timestamp": "20261021-175401",
+    "status": "done",
+    "report_readable": true,
+    "pages_visited": 127,
+    "verification": "unverified",
+    "reason": "Le périmètre complet de cet ancien correctif est inconnu."
+  },
+  "next_choice": {
+    "opened": true,
+    "new_correction_selected": false,
+    "previous_receipt_preserved": true,
+    "candidate_families": 3
+  },
+  "usage": {
+    "pages_before": 102,
+    "pages_after": 229,
+    "pages_delta": 127,
+    "assistant_messages_delta": 0,
+    "ai_corrections_delta": 0,
+    "purchase_or_plan_change": false
+  },
+  "responsive_mobile": [
+    {
+      "path": "/projects/voiceoverstudioai-com/first-correction",
+      "query": "",
+      "width": 360,
+      "overflow": false,
+      "h1": "Votre correction",
+      "unconfirmed": true,
+      "chart_loading_visible": false
+    },
+    {
+      "path": "/billing",
+      "query": "?project=voiceoverstudioai-com",
+      "width": 360,
+      "overflow": false,
+      "h1": "Abonnement",
+      "unconfirmed": false,
+      "chart_loading_visible": false
+    },
+    {
+      "path": "/jobs/{analysis_id}",
+      "query": "",
+      "width": 360,
+      "overflow": false,
+      "h1": "Analyse de voiceoverstudioai.com",
+      "unconfirmed": false,
+      "chart_loading_visible": false,
+      "report_link": "/projects/voiceoverstudioai-com?crawl=20261021-175401"
+    },
+    {
+      "path": "/projects/voiceoverstudioai-com/performance",
+      "query": "?source=gsc&days=28",
+      "width": 360,
+      "overflow": false,
+      "h1": "Performance",
+      "unconfirmed": false,
+      "chart_loading_visible": false
+    },
+    {
+      "path": "/projects/voiceoverstudioai-com/performance",
+      "query": "?source=bing&days=28",
+      "width": 360,
+      "overflow": false,
+      "h1": "Performance",
+      "unconfirmed": false,
+      "chart_loading_visible": false
+    }
+  ],
+  "desktop_width_observed": 1030,
+  "github_repository_list": {
+    "outcome": "not_attested_within_driver_deadline",
+    "driver_deadline_seconds": 45,
+    "retried": false
+  },
+  "logout": {
+    "outcome": "not_attested_by_browser_driver",
+    "returned_to_login_observed": false
+  },
+  "cleanup": {
+    "dedicated_profile_removed": true,
+    "other_profiles_untouched": true
+  },
+  "remote_site_writes": 0,
+  "new_github_pull_requests_or_merges_on_client_site": 0,
+  "manual_production_deployment": false,
+  "limitations": [
+    "Les consentements OAuth ne sont pas rejoués.",
+    "Le résultat réel reste non confirmé ; les gardes de preuve ne sont pas affaiblies.",
+    "Les correctifs de cette PR sont testés localement ; la production observée est antérieure à leur livraison.",
+    "Le laboratoire WordPress ne valide pas une liaison HTTPS depuis Noyaru en ligne.",
+    "La déconnexion applicative et la lecture des dépôts GitHub ne sont pas attestées. Le profil temporaire a été supprimé."
+  ]
+}
