@@ -1,0 +1,1048 @@
+{
+  "checks": [
+    {
+      "screen": "public-pricing",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "guide-open-by-keyboard",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "localized-quota-guide",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "comparison-scroll",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "home-summary-preserved",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-free",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-free",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-pro",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-pro",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-member",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-member",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-admin",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-admin",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-payment-configured-mock",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-exhausted",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-unlimited",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-unlimited-aligned",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-closed-engine-aligned",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-pricing",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "guide-open-by-keyboard",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "localized-quota-guide",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "comparison-scroll",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "home-summary-preserved",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-free",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-free",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-pro",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-pro",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-member",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-member",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-admin",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-admin",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-payment-configured-mock",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-exhausted",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-unlimited",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-unlimited-aligned",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-closed-engine-aligned",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-pricing",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "guide-open-by-keyboard",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "localized-quota-guide",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "comparison-scroll",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "home-summary-preserved",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-free",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-free",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-pro",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-pro",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-member",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-member",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-admin",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-admin",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-payment-configured-mock",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-exhausted",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-unlimited",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-unlimited-aligned",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-closed-engine-aligned",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-pricing",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "guide-open-by-keyboard",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "localized-quota-guide",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "comparison-scroll",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "home-summary-preserved",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-free",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-free",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-pro",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-pro",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-member",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-member",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-admin",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-admin",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-payment-configured-mock",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-exhausted",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-unlimited",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-unlimited-aligned",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-closed-engine-aligned",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-pricing",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "guide-open-by-keyboard",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "localized-quota-guide",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "comparison-scroll",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "home-summary-preserved",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-free",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-free",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-pro",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-pro",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-member",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-member",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-admin",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-admin",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-payment-configured-mock",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-exhausted",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-unlimited",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-unlimited-aligned",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-closed-engine-aligned",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-pricing",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "guide-open-by-keyboard",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "localized-quota-guide",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "comparison-scroll",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "home-summary-preserved",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-free",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-free",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-pro",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-pro",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-member",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-member",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-admin",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-admin",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-payment-configured-mock",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-exhausted",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-unlimited",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-unlimited-aligned",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-closed-engine-aligned",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-pricing",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "guide-open-by-keyboard",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "localized-quota-guide",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "comparison-scroll",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "home-summary-preserved",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-free",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-free",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-pro",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-pro",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-member",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-member",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-admin",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-admin",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-payment-configured-mock",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-exhausted",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-unlimited",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-unlimited-aligned",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-closed-engine-aligned",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-pricing",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "guide-open-by-keyboard",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "localized-quota-guide",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "comparison-scroll",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "home-summary-preserved",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-free",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-free",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-pro",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-pro",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-member",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-member",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-admin",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-guide-admin",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-payment-configured-mock",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-exhausted",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "billing-unlimited",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-unlimited-aligned",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "public-closed-engine-aligned",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "without-javascript-public",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "without-javascript-pro",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "without-javascript-public",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    },
+    {
+      "screen": "without-javascript-pro",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "new_controls_at_least_44px": true
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": 0,
+  "mutating_requests": [],
+  "notes": [
+    "Compte, consommations et paiement configuré sont fictifs.",
+    "Formulaires de paiement et résiliation affichés, jamais soumis.",
+    "Droits, modèle de calcul et décomptes restent contrôlés côté serveur."
+  ]
+}

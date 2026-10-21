@@ -4,6 +4,7 @@
    Sur la home, `cartes_resumees` garde les quotas essentiels dans les cartes et place la
    grille complete dans un volet. /pricing conserve les cartes detaillees. #}
 {% from "_tarif_fonctions.html" import liste_fonctions %}
+{% from "_plan_usage.html" import correction_definition %}
 {% include "_tarifs_styles.html" %}
 
 <div class="tarifs{% if cartes_resumees|default(false) %} tarifs--resumees{% endif %}">
@@ -24,7 +25,7 @@
       {% if cartes_resumees|default(false) %}
         <ul class="tarif-cles">
           {% for f in c.fonctions if f.resume and f.inclus %}
-            <li{% if f.phare %} class="phare"{% endif %}>{{ tr(f.texte) }}</li>
+            <li{% if f.phare %} class="phare"{% endif %}>{{ tr(f.texte) }}{% if f.unlimited %} : {{ tr("Illimité") }}{% endif %}</li>
           {% endfor %}
         </ul>
       {% else %}
@@ -34,8 +35,8 @@
   {% endfor %}
 </div>
 
+<p class="tarifs-note">{{ tr("Les corrections dans le code nécessitent un dépôt GitHub compatible.") }} {{ correction_definition() }} <a href="{{ localized_path('/pricing', current_lang()) }}#quota-guide">{{ tr("Comprendre le décompte") }}</a></p>
 {% if cartes_resumees|default(false) %}
-  <p class="tarifs-note">{{ tr("Les corrections dans le code nécessitent un dépôt GitHub compatible. Une correction IA correspond à un fichier écrit par le modèle. Chaque analyse reste limitée au quota mensuel de pages disponible.") }}</p>
   <details class="tarifs-detail">
     <summary>{{ tr("Comparer toutes les fonctions et les quotas") }}</summary>
     {% include "_comparatif.html" %}

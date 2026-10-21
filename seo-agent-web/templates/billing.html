@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 {% from "_tarif_fonctions.html" import liste_fonctions %}
+{% from "_plan_usage.html" import monthly_usage, guide %}
+{% block head_extra %}<link rel="stylesheet" href="/static/plan-usage.css?v=1" />{% endblock %}
 
 {% block title %}{{ tr("Abonnement") }} - Noyaru{% endblock %}
 
@@ -13,7 +15,7 @@
   <div class="page-header">
     <h1>{{ tr("Abonnement") }}</h1>
     <p class="muted">{{ tr("La formule et les compteurs ci-dessous appartiennent à votre compte personnel.") }}</p>
-  <a href="/docs/plans-et-quotas" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
+  <a href="{{ doc_path('plans-et-quotas') }}" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
   </div>
 
   {% if msg %}
@@ -47,7 +49,7 @@
     {% endif %}
   </section>
 
-  <div class="grid two">
+  <div class="grid two billing-overview">
     <div class="card">
       <div class="card-title-row">
         <h2>{{ tr("Plan actuel") }}</h2>
@@ -97,83 +99,12 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title-row">
-        <h2>{{ tr("Quotas") }}</h2>
-        <span class="muted small">{{ tr("Utilisation ce mois-ci") }}</span>
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-            <span style="font-size:13px;font-weight:600;">{{ tr("Sites") }}</span>
-            <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">{{ usage.projects }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.projects }}</span></span>
-          </div>
-        </div>
-
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-            <span style="font-size:13px;font-weight:600;">{{ tr("Pages analysées") }}</span>
-            {% if is_admin %}
-              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
-            {% else %}
-              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">{{ usage.pages_crawled_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
-            {% endif %}
-          </div>
-          {% if is_admin %}
-            <div class="muted small" style="margin-top:5px;">{{ tr("Compte admin – quotas non limités") }}</div>
-          {% else %}
-            <div class="progress slim" style="--p: {{ usage_pct.pages_crawled_month }};background:rgba(255,255,255,.06);">
-              <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.pages_crawled_month >= 90 else ('var(--warn)' if usage_pct.pages_crawled_month >= 70 else 'var(--accent)') }};"></div>
-            </div>
-            <div class="muted small" style="margin-top:5px;">{{ tr("{n}% utilisé", n=usage_pct.pages_crawled_month) }}</div>
-          {% endif %}
-        </div>
-
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-            <span style="font-size:13px;font-weight:600;">{{ tr("Messages IA") }}</span>
-            {% if is_admin %}
-              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
-            {% else %}
-              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">{{ usage.assistant_messages_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
-            {% endif %}
-          </div>
-          {% if is_admin %}
-            <div class="muted small" style="margin-top:5px;">{{ tr("Compte admin – quotas non limités") }}</div>
-          {% else %}
-            <div class="progress slim" style="--p: {{ usage_pct.assistant_messages_month }};background:rgba(255,255,255,.06);">
-              <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.assistant_messages_month >= 90 else ('var(--warn)' if usage_pct.assistant_messages_month >= 70 else 'var(--accent)') }};"></div>
-            </div>
-            <div class="muted small" style="margin-top:5px;">{{ tr("{n}% utilisé", n=usage_pct.assistant_messages_month) }}</div>
-          {% endif %}
-        </div>
-
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-            <span style="font-size:13px;font-weight:600;">{{ tr("Corrections IA") }}</span>
-            {% if is_admin %}
-              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.ai_corrections_month }}</span></span>
-            {% else %}
-              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">{{ usage.ai_corrections_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.ai_corrections_month }}</span></span>
-            {% endif %}
-          </div>
-          {% if is_admin %}
-            <div class="muted small" style="margin-top:5px;">{{ tr("Compte admin – quotas non limités") }}</div>
-          {% elif limits_labels.ai_corrections_month == '—' %}
-            <div class="muted small" style="margin-top:5px;">{{ tr("Non inclus dans ce forfait") }}</div>
-          {% else %}
-            <div class="progress slim" style="--p: {{ usage_pct.ai_corrections_month }};background:rgba(255,255,255,.06);">
-              <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.ai_corrections_month >= 90 else ('var(--warn)' if usage_pct.ai_corrections_month >= 70 else 'var(--accent)') }};"></div>
-            </div>
-            <div class="muted small" style="margin-top:5px;">{{ tr("{n}% utilisé", n=usage_pct.ai_corrections_month) }}</div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
+    {{ monthly_usage(quota_rows, quota_period, usage.projects, limits_labels.projects) }}
   </div>
 
-  <div class="card">
+  {{ guide() }}
+
+  <div class="card" id="billing-plans">
     <div class="card-title-row">
       <h2>{{ tr("Changer de plan") }}</h2>
       <span class="muted small">{{ tr("Prix TTC · passage au plan supérieur immédiat · retour au plan inférieur en fin de période") }}</span>

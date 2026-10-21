@@ -22,6 +22,7 @@ import uuid
 from pathlib import Path
 
 import pytest
+from bs4 import BeautifulSoup
 
 WEB_ROOT = Path(__file__).resolve().parents[1]
 if str(WEB_ROOT) not in sys.path:
@@ -168,10 +169,13 @@ def test_chaque_carte_liste_TOUTES_les_lignes_de_la_grille(chemin, balise) -> No
 
 def test_une_fonction_ABSENTE_est_grisee_et_une_INCLUSE_ne_l_est_pas() -> None:
     cartes = _cartes(TestClient(m.app).get("/pricing").text, "h3")
-    fix_free = re.search(r'<li class="absent"><span class="sr">Non inclus : </span>Fix pack sans dépôt Git</li>', cartes["Free"])
-    assert fix_free, "Free n'a pas le fix pack : grisé"
-    assert "<li>Fix pack sans dépôt Git</li>" in cartes["Solo"]
-    assert "absent" not in cartes["Business"], "Business a tout"
+    items = {nom: BeautifulSoup(carte, "html.parser").select("li") for nom, carte in cartes.items()}
+    fix_free = next(li for li in items["Free"] if li.get_text(strip=True).endswith("Fix pack sans dépôt Git"))
+    assert "absent" in fix_free.get("class", []), "Free n'a pas le fix pack : signalé absent"
+    assert "Non inclus :" in fix_free.get_text(), "L'absence doit être compréhensible sans sa couleur"
+    fix_solo = next(li for li in items["Solo"] if li.get_text(strip=True) == "Fix pack sans dépôt Git")
+    assert "absent" not in fix_solo.get("class", []), "Solo inclut le fix pack"
+    assert not any("absent" in li.get("class", []) for li in items["Business"]), "Business a tout"
     grille = m._comparatif_des_plans()
     for i, carte in enumerate(grille["cartes"]):
         absents = sum(1 for f in carte["fonctions"] if "texte" in f and not f["inclus"])
