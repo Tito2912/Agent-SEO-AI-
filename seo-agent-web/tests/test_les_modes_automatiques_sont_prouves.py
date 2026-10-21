@@ -42,9 +42,16 @@ def connect(depot, **body):
                                 headers={m._CSRF_HEADER_NAME: token})
 
 
-def journal(action):
+def journal(action, *, after=()):
+    """Les entrées du journal pour cette action, sauf celles dont l'identifiant est dans `after`."""
     with m.DB.session() as db:
-        return [row.meta for row in db.scalars(select(AuditLog).where(AuditLog.action == action))]
+        return [row.meta for row in db.scalars(select(AuditLog).where(AuditLog.action == action))
+                if row.id not in set(after)]
+
+
+def journal_ids(action):
+    with m.DB.session() as db:
+        return [row.id for row in db.scalars(select(AuditLog).where(AuditLog.action == action))]
 
 
 def test_full_access_needs_consent_and_each_change_is_kept(depot):
@@ -73,15 +80,17 @@ def test_detaching_a_full_access_repository_is_kept_too(depot):
 
 def test_automatic_publishing_of_articles_needs_consent_and_is_kept(client_connecte, plan):
     browser, slug, _pid = client_connecte
+    # La base de ces fixtures peut déjà porter les traces d'autres tests : on compte ce qui s'ajoute.
+    before = journal_ids('automation.content_publication')
     refused = _auto._regler(browser, slug, enabled=True, section='/blog', publication='auto')
     assert refused.status_code == 400 and 'sans relecture humaine' in refused.json()['error']
-    assert journal('automation.content_publication') == []
+    assert journal('automation.content_publication', after=before) == []
     assert _auto._regler(browser, slug, enabled=True, section='/blog', publication='auto', consent=True).status_code == 200
     assert _auto._regler(browser, slug, enabled=True, section='/blog', publication='auto').status_code == 200
     assert _auto._regler(browser, slug, enabled=True, section='/blog', publication='verification').status_code == 200
-    logs = journal('automation.content_publication')
-    assert sorted(log['publication'] for log in logs) == ['auto', 'verification']
-    assert next(log for log in logs if log['publication'] == 'auto')['consent'] is True
+    added = journal('automation.content_publication', after=before)
+    assert sorted(log['publication'] for log in added) == ['auto', 'verification']
+    assert next(log for log in added if log['publication'] == 'auto')['consent'] is True
 
 
 def test_every_screen_that_turns_on_an_automatic_mode_asks_for_consent() -> None:
