@@ -124,6 +124,7 @@ def test_manual_choice_is_persisted_for_the_owner_and_can_resume_without_github(
         assert len(list(db.scalars(select(IssueTask).where(IssueTask.project_id == journey["project_id"])))) == 1
     page = journey["client"].get(again.headers["location"])
     assert "J’ai modifié cette page" in page.text and "Modifiez votre page" in page.text
+    assert not BeautifulSoup(page.text, "html.parser").select_one("[data-correction-instructions]")
     state = _state(journey)
     assert state["progress_pct"] == 75 and not state["complete"]
 
@@ -134,6 +135,12 @@ def test_declared_edit_is_pending_until_a_new_crawl_confirms_it(journey):
         row = db.get(IssueTask, task.id)
         assert row.status == "in_progress" and not first_correction.note_data(row.note).get("verify")
     assert not _state(journey)["complete"]
+    waiting = journey["client"].get(f'/projects/{journey["slug"]}/first-correction')
+    soup = BeautifulSoup(waiting.text, "html.parser")
+    instructions = soup.select_one("details[data-correction-instructions]")
+    assert instructions and not instructions.has_attr("open")
+    assert instructions.find("a", string="Ouvrir les instructions détaillées")
+    assert soup.select_one('#verification form[action$="/crawl"] button')
     page = _verify(journey)
     assert page.status_code == 200 and "Votre correction est vérifiée" in page.text
     state = _state(journey)
@@ -247,9 +254,9 @@ def test_reopening_the_choice_does_not_reset_a_verified_success(journey):
 
 @pytest.mark.parametrize("case,result", [("still_present", "still_present"), ("not_visited", "unverified"),
                                          ("blocked", "unverified"), ("predates_edit", "unverified"),
-                                         ("incomplete_examples", "unverified")])
+                                         ("incomplete_examples", "unverified"), ("legacy_scope", "unverified")])
 def test_failed_or_inconclusive_controls_keep_the_journey_open(journey, case, result):
-    _ready(journey)
+    task = _ready(journey)
     options = {}
     if case == "still_present":
         options["issues"] = {"missing_title": {"count": 1, "examples": [URL]}}
@@ -259,6 +266,13 @@ def test_failed_or_inconclusive_controls_keep_the_journey_open(journey, case, re
         options["blocked"] = True
     elif case == "predates_edit":
         options["ts"] = "20261002-100000"
+    elif case == "legacy_scope":
+        with m.DB.session() as db:
+            row = db.get(IssueTask, task.id)
+            note = first_correction.note_data(row.note)
+            note.update(bulk=True, verification_expected_count=2, verification_urls=[URL])
+            row.note = json.dumps(note)
+            db.commit()
     else:
         options["issues"] = {"missing_title": {"count": 10, "examples": [OTHER]}}
     page = _verify(journey, **options)
@@ -266,6 +280,18 @@ def test_failed_or_inconclusive_controls_keep_the_journey_open(journey, case, re
     assert page.context["state"]["verify"]["result"] == result
     assert not page.context["state"]["verified"] and not _state(journey)["complete"]
     assert "Votre correction est vérifiée" not in page.text
+    assert not BeautifulSoup(page.text, "html.parser").select_one("[data-correction-instructions]")
+    if result == "unverified":
+        soup = BeautifulSoup(page.text, "html.parser")
+        control = soup.select_one("#verification")
+        assert control.select_one("a.btn.primary")["href"] == (
+            f'/projects/{journey["slug"]}?crawl={page.context["state"]["verify"]["crawl_ts"]}'
+        )
+        retry = control.select_one("details.first-correction-retry")
+        assert retry and not retry.has_attr("open") and retry.select_one('form[action$="/crawl"]')
+        assert "Ce contrôle lance une nouvelle analyse" in retry.get_text()
+        if case == "legacy_scope":
+            assert "Le périmètre complet de cet ancien correctif est inconnu." in control.get_text()
 
 
 def test_one_page_can_be_verified_while_other_fully_listed_occurrences_remain(journey):

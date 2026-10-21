@@ -209,7 +209,7 @@
       </details>
 
       <p class="muted small" style="margin: 10px 0 0;">
-        <a id="live-job-jobs-link" href="/jobs">{{ tr("Voir dans Exécutions") }}</a>
+        <a id="live-job-jobs-link" href="/jobs/{{ live_job.id }}">{{ tr("Voir le suivi") }}</a>
       </p>
     </section>
   {% endif %}
@@ -226,7 +226,7 @@
       <p class="muted" style="margin:0 0 12px;">{% if crawl_active %}{{ tr("Votre site est enregistré. Le bilan apparaîtra ici à la fin de l’analyse.") }}{% else %}{{ tr("Aucune analyse terminée pour ce projet.") }}{% endif %}</p>
       {% if live_job and live_job.status in ['failed', 'canceled'] %}
         <p class="muted small" style="margin:0 0 14px;">
-          {% if live_job.status == 'failed' %}{{ tr("La dernière analyse n’a pas abouti.") }}{% else %}{{ tr("La dernière analyse a été annulée.") }}{% endif %} {{ tr_html('Votre site est conservé. Vous pouvez réessayer ou <a href="{url}">consulter le détail de cette analyse</a>.', url='/jobs?job=' ~ live_job.id) }}
+          {% if live_job.status == 'failed' %}{{ tr("La dernière analyse n’a pas abouti.") }}{% else %}{{ tr("La dernière analyse a été annulée.") }}{% endif %} {{ tr_html('Votre site est conservé. Vous pouvez réessayer ou <a href="{url}">consulter le détail de cette analyse</a>.', url='/jobs/' ~ live_job.id) }}
         </p>
       {% endif %}
       <div class="topbar-actions">
@@ -723,7 +723,7 @@
         const stderrEl = document.getElementById("live-job-stderr");
         const jobsLink = document.getElementById("live-job-jobs-link");
         const cancelBtn = document.getElementById("live-job-cancel-btn");
-        if (jobsLink) jobsLink.href = `/jobs?job=${encodeURIComponent(jobId)}`;
+        if (jobsLink) jobsLink.href = `/jobs/${encodeURIComponent(jobId)}`;
         function isLiveStatus(s) { return s === "queued" || s === "running" || s === "cancel_requested"; }
         function fmtRunTs(v) { if (!v || !/^\d{8}-\d{6}$/.test(v)) return null; return `${v.slice(6,8)}/${v.slice(4,6)}/${v.slice(2,4)}`; }
         function fmtEpoch(v) { if (!Number.isFinite(v) || v <= 0) return ""; const d = new Date(v*1000); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; }

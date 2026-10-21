@@ -293,6 +293,23 @@ def test_wrong_report_and_same_slug_are_never_substituted(journey):
     )
 
 
+@pytest.mark.parametrize("status", ["queued", "running", "failed", "canceled"])
+def test_project_opens_the_exact_analysis_tracking_without_the_list(journey, status):
+    if status in {"queued", "running"}:
+        journey["report"]()
+    row = job(journey, status)
+    page = journey["client"].get(f'/projects/{journey["slug"]}?job={row.id}')
+    assert page.status_code == 200
+    soup = BeautifulSoup(page.text, "html.parser")
+    link = soup.find("a", href="/jobs/" + row.id)
+    assert link
+    if status in {"queued", "running"}:
+        assert link.get_text(strip=True) == "Voir le suivi"
+    detail = journey["client"].get(link["href"])
+    assert detail.status_code == 200 and detail.context["job"].id == row.id
+    assert journey["stranger"].get(link["href"]).status_code == 404
+
+
 def test_activity_names_and_return_are_authorized_and_filtered(journey):
     row = job(journey)
     page = journey["client"].get("/jobs")

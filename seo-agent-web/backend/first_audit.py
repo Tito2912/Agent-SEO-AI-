@@ -80,6 +80,10 @@ def resume(selected, state, live, last_job, has_crawl, clean):
         if (state.get("verify") or {}).get("result") == "still_present":
             result.update(title="La correction reste à ajuster",
                           detail="Le dernier contrôle retrouve encore ce problème. Reprenez la modification avant de la faire vérifier.")
+        elif (state.get("verify") or {}).get("result") == "unverified":
+            result.update(title="Le contrôle n’a pas pu confirmer le résultat.", label="Comprendre le contrôle",
+                          href=base + "/first-correction#verification",
+                          detail=state["verify"].get("reason") or "Consultez le bilan du contrôle avant de poursuivre.")
         elif state.get("declared"):
             result.update(title="Votre modification attend son contrôle",
                           detail="La modification est déclarée. Une nouvelle analyse doit confirmer que le problème a disparu.")

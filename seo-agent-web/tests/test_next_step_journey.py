@@ -84,6 +84,18 @@ def test_an_old_job_link_does_not_hide_an_active_analysis(journey):
     assert action(soup)["href"] == f'/projects/{journey["slug"]}?job={active.id}'
 
 
+def test_inconclusive_control_points_to_its_explanation_before_another_crawl(journey):
+    _ready(journey)
+    _verify(journey, urls=(OTHER,))
+    for path in ("/", f'/projects/{journey["slug"]}', f'/projects/{journey["slug"]}/issues'):
+        response = journey["client"].get(path)
+        soup = BeautifulSoup(response.text, "html.parser")
+        assert action(soup).get_text(strip=True) == "Comprendre le contrôle"
+        assert action(soup)["href"] == f'/projects/{journey["slug"]}/first-correction#verification'
+        assert not soup.select(".journey-card form")
+        assert "Certaines URL du correctif" in soup.select_one(".journey-card").get_text()
+
+
 def test_first_success_survives_but_resume_follows_the_next_explicit_selection(journey):
     _ready(journey)
     verified = _verify(journey, issues={"missing_title": {"count": 1, "examples": [OTHER]}}, urls=(URL, OTHER))
