@@ -67,7 +67,7 @@ const noyaruT = window.noyaruT || ((text) => text);
   save.addEventListener('click', () => {
     if (!repo.value.trim().match(/^[^/\s]+\/[^/\s]+$/)) { feedback.textContent = noyaruT('Saisissez un dépôt sous la forme compte/nom-du-dépôt.'); repo.focus(); return; }
     if (mode === 'auto' && !consent.checked) { feedback.textContent = noyaruT('Confirmez l’autorisation pour le mode Full Access.'); consent.focus(); return; }
-    mutate({repo:repo.value.trim(),branch:branch.value.trim() || 'main',mode});
+    mutate({repo:repo.value.trim(),branch:branch.value.trim() || 'main',mode,consent:consent.checked});
   });
   detach.addEventListener('click', () => {
     if (confirm(noyaruT('Retirer ce dépôt du site ? Les propositions déjà créées sur GitHub restent disponibles.'))) mutate({repo:'',disconnect:true});

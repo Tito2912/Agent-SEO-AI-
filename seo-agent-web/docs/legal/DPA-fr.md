@@ -314,9 +314,10 @@ parties.
 de l'article 82 du RGPD. Le présent accord ne restreint pas leurs droits.
 
 **Responsabilité entre les parties.** La responsabilité de chaque partie au titre du présent
-accord est limitée aux dommages directs et prévisibles, dans la limite des sommes payées par le
-Client au cours des 12 mois précédant le fait qui l'engage, comme le prévoit l'article 10 des
-conditions générales pour les professionnels. Ces limites ne s'appliquent pas en cas de faute
+accord est limitée aux dommages directs et prévisibles, dans la limite du plus élevé des deux
+montants suivants : les sommes payées par le Client au cours des 12 mois précédant le fait qui
+l'engage, ou 1 000 €, comme le prévoit l'article 10 des conditions générales pour les
+professionnels. Ces limites ne s'appliquent pas en cas de faute
 lourde ou de dol, ni aux responsabilités qu'une règle impérative interdit de limiter. Elles ne
 réduisent pas les droits des personnes concernées au titre de l'article 82 du RGPD, et une amende
 administrative reste à la charge de la partie à laquelle elle est infligée.
