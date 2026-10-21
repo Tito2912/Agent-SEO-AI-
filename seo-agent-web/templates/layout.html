@@ -184,6 +184,10 @@
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h16l-6 8v7l-4 2v-9z"/></svg>
               {{ tr("Parcours clients") }}
             </a>
+            <a class="nav-item {% if request.url.path.startswith('/settings/legal-notices') %}active{% endif %}"{% if request.url.path.startswith('/settings/legal-notices') %} aria-current="page"{% endif %} href="/settings/legal-notices">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg>
+              {{ tr("Annonces aux clients") }}
+            </a>
             <a class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}"{% if request.url.path.startswith('/settings/system') %} aria-current="page"{% endif %} href="/settings/system">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17" cy="12" r="3"/></svg>
               {{ tr("Système") }}

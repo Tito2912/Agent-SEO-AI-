@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+{% block title %}Annonces aux clients - Noyaru{% endblock %}
+{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/settings/operations">Exploitation</a><span class="crumb-sep">/</span><span class="crumb-current">Annonces aux clients</span>{% endblock %}
+{# Les CGU (article 13) promettent un e-mail au moins 30 jours avant un changement important des
+   conditions ou du service. Cet ecran l'envoie a tous les comptes et garde la preuve de chaque
+   envoi (backend/legal_notices.py). Ecran reserve au proprietaire du site, en francais seulement. #}
+{% block content %}
+<div class="legal-notices-page">
+  <div class="page-header">
+    <h1>Annoncer un changement</h1>
+    <p class="muted">Prévenez vos clients par e-mail au moins {{ notice_days }} jours avant un changement important de vos conditions générales, de votre politique de confidentialité ou du service, comme vos CGU le promettent (article 13).</p>
+  </div>
+  {% if msg %}<div class="alert ok" role="status"><p>{{ msg }}</p></div>{% endif %}
+  {% if err %}<div class="alert error" role="alert"><p>{{ err }}</p></div>{% endif %}
+
+  <section class="card" id="announce">
+    <h2>Nouvelle annonce</h2>
+    <p class="muted small">L’e-mail part à <strong>{{ recipients }} compte{% if recipients != 1 %}s{% endif %}</strong>, dans la langue choisie par chacun, ou en français puis en anglais si le compte n’en a choisi aucune. Il part même aux comptes qui refusent les e-mails promotionnels : c’est une information sur leur contrat.</p>
+    <form method="post" action="/settings/legal-notices" class="stack">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <label>Ce qui change
+        <select name="document" required>
+          {% for key, spec in documents.items() %}<option value="{{ key }}">{{ spec.label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Date d’entrée en vigueur
+        <input type="date" name="effective_on" required min="{{ earliest }}" value="{{ earliest }}" aria-describedby="effective-help" />
+      </label>
+      <p class="muted small" id="effective-help">Au plus tôt le {{ earliest_label }}, soit {{ notice_days }} jours après aujourd’hui.</p>
+      <label>Ce qui change, en français
+        <textarea name="summary_fr" rows="5" required maxlength="{{ summary_max }}" placeholder="Par exemple : le prix du plan Pro passe de 49 € à 59 € par mois."></textarea>
+      </label>
+      <label>Ce qui change, en anglais
+        <textarea name="summary_en" rows="5" required maxlength="{{ summary_max }}" placeholder="For example: the Pro plan price goes from €49 to €59 per month."></textarea>
+      </label>
+      <label>Adresse de la nouvelle version (facultatif)
+        <input type="text" name="new_version_url" maxlength="512" placeholder="/terms ou https://…" aria-describedby="version-help" />
+      </label>
+      <p class="muted small" id="version-help">Si la nouvelle version est déjà en ligne, indiquez son adresse. Sinon, l’e-mail indique qu’elle sera publiée à la date d’entrée en vigueur et qu’elle peut être demandée dès maintenant au support.</p>
+      <label class="checkbox"><input type="checkbox" name="confirm" value="yes" required /> J’envoie cette annonce à {{ recipients }} compte{% if recipients != 1 %}s{% endif %}. Un envoi ne peut pas être annulé.</label>
+      <button type="submit" class="btn primary">Envoyer l’annonce</button>
+    </form>
+  </section>
+
+  <section class="card" id="history">
+    <h2>Annonces envoyées</h2>
+    {% if notices %}
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Annonces envoyées">
+        <table class="table compact">
+          <thead><tr><th scope="col">Envoyée le</th><th scope="col">Ce qui change</th><th scope="col">En vigueur le</th><th scope="col">Envois</th><th scope="col"></th></tr></thead>
+          <tbody>
+            {% for notice in notices %}
+              <tr>
+                <td><span data-ts-datetime="{{ notice.created_at.strftime('%Y%m%d-%H%M%S') if notice.created_at else '' }}">{{ notice.created_at.strftime('%d/%m/%y %H:%M') if notice.created_at else '—' }}</span></td>
+                <td><strong>{{ notice.document }}</strong><br><span class="muted small">{{ notice.summary_fr|truncate(160) }}</span></td>
+                <td>{{ notice.effective_on }}</td>
+                <td>{{ notice.sent }} envoyé{% if notice.sent != 1 %}s{% endif %}{% if notice.pending %} · {{ notice.pending }} en attente{% endif %}{% if notice.failed %} · <strong>{{ notice.failed }} en échec</strong>{% endif %}</td>
+                <td>{% if notice.pending or notice.failed %}<form method="post" action="/settings/legal-notices/{{ notice.id }}/resume"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button type="submit" class="btn">Reprendre l’envoi</button></form>{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="muted small">Chaque envoi est enregistré avec l’adresse, la langue et l’heure : c’est la preuve que le client a été prévenu. Les envois d’un compte supprimé sont effacés avec lui.</p>
+    {% else %}
+      <p class="muted">Aucune annonce pour l’instant.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

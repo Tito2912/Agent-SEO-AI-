@@ -29,7 +29,7 @@ Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeu
 
 | Engagement | Document | Dépendance |
 | --- | --- | --- |
-| Informer les clients par e-mail au moins 30 jours avant une modification substantielle des CGU ou du service | CGU article 13 (FR/EN) | Le service n'a **pas** de fonction d'envoi automatique pour cela. L'engagement suppose un envoi manuel de votre part à chaque modification substantielle. Un consommateur gêné par une modification du service peut aussi mettre fin au contrat dans les 30 jours, avec remboursement de la période restant à courir (remboursement manuel dans Stripe). |
+| Informer les clients par e-mail au moins 30 jours avant une modification substantielle des CGU ou du service | CGU article 13 (FR/EN) | Écran « Annonces aux clients » (`/settings/legal-notices`, réservé au propriétaire) : il envoie l'e-mail à tous les comptes, refuse une date à moins de 30 jours et garde la preuve de chaque envoi. Il reste à l'utiliser à chaque modification substantielle. Un consommateur gêné par une modification du service peut aussi mettre fin au contrat dans les 30 jours, avec remboursement de la période restant à courir (remboursement manuel dans Stripe). |
 | Rembourser une rétractation sous 14 jours | CGU article 5 (FR/EN) | Le remboursement est une opération manuelle dans Stripe (`RUNBOOK.md`, « Rétractation »). La case « Je demande que mon abonnement commence immédiatement » existe bien avant le paiement. |
 | Fournir un accord de traitement des données (DPA) sur demande | Confidentialité § 1, CGU article 11 | Les pages annoncent qu'il « peut être demandé ». Le DPA (`DPA-fr.md`, `DPA-en.md`) est un brouillon non opérationnel, corrigé le 21/10/2026 : il ne peut être proposé aux clients qu'une fois réglés les points de la section 5. Mode d'acceptation choisi le 21/10/2026 : une case à cocher dans le service. |
 | Décrire les garanties de transfert sur demande | Confidentialité § 5 | Suppose d'avoir les justificatifs du point 2. |
@@ -94,7 +94,7 @@ juridiquement. Ce sont des choix courants et équilibrés ; ils restent à faire
 | Notifier une violation de données dans les 48 heures, dans la mesure du possible | 13 | Lire contact@noyaru.com et les alertes du service chaque jour ouvré. |
 | Rembourser au prorata un client qui résilie après une objection | 10 | Un remboursement manuel dans Stripe, comme pour une rétractation. |
 | Restituer en 30 jours les données que les exports ne couvrent pas | 15 | Une procédure d'extraction, à mettre en œuvre (voir ci-dessous). |
-| Prévenir les clients 30 jours avant un nouveau sous-traitant ultérieur | 10 | Un e-mail manuel à chaque client concerné. |
+| Prévenir les clients 30 jours avant un nouveau sous-traitant ultérieur | 10 | Une annonce « Politique de confidentialité, et liste des prestataires » depuis l'écran « Annonces aux clients ». |
 | Faire signer un engagement de confidentialité avant de donner accès aux données à une autre personne | 8 | Le propriétaire, seul à accéder aux données le 21/10/2026, l'a indiqué ce jour-là. |
 
 ### Où trouver le contrat de traitement de chaque sous-traitant ultérieur

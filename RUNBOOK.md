@@ -275,6 +275,23 @@ côté base. **Sauf les abonnements créés en live entre-temps** — leurs `sub
 par l'API test, exactement le symptôme inverse. C'est pourquoi l'étape 4 se fait avant d'annoncer
 quoi que ce soit à un client.
 
+## Annoncer un changement des conditions ou du service
+
+Les CGU (article 13) promettent un e-mail au moins 30 jours avant un changement important des
+conditions, de la politique de confidentialité (liste des prestataires comprise) ou du service
+(prix, fonctions). L'écran **Annonces aux clients** (`/settings/legal-notices`, propriétaire du
+site seulement) l'envoie :
+
+- choisir ce qui change, la date d'entrée en vigueur (30 jours au plus tôt, refusé avant), et
+  écrire ce qui change en français et en anglais ;
+- l'e-mail part à tous les comptes, dans la langue choisie par chacun, ou en français puis en
+  anglais si le compte n'en a choisi aucune ; il part même aux comptes qui refusent les e-mails
+  promotionnels ;
+- chaque envoi est enregistré (`legal_notice_deliveries` : adresse, langue, état, heure) ; un
+  envoi en échec se relance avec « Reprendre l'envoi », sans renvoyer aux comptes déjà prévenus ;
+- publier la nouvelle version du texte à la date d'entrée en vigueur (et mettre à jour sa date
+  dans `backend/legal.py`) ; l'e-mail indique qu'elle peut être demandée avant au support.
+
 ## Vente aux consommateurs : TVA, résiliation, rétractation
 
 Depuis le 30/09/2026 le service est ouvert aux professionnels ET aux particuliers, et EComShop est
