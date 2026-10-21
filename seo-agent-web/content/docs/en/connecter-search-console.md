@@ -5,7 +5,7 @@ description: "Link Search Console to a {{app_name}} project: Google authorizatio
 kind: "Documentation"
 section: "Search Console and keywords"
 order: 30
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "All plans"
 keywords: ["Google Search Console", "GSC", "impressions", "URL inspection"]
 app_href: "/settings/accounts#gsc-oauth-card"
@@ -57,15 +57,17 @@ table. Read that message: it names the cause in nearly every case.
 
 ## Settings
 
-In the project's analysis settings, Search Console section:
+In the project's analysis settings, **Extra data** section, **Google Search Console**
+module:
 
 - **Enable** — joins search data to the crawl.
-- **Period** — the number of days of history to fetch. 28 days by default, which smooths out
-  weekly variations without drowning out a recent change.
-- **Search type** — web, image, video, news. Leave it on “web” unless your traffic
-  really comes from elsewhere.
-- **Minimum impressions** — the threshold below which a query is ignored. It removes the long
-  tail at two impressions, where click-through rate means nothing statistically.
+- **Analysis period (days)** — the number of days of history to fetch. 28 days by default,
+  which smooths out weekly variations without drowning out a recent change.
+- **Result type** — web search, images, videos, news or Discover. Leave it on “Web search”
+  unless your traffic really comes from elsewhere.
+- **Minimum impressions for alerts** — the threshold below which a page or a query is ignored,
+  200 by default. It removes the long tail at two impressions, where click-through rate means
+  nothing statistically.
 
 ## URL inspection
 
@@ -76,7 +78,7 @@ What it provides that the crawl cannot: **Google's own verdict**. Whether the pa
 indexed, the canonical Google selected — which is not always the one you declare —
 the date of the last crawl, and presence in a sitemap Google knows about.
 
-Three settings: enable, maximum number of URLs to inspect, and timeout. The API is
+Four settings: enable, maximum number of pages to inspect, timeout and results language. The API is
 rate-limited by Google, hence the sample.
 
 !!! note "When it's worth it"

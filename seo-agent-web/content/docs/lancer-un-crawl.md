@@ -5,14 +5,14 @@ description: "Choisir les pages et sous-domaines à analyser, adapter les param�
 kind: "Documentation"
 section: "Prise en main"
 order: 12
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "Tous les plans"
 keywords: ["crawl SEO", "paramètres de crawl", "robots.txt", "profondeur"]
 app_href: "/"
 related: ["lire-le-rapport", "anomalies-et-priorites", "automatiser-les-audits", "plans-et-quotas"]
 faq:
   - question: "Mon crawl s'est arrêté avant la fin, pourquoi ?"
-    answer: "Trois causes possibles : la limite de pages du plan ou du projet a été atteinte, le délai maximal du job a expiré, ou l'hôte a commencé à refuser les requêtes. Consultez le suivi dans Activité pour lire les informations disponibles."
+    answer: "Trois causes possibles : la limite de pages du plan ou du projet a été atteinte, le délai maximal de l’analyse a expiré, ou l'hôte a commencé à refuser les requêtes. Consultez le suivi dans Activité pour lire les informations disponibles."
   - question: "{{app_name}} exécute-t-il le JavaScript ?"
     answer: "Oui, le crawler dispose d'un moteur de rendu Chromium. Le rendu est plus lent et plus coûteux que la lecture du HTML brut, il est donc réservé aux cas où il change le résultat."
   - question: "Le crawl compte-t-il les images et les fichiers CSS dans mon quota de pages ?"
@@ -69,8 +69,8 @@ Les ressources (images, styles et scripts), PageSpeed, Google Search Console et 
 
 ## PageSpeed et Core Web Vitals
 
-Case **PageSpeed** dans les paramètres, avec un nombre d'URLs à analyser et une stratégie
-mobile ou desktop.
+Module **Core Web Vitals**, dans **Données en plus** : l’appareil testé (mobile ou desktop), le
+nombre de pages à tester, l’attente maximale de PageSpeed et le nombre de requêtes simultanées.
 
 Cette mesure passe par l'API Google PageSpeed Insights, qui est lente et contingentée. C'est
 pourquoi elle ne s'applique qu'à un échantillon d'URLs, dont la taille dépend de votre plan.

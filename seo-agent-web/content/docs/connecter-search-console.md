@@ -5,7 +5,7 @@ description: "Relier Search Console à un projet {{app_name}} : autorisation Goo
 kind: "Documentation"
 section: "Search Console et mots-clés"
 order: 30
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "Tous les plans"
 keywords: ["Google Search Console", "GSC", "impressions", "inspection d'URL"]
 app_href: "/settings/accounts#gsc-oauth-card"
@@ -57,15 +57,17 @@ vide. Lisez ce message : il nomme la cause dans la quasi-totalité des cas.
 
 ## Les réglages
 
-Dans les réglages de l’analyse du projet, section Search Console :
+Dans les réglages de l’analyse du projet, rubrique **Données en plus**, module **Google Search
+Console** :
 
 - **Activer** — joint les données de recherche au crawl.
-- **Période** — le nombre de jours d'historique à récupérer. 28 jours par défaut, ce qui lisse
-  les variations hebdomadaires sans noyer une évolution récente.
-- **Type de recherche** — web, image, vidéo, actualités. Laissez « web » sauf si votre trafic
-  vient réellement d'ailleurs.
-- **Impressions minimum** — le seuil sous lequel une requête est ignorée. Il élimine la longue
-  traîne à deux impressions, où le taux de clic ne veut rien dire statistiquement.
+- **Période d'analyse (jours)** — le nombre de jours d'historique à récupérer. 28 jours par
+  défaut, ce qui lisse les variations hebdomadaires sans noyer une évolution récente.
+- **Type de résultat** — recherche web, images, vidéos, actualités ou Discover. Laissez
+  « Recherche web » sauf si votre trafic vient réellement d'ailleurs.
+- **Impressions min pour les alertes** — le seuil sous lequel une page ou une requête est
+  ignorée, 200 par défaut. Il élimine la longue traîne à deux impressions, où le taux de clic
+  ne veut rien dire statistiquement.
 
 ## L'inspection d'URL
 
@@ -76,7 +78,7 @@ Ce qu'elle apporte que le crawl ne peut pas donner : **le verdict de Google lui-
 indexée ou non, canonical retenue par Google — qui n'est pas toujours celle que vous déclarez —
 date du dernier passage, présence dans un sitemap connu de Google.
 
-Trois réglages : activation, nombre maximum d'URLs à inspecter, et délai d'attente. L'API est
+Quatre réglages : activation, nombre maximum de pages à inspecter, délai d'attente et langue des résultats. L'API est
 contingentée par Google, d'où l'échantillon.
 
 !!! note "Quand ça vaut le coup"

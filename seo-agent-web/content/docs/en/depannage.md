@@ -5,7 +5,7 @@ description: "Empty or incomplete crawl, Search Console returning nothing, missi
 kind: "Troubleshooting"
 section: "Account and billing"
 order: 52
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "All plans"
 keywords: ["troubleshooting", "errors", "empty crawl", "problem"]
 app_href: "/"
@@ -35,7 +35,7 @@ Start by checking the links and the scope actually analyzed.
 Three things to check in the analysis tracking, available from **Activity**:
 
 1. **Page limit reached** — the project's, the plan's, or the monthly quota.
-2. **Maximum job duration exceeded** — a slow site, or a lot of pages.
+2. **Maximum analysis duration exceeded** — a slow site, or a lot of pages.
 3. **The host refused the requests** — 403 or 429. Reduce the simultaneous connections in the crawl options, then review the tracking before running it again.
 
 In the third case, these refusals are **not** counted as errors on your site: they

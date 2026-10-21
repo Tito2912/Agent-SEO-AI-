@@ -5,7 +5,7 @@ description: "La page Performance d'un projet : données Search Console, mesures
 kind: "Documentation"
 section: "Search Console et mots-clés"
 order: 32
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "Tous les plans"
 keywords: ["Core Web Vitals", "LCP", "INP", "CLS", "PageSpeed"]
 app_href: "/"
@@ -73,12 +73,14 @@ URL — et limitée en nombre d'appels par jour, une limite partagée par toute 
 
 D'où un plafond d'URLs mesurées par crawl, dont la taille dépend de votre plan.
 
-Cet échantillon se choisit. Mesurer les vingt premières URLs par ordre alphabétique
-n'apprend rien ; mesurer la home, une page de catégorie, une fiche produit, un article et une
-page de contact vous donne l'état de chacun de vos gabarits.
+Vous choisissez le nombre de pages mesurées, pas lesquelles : {{app_name}} retient les
+premières pages HTML valides (statut 200), dans l'ordre alphabétique de leurs adresses. Une
+mesure est réutilisée tant que la page n'a pas changé. Si un gabarit important manque à
+l'échantillon, augmentez le nombre de pages à tester, dans la limite de votre plan.
 
-À activer dans les [réglages de l’analyse](/docs/lancer-un-crawl), avec le choix de la stratégie
-mobile ou desktop. Prenez mobile : c'est l'index que Google utilise.
+À activer dans les [réglages de l’analyse](/docs/lancer-un-crawl), rubrique **Données en plus**,
+module **Core Web Vitals** : appareil testé (mobile ou desktop), nombre de pages à tester,
+attente maximale et requêtes simultanées. Prenez mobile : c'est l'index que Google utilise.
 
 ## Ce qu'une mesure ne dit pas
 

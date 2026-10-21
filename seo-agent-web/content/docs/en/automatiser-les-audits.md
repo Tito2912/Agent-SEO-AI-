@@ -5,9 +5,9 @@ description: "Run crawls without having to think about them, fix every error in 
 kind: "Documentation"
 section: "Going further"
 order: 42
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "All plans"
-keywords: ["automation", "SEO monitoring", "scheduled crawl", "jobs"]
+keywords: ["automation", "SEO monitoring", "scheduled crawl", "activity"]
 app_href: "/jobs"
 related: ["corrections-automatiques", "verifier-une-correction", "lancer-un-crawl"]
 faq:
@@ -15,27 +15,30 @@ faq:
     answer: "A stable brochure site: once a month. A blog that publishes every week: every two weeks. An e-commerce site with a changing catalog: every week. And always after a major release, whatever the schedule."
   - question: "Does an automatic crawl use up my page quota?"
     answer: "Yes, exactly like a crawl you start by hand. That is why the page limit per crawl is worth setting before you automate anything."
-  - question: "Can I cancel a job that is running?"
-    answer: "Yes, from the Jobs page. A canceled crawl keeps what it has already collected, but its report is partial: treat it as a spot check, not as an audit."
+  - question: "Can I cancel a task that is running?"
+    answer: "Yes: open its tracking page in Activity, then “Request a stop”. The task finishes its current step before stopping. A stop does not guarantee that a partial report is available; previous reports remain available from the site."
 ---
 
 A one-off audit gives you a snapshot. A routine shows the trends — and above all, it catches
 regressions within days of the deployment that introduced them, rather than six
 months later.
 
-## The Jobs page
+## The Activity screen
 
-All of the account's jobs, running and past: crawls, fixes, competitor analyses,
-opportunity searches.
+**Activity**, in the sidebar, gathers your sites' recent tasks and the ones still running:
+site analyses, multi-site audits and other tasks. It is not a complete history. The Site,
+Type and Status filters apply to this list.
 
-Each job shows its status, its duration, its logs, and two buttons:
+**View tracking** opens a task's details: its status, its progress and, under **Technical
+details and logs**, its logs. The actions are on this tracking page:
 
-- **Cancel** — stops a running job. What has already been collected is kept.
-- **Rerun** — replays the same job with the same parameters. Useful after a network
-  outage or when the site was temporarily unavailable.
+- **Request a stop** — stops a running task once its current step is finished.
+- **Request a new analysis** — after a failure or a stop, creates a new request, which counts
+  toward the quota of the account that manages the site. Useful after a network outage or when
+  the site was temporarily unavailable.
 
-This is the page to open when something seems stuck. A crawl that has been "running" for three
-hours on a 40-page site has a problem, and its logs name it.
+This is the screen to open when something seems stuck. An analysis that has been "In progress"
+for three hours on a 40-page site has a problem, and its logs name it.
 
 ## Run crawls regularly
 
