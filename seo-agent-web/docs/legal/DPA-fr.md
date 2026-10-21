@@ -2,9 +2,9 @@
 
 > **BROUILLON — NON PUBLIÉ, NON OPÉRATIONNEL.** Ce document n'est ni affiché sur le site ni proposé
 > aux clients. Il ne pourra l'être qu'après validation juridique, une fois complétés les éléments
-> marqués « À COMPLÉTER », « À CONFIRMER » ou « À VALIDER », et une fois construit et vérifié le
-> mécanisme d'acceptation de l'article 1 (voir `LEGAL-VALIDATION-REQUIRED.md`). Mode d'acceptation
-> choisi par le propriétaire le 21/10/2026 : une case à cocher dans le service.
+> marqués « À COMPLÉTER » ou « À CONFIRMER », et une fois mis en œuvre ce qui est marqué « À
+> METTRE EN ŒUVRE » (voir `LEGAL-VALIDATION-REQUIRED.md`). Mode d'acceptation et choix
+> contractuels arrêtés par E-Com Shop le 21/10/2026 ; ils restent à faire relire par un juriste.
 > Version anglaise : `DPA-en.md` (mêmes clauses).
 
 Article 28 du règlement (UE) 2016/679 (« RGPD »).
@@ -27,16 +27,16 @@ dénomination et, lorsqu'il existe, son numéro d'immatriculation.
 **Preuve de l'acceptation.** Pour chaque acceptation, E-Com Shop conserve l'organisation
 contractante, le compte et la personne qui ont accepté, la date et l'heure de l'acceptation, la
 version exacte du présent accord et la trace de l'action d'acceptation, pendant toute la durée de
-l'accord puis le temps de la prescription applicable.
+l'accord puis pendant cinq ans.
 
 **Modifications.** Chaque version du présent accord est datée et numérotée. E-Com Shop informe le
 Client d'une nouvelle version avant son entrée en vigueur. Une version qui modifie les droits ou
 obligations des parties ne s'applique qu'après une nouvelle acceptation expresse ; d'ici là, la
 version précédemment acceptée reste applicable, sauf modification imposée par le droit applicable.
 
-**À METTRE EN ŒUVRE ET À VALIDER** : ce mécanisme n'existe pas encore dans le service. Ni la case,
+**À METTRE EN ŒUVRE** : ce mécanisme n'existe pas encore dans le service. Ni la case,
 ni l'identification de l'organisation, ni la conservation des preuves ci-dessus ne sont en place.
-Tant qu'il n'est pas construit, vérifié et validé, aucune acceptation en ligne n'est possible.
+Tant qu'il n'est pas construit et vérifié, aucune acceptation en ligne n'est possible.
 
 ## 2. Objet et durée
 
@@ -129,24 +129,22 @@ certification ni d'aucun audit de sécurité indépendant.
 
 **Autorisation générale.** Le Client donne à E-Com Shop une autorisation générale écrite de recourir
 à des sous-traitants ultérieurs. La liste des sous-traitants ultérieurs autorisés figure en annexe
-3 ; E-Com Shop la tient à jour et la met à la disposition du Client. **À COMPLÉTER** : où le Client
-consulte la liste à jour.
+3 ; E-Com Shop la tient à jour et la communique sur simple demande à contact@noyaru.com. Les
+prestataires d'E-Com Shop figurent aussi dans sa politique de confidentialité (noyaru.com/privacy).
 
 **Information préalable.** E-Com Shop informe le Client de tout ajout ou remplacement envisagé d'un
 sous-traitant ultérieur, par e-mail à l'adresse du compte, au moins 30 jours avant le changement.
-**À VALIDER** : délai et canal proposés ; ce délai est un choix contractuel, il n'est pas imposé tel
-quel par le RGPD.
 
 **Opposition.** Pendant ce délai, le Client peut s'opposer au changement, par écrit et de façon
-motivée, à l'adresse de contact indiquée dans le service. Les parties examinent l'objection de
+motivée, à contact@noyaru.com. Les parties examinent l'objection de
 bonne foi. E-Com Shop peut proposer une solution : renoncer au changement, ne pas confier au nouveau
 sous-traitant ultérieur les données du Client, ou une autre mesure adaptée. Tant que l'objection
 est examinée, E-Com Shop ne confie pas les données du Client au nouveau sous-traitant ultérieur,
 lorsque cela est techniquement possible.
 
 **Objection non résolue.** Si aucune solution n'est trouvée dans les 30 jours suivant l'objection,
-le Client peut résilier, sans pénalité, les services concernés par le changement. **À VALIDER** :
-ce délai, et le remboursement éventuel de la période déjà payée et non utilisée.
+le Client peut résilier, sans pénalité, les services concernés par le changement. E-Com Shop lui
+rembourse alors la part du prix déjà payée qui correspond à la période non utilisée, au prorata.
 
 **Remplacement urgent.** Lorsqu'un remplacement s'impose sans attendre (défaillance, cessation
 d'activité ou risque pour la sécurité d'un sous-traitant ultérieur), E-Com Shop informe le Client
@@ -213,7 +211,9 @@ sont pas transmises au Client.
 ## 13. Violations de données personnelles
 
 E-Com Shop notifie au Client toute violation de données personnelles concernant les données
-traitées au titre du présent accord, sans retard injustifié après en avoir pris connaissance.
+traitées au titre du présent accord, sans retard injustifié après en avoir pris connaissance et,
+dans la mesure du possible, dans les 48 heures, afin de laisser au Client le temps de respecter son
+propre délai de notification à l'autorité de contrôle.
 
 La notification contient les informations disponibles à ce moment, notamment :
 
@@ -227,8 +227,8 @@ La notification contient les informations disponibles à ce moment, notamment :
 Les informations qui ne sont pas disponibles immédiatement sont transmises ensuite, dès qu'elles le
 sont, sans retard injustifié supplémentaire.
 
-**À COMPLÉTER** : canal de notification et contact de suivi d'E-Com Shop. Aucun délai fixe n'est
-prévu : un délai chiffré ne sera ajouté qu'après validation de la capacité d'E-Com Shop à le tenir.
+La notification est adressée par e-mail à l'adresse du compte du Client. Le Client joint le
+contact de suivi d'E-Com Shop à contact@noyaru.com.
 
 ## 14. Assistance au Client
 
@@ -244,15 +244,19 @@ l'autorité de contrôle (article 36).
 Au terme des services relatifs au traitement, E-Com Shop, selon le choix du Client, restitue ou
 supprime toutes les données personnelles traitées pour son compte, et supprime les copies
 existantes, à moins que le droit de l'Union ou le droit de l'État membre n'exige leur
-conservation. **À VALIDER** : forme du choix du Client, et suppression à défaut de choix exprimé.
+conservation. Le Client indique son choix par écrit à contact@noyaru.com ; supprimer lui-même ses
+projets ou son compte vaut choix de la suppression. À défaut de choix exprimé dans les 30 jours
+suivant la fin des services, les données sont supprimées.
 
 - **Base active** : à la suppression d'un projet ou du compte, les données correspondantes sont
   effacées de la base active.
 - **Rapports et exports** : avant la suppression, le Client peut télécharger les rapports et
   exports proposés par le service. Ces exports reprennent les résultats d'analyse ; ils ne
-  couvrent pas nécessairement toutes les données personnelles traitées pour le Client. **À
-  COMPLÉTER** : moyen de restituer les données que les exports ne couvrent pas, si le Client choisit
-  la restitution. Cette fonction n'existe pas à ce jour.
+  couvrent pas nécessairement toutes les données personnelles traitées pour le Client. Si le
+  Client choisit la restitution, E-Com Shop lui remet, dans les 30 jours de sa demande, les données
+  personnelles traitées pour son compte que les exports ne couvrent pas, dans un format structuré
+  et couramment utilisé. **À METTRE EN ŒUVRE** : la procédure de cette restitution n'existe pas
+  encore.
 - **Sauvegardes** : les données effacées de la base active subsistent dans les sauvegardes jusqu'à
   la suppression de celles-ci, 30 jours après leur création. Pendant cette conservation résiduelle,
   les sauvegardes ne servent qu'à restaurer le service. **À CONFIRMER** : fonctionnement en
@@ -278,16 +282,17 @@ et contribue à ces audits.
 - **Documentation** : E-Com Shop répond d'abord par la documentation disponible. Un audit sur
   pièces ou sur place est organisé lorsque cette documentation ne suffit pas à démontrer le respect
   du présent accord.
-- **Préavis** : 30 jours pour un audit ordinaire. **À VALIDER**.
-- **Fréquence** : en principe une fois par période de 12 mois au plus. **À VALIDER**.
+- **Préavis** : 30 jours pour un audit ordinaire.
+- **Fréquence** : en principe une fois par période de 12 mois au plus.
 - **Confidentialité** : l'auditeur est tenu au secret professionnel ou à un engagement de
   confidentialité. Les informations communiquées lors de l'audit restent confidentielles.
 - **Autres clients** : l'audit ne donne accès ni aux données ni aux informations des autres
   clients d'E-Com Shop. L'accès aux systèmes est limité à ce qui est nécessaire à l'objet de
   l'audit et ne doit pas compromettre leur sécurité.
-- **Frais** : chaque partie supporte ses propres frais. **À VALIDER** : prise en charge des frais
-  d'un audit qui exigerait un effort important d'E-Com Shop, sauf s'il révèle un manquement de sa
-  part.
+- **Frais** : chaque partie supporte ses propres frais d'audit. Pour un audit sur place, le
+  Client rembourse en outre les frais raisonnables et justifiés exposés par E-Com Shop, sauf si
+  l'audit révèle un manquement significatif d'E-Com Shop au présent accord ou s'il est exigé par
+  une autorité de contrôle.
 
 Le préavis et la fréquence ne s'appliquent pas en cas de violation de données, d'incident grave, de
 demande d'une autorité de contrôle ou d'autre justification particulière. Ces modalités ne font pas
@@ -308,11 +313,13 @@ parties.
 **Personnes concernées.** Chaque partie répond envers les personnes concernées dans les conditions
 de l'article 82 du RGPD. Le présent accord ne restreint pas leurs droits.
 
-**Responsabilité entre les parties.** Le plafond de responsabilité de l'article 10 des conditions
-générales ne s'applique pas automatiquement aux manquements au présent accord. **À DÉCIDER ET À
-VALIDER** : régime de responsabilité entre les parties pour ces manquements (plafond propre,
-exclusions, ou absence de plafond pour certains manquements), à fixer par E-Com Shop et à faire
-valider par un juriste.
+**Responsabilité entre les parties.** La responsabilité de chaque partie au titre du présent
+accord est limitée aux dommages directs et prévisibles, dans la limite des sommes payées par le
+Client au cours des 12 mois précédant le fait qui l'engage, comme le prévoit l'article 10 des
+conditions générales pour les professionnels. Ces limites ne s'appliquent pas en cas de faute
+lourde ou de dol, ni aux responsabilités qu'une règle impérative interdit de limiter. Elles ne
+réduisent pas les droits des personnes concernées au titre de l'article 82 du RGPD, et une amende
+administrative reste à la charge de la partie à laquelle elle est infligée.
 
 ## 18. Annexes
 
@@ -365,5 +372,8 @@ tests de sécurité. Seules les mesures effectivement appliquées seront inscrit
 de Google Search Console, de Bing Webmaster Tools et de Netlify dépend des relations contractuelles
 et des opérations de traitement concernées. Ces services sont en principe choisis et contractés par
 le Client, et E-Com Shop y accède avec son autorisation ; selon les cas, ils peuvent néanmoins agir
-comme sous-traitants ultérieurs d'E-Com Shop. **À CONFIRMER** : la qualification de chacun de ces
-services.
+comme sous-traitants ultérieurs d'E-Com Shop. Lorsque le Client a lui-même souscrit un de ces
+services et qu'E-Com Shop y accède avec son autorisation ou ses identifiants, E-Com Shop le
+considère comme un prestataire du Client et non comme son sous-traitant ultérieur. Si E-Com Shop
+confiait des données du Client à l'un de ces services pour son propre compte, ce service serait
+ajouté à la liste ci-dessus selon l'article 10.

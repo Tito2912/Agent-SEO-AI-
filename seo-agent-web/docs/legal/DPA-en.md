@@ -2,9 +2,9 @@
 
 > **DRAFT — NOT PUBLISHED, NOT OPERATIONAL.** This document is neither shown on the website nor
 > offered to customers. It can only be once it has been legally validated, the items marked “TO BE
-> COMPLETED”, “TO BE CONFIRMED” or “TO BE VALIDATED” have been dealt with, and the acceptance
-> mechanism of section 1 has been built and checked (see `LEGAL-VALIDATION-REQUIRED.md`).
-> Acceptance method chosen by the owner on 21/10/2026: a checkbox in the service.
+> COMPLETED” or “TO BE CONFIRMED” have been dealt with, and what is marked “TO BE IMPLEMENTED” has
+> been implemented (see `LEGAL-VALIDATION-REQUIRED.md`). Acceptance method and contractual choices
+> settled by E-Com Shop on 21/10/2026; they are still to be reviewed by legal counsel.
 > French version: `DPA-fr.md` (same clauses).
 
 Article 28 of Regulation (EU) 2016/679 (“GDPR”).
@@ -27,16 +27,16 @@ where one exists, its registration number.
 **Evidence of acceptance.** For each acceptance, E-Com Shop keeps the contracting organisation,
 the account and the person who accepted, the date and time of acceptance, the exact version of
 this agreement and a record of the act of acceptance, for the whole term of the agreement and then
-for the applicable limitation period.
+for five years.
 
 **Amendments.** Each version of this agreement is dated and numbered. E-Com Shop informs the
 Customer of a new version before it takes effect. A version that changes the rights or obligations
 of the parties only applies after a new express acceptance; until then, the version previously
 accepted remains applicable, unless the change is required by applicable law.
 
-**TO BE IMPLEMENTED AND VALIDATED**: this mechanism does not yet exist in the service. Neither the
+**TO BE IMPLEMENTED**: this mechanism does not yet exist in the service. Neither the
 checkbox, nor the identification of the organisation, nor the keeping of the evidence above is in
-place. Until it has been built, checked and validated, no online acceptance is possible.
+place. Until it has been built and checked, no online acceptance is possible.
 
 ## 2. Subject matter and duration
 
@@ -124,24 +124,22 @@ or independent security audit.
 
 **General authorisation.** The Customer gives E-Com Shop a general written authorisation to engage
 Subprocessors. The list of authorised Subprocessors is set out in Annex 3; E-Com Shop keeps it up
-to date and makes it available to the Customer. **TO BE COMPLETED**: where the Customer can consult
-the up-to-date list.
+to date and provides it on request at contact@noyaru.com. E-Com Shop's providers are also listed
+in its Privacy Policy (noyaru.com/en/privacy).
 
 **Prior notice.** E-Com Shop informs the Customer of any intended addition or replacement of a
-Subprocessor, by email to the account address, at least 30 days before the change. **TO BE
-VALIDATED**: proposed timeframe and channel; this timeframe is a contractual choice, it is not
-imposed as such by the GDPR.
+Subprocessor, by email to the account address, at least 30 days before the change.
 
 **Objection.** During this period, the Customer may object to the change, in writing and giving
-reasons, at the contact address shown in the service. The parties consider the objection in good
+reasons, at contact@noyaru.com. The parties consider the objection in good
 faith. E-Com Shop may propose a solution: abandoning the change, not entrusting the Customer's data
 to the new Subprocessor, or another appropriate measure. While the objection is being considered,
 E-Com Shop does not entrust the Customer's data to the new Subprocessor, where this is technically
 possible.
 
 **Unresolved objection.** If no solution is found within 30 days of the objection, the Customer may
-terminate, without penalty, the services affected by the change. **TO BE VALIDATED**: this
-timeframe, and any refund of the period already paid and not used.
+terminate, without penalty, the services affected by the change. E-Com Shop then refunds the
+portion of the price already paid that corresponds to the unused period, on a pro rata basis.
 
 **Urgent replacement.** Where a replacement cannot wait (failure, cessation of business or a
 security risk at a Subprocessor), E-Com Shop informs the Customer as soon as reasonably possible,
@@ -206,7 +204,9 @@ forwarded to the Customer.
 ## 13. Personal Data Breaches
 
 E-Com Shop notifies the Customer of any Personal Data Breach affecting the data processed under
-this agreement without undue delay after becoming aware of it.
+this agreement without undue delay after becoming aware of it and, where possible, within 48
+hours, so that the Customer has time to meet its own deadline for notifying the supervisory
+authority.
 
 The notification contains the information available at that time, in particular:
 
@@ -220,9 +220,8 @@ The notification contains the information available at that time, in particular:
 Information that is not available immediately is provided afterwards, as soon as it becomes
 available, without further undue delay.
 
-**TO BE COMPLETED**: E-Com Shop's notification channel and follow-up contact. No fixed timeframe is
-set: a specific timeframe will only be added once E-Com Shop's ability to meet it has been
-validated.
+The notification is sent by email to the Customer's account address. The Customer can reach
+E-Com Shop's follow-up contact at contact@noyaru.com.
 
 ## 14. Assistance to the Customer
 
@@ -237,16 +236,19 @@ protection impact assessments (Article 35) and prior consultation of the supervi
 
 At the end of the provision of services relating to processing, E-Com Shop, at the Customer's
 choice, returns or deletes all personal data processed on its behalf, and deletes existing copies,
-unless Union or Member State law requires their storage. **TO BE VALIDATED**: how the Customer
-states its choice, and deletion where no choice is stated.
+unless Union or Member State law requires their storage. The Customer states its choice in
+writing at contact@noyaru.com; deleting its projects or its account itself counts as choosing
+deletion. Where no choice is stated within 30 days of the end of the services, the data is
+deleted.
 
 - **Live database**: when a project or the account is deleted, the corresponding data is erased
   from the live database.
 - **Reports and exports**: before deletion, the Customer can download the reports and exports
   offered by the service. These exports contain the analysis results; they do not necessarily
-  cover all the personal data processed for the Customer. **TO BE COMPLETED**: how to return the
-  data that the exports do not cover, if the Customer chooses Return of Personal Data. This
-  feature does not exist to date.
+  cover all the personal data processed for the Customer. If the Customer chooses Return of
+  Personal Data, E-Com Shop provides it, within 30 days of the request, with the personal data
+  processed on its behalf that the exports do not cover, in a structured and commonly used format.
+  **TO BE IMPLEMENTED**: the procedure for this return does not exist yet.
 - **Backups**: data erased from the live database remains in the backups until they are deleted,
   30 days after their creation. During this residual retention, backups are used only to restore
   the service. **TO BE CONFIRMED**: that the daily backup and its automatic deletion after 30 days
@@ -271,15 +273,16 @@ by the Customer.
 - **Documentation**: E-Com Shop first responds with the available documentation. A document-based
   or on-site audit is organised where that documentation is not sufficient to demonstrate
   compliance with this agreement.
-- **Notice**: 30 days for an ordinary audit. **TO BE VALIDATED**.
-- **Frequency**: as a rule, no more than once in any 12-month period. **TO BE VALIDATED**.
+- **Notice**: 30 days for an ordinary audit.
+- **Frequency**: as a rule, no more than once in any 12-month period.
 - **Confidentiality**: the auditor is bound by professional secrecy or a confidentiality
   undertaking. Information disclosed during the audit remains confidential.
 - **Other customers**: the audit gives no access to the data or information of E-Com Shop's other
   customers. Access to systems is limited to what the purpose of the audit requires and must not
   compromise their security.
-- **Costs**: each party bears its own costs. **TO BE VALIDATED**: who bears the costs of an audit
-  that would require significant effort from E-Com Shop, unless it reveals a breach on its part.
+- **Costs**: each party bears its own audit costs. For an on-site audit, the Customer also
+  reimburses the reasonable and documented costs incurred by E-Com Shop, unless the audit reveals a
+  material breach of this agreement by E-Com Shop or is required by a supervisory authority.
 
 The notice period and frequency do not apply in the event of a Personal Data Breach, a serious
 incident, a request from a supervisory authority or another specific justification. These terms do
@@ -300,11 +303,13 @@ each party.
 **Data subjects.** Each party is liable to data subjects under the conditions of Article 82 GDPR.
 This agreement does not restrict their rights.
 
-**Liability between the parties.** The limitation of liability in section 10 of the Terms and
-Conditions does not automatically apply to breaches of this agreement. **TO BE DECIDED AND
-VALIDATED**: the liability regime between the parties for such breaches (a specific cap,
-exclusions, or no cap for certain breaches), to be set by E-Com Shop and validated by legal
-counsel.
+**Liability between the parties.** Each party's liability under this agreement is limited to
+direct and foreseeable damage, up to the amounts paid by the Customer in the 12 months preceding
+the event giving rise to liability, as provided for business customers in section 10 of the Terms
+and Conditions. These limits do not apply in the event of gross negligence or wilful misconduct,
+nor to liability that a mandatory rule prohibits limiting. They do not reduce the rights of data
+subjects under Article 82 GDPR, and an administrative fine remains the responsibility of the party
+on which it is imposed.
 
 ## 18. Annexes
 
@@ -357,5 +362,8 @@ security testing. Only the measures actually applied will be listed.
 Console, Bing Webmaster Tools and Netlify are Subprocessors depends on the contractual
 relationships and the processing operations concerned. These services are, as a rule, chosen and
 contracted by the Customer, and E-Com Shop accesses them with its authorisation; depending on the
-case, they may nevertheless act as Subprocessors of E-Com Shop. **TO BE CONFIRMED**: the
-classification of each of these services.
+case, they may nevertheless act as Subprocessors of E-Com Shop. Where the Customer has itself
+subscribed to one of these services and E-Com Shop accesses it with the Customer's authorisation or
+credentials, E-Com Shop treats that service as a provider of the Customer and not as its own
+Subprocessor. Should E-Com Shop entrust the Customer's data to one of these services on its own
+account, that service would be added to the list above under section 10.

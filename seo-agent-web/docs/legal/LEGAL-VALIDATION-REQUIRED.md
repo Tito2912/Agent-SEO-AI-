@@ -56,10 +56,8 @@ brouillon : il ne peut être proposé aux clients qu'une fois réglés tous les 
 | Information | Article du DPA |
 | --- | --- |
 | Catégories de personnes habilitées à accéder aux données, et leur engagement de confidentialité | 8 |
-| Endroit où le client consulte la liste à jour des sous-traitants ultérieurs | 10 |
 | Accord de traitement en vigueur avec chaque sous-traitant ultérieur | 10, annexe 3 |
 | Mécanisme de transfert, justificatif et région de traitement confirmée de chaque sous-traitant ultérieur (Render, Amazon Web Services, Anthropic, OpenAI, Google Gemini, Sentry, SerpAPI, Ahrefs) | 11 |
-| Canal de notification des violations de données et contact de suivi | 13 |
 | Durée de conservation appliquée par chaque sous-traitant ultérieur | 15 |
 | Protections appliquées aux sauvegardes (chiffrement du stockage, accès restreints) | 15 |
 | Mesures organisationnelles réellement appliquées (accès internes, incidents, tests de sécurité) | Annexe 2 |
@@ -71,18 +69,34 @@ brouillon : il ne peut être proposé aux clients qu'une fois réglés tous les 
 | La sauvegarde quotidienne et sa suppression à 30 jours fonctionnent en production, et une restauration est possible. Elles sont configurées dans `render.yaml` (tâche `noyaru-db-backup`, `BACKUP_RETENTION_DAYS=30`), sans preuve de leur fonctionnement. | 15, annexe 2 |
 | Les traces d'erreur envoyées à Sentry contiennent-elles des données personnelles des clients ? | Annexe 3 |
 | SerpAPI et Ahrefs ne reçoivent-ils vraiment aucune donnée personnelle ? | Annexe 3 |
-| Qualification de GitHub, de WordPress et de son hébergeur, de Google Search Console, de Bing Webmaster Tools, de Netlify, et de Google PageSpeed Insights (appelé avec la clé d'E-Com Shop sur les adresses des pages du client) | Annexe 3 |
+| Google PageSpeed Insights, appelé avec la clé d'E-Com Shop sur les adresses des pages du client : ne reçoit-il vraiment aucune donnée personnelle ? | Annexe 3 |
 
-### Décisions contractuelles d'E-Com Shop
+### Décisions contractuelles arrêtées le 21 octobre 2026
 
-| Décision | Article du DPA | Proposition du brouillon |
+Le propriétaire a délégué ces choix le 21/10/2026, en demandant les solutions les plus sûres
+juridiquement. Ce sont des choix courants et équilibrés ; ils restent à faire relire par un juriste.
+
+| Décision | Article du DPA | Choix retenu | Pourquoi |
+| --- | --- | --- | --- |
+| Conservation des preuves d'acceptation | 1 | Pendant l'accord, puis 5 ans | Durée de la prescription de droit commun des actions entre commerçants et en matière civile. |
+| Liste à jour des sous-traitants ultérieurs | 10 | Communiquée sur demande à contact@noyaru.com ; prestataires repris dans la politique de confidentialité | Rend la liste accessible sans construire de page nouvelle. |
+| Préavis avant un nouveau sous-traitant ultérieur | 10 | 30 jours, par e-mail à l'adresse du compte | Délai courant, qui laisse au client le temps d'examiner et de s'opposer. |
+| Objection non résolue | 10 | Résiliation sans pénalité après 30 jours, avec remboursement au prorata de la période payée non utilisée | Rend le droit d'opposition effectif sans pénaliser le client. |
+| Notification d'une violation de données | 13 | Sans retard injustifié et, dans la mesure du possible, dans les 48 heures ; par e-mail à l'adresse du compte ; contact de suivi à contact@noyaru.com | Laisse au client le temps de notifier lui-même l'autorité dans ses 72 heures. « Dans la mesure du possible » évite un délai impossible à tenir. |
+| Choix entre restitution et suppression | 15 | Par écrit à contact@noyaru.com ; supprimer ses projets ou son compte vaut suppression ; suppression à défaut de choix dans les 30 jours | Respecte le choix du client exigé par l'article 28.3.g, avec une règle claire s'il ne répond pas. |
+| Restitution des données non exportables | 15 | Remise dans les 30 jours, dans un format structuré et couramment utilisé | Rend la restitution réelle, au-delà des exports existants. |
+| Audits | 16 | Préavis de 30 jours ; une fois par période de 12 mois ; chacun ses frais ; frais d'un audit sur place remboursés par le client, sauf manquement significatif révélé ou audit exigé par une autorité | Garantit le droit d'audit sans le rendre disproportionné pour une petite société. |
+| Responsabilité entre les parties | 17 | Mêmes limites que l'article 10 des CGU, réciproques, choisies expressément ; jamais en cas de faute lourde, de dol ou de règle impérative ; sans effet sur les personnes concernées (article 82) ni sur les amendes | Cohérent avec les CGU, tout en écartant les cas où une limitation serait nulle ou inopposable. |
+| Services connectés par le client | Annexe 3 | Prestataires du client quand il les a souscrits et qu'E-Com Shop y accède avec son autorisation ; ajoutés à la liste s'ils traitaient des données pour E-Com Shop | Qualification fondée sur la relation contractuelle réelle, sans exclusion d'office. |
+
+### Engagements qui dépendent de vous
+
+| Engagement | Article du DPA | Ce qu'il suppose |
 | --- | --- | --- |
-| Préavis avant un nouveau sous-traitant ultérieur, et canal d'information | 10 | 30 jours, par e-mail à l'adresse du compte |
-| Délai pour résoudre une objection, et remboursement éventuel en cas de résiliation | 10 | 30 jours ; remboursement à décider |
-| Forme du choix entre restitution et suppression, et règle à défaut de choix | 15 | Suppression à défaut de choix |
-| Préavis, fréquence et frais des audits | 16 | 30 jours ; une fois par période de 12 mois au plus ; chacun ses frais, sauf audit très lourd |
-| Régime de responsabilité pour les manquements au DPA | 17 | Le plafond des CGU ne s'applique pas automatiquement ; régime à fixer |
-| Délai chiffré de notification des violations de données | 13 | Aucun, tant que la capacité à le tenir n'est pas validée |
+| Notifier une violation de données dans les 48 heures, dans la mesure du possible | 13 | Lire contact@noyaru.com et les alertes du service chaque jour ouvré. |
+| Rembourser au prorata un client qui résilie après une objection | 10 | Un remboursement manuel dans Stripe, comme pour une rétractation. |
+| Restituer en 30 jours les données que les exports ne couvrent pas | 15 | Une procédure d'extraction, à mettre en œuvre (voir ci-dessous). |
+| Prévenir les clients 30 jours avant un nouveau sous-traitant ultérieur | 10 | Un e-mail manuel à chaque client concerné. |
 
 ### Points à faire valider par un juriste
 
@@ -93,13 +107,13 @@ brouillon : il ne peut être proposé aux clients qu'une fois réglés tous les 
 - L'articulation entre CGU, DPA et RGPD, et le régime de responsabilité (article 17).
 - La qualification des services connectés par le client (annexe 3).
 - Le module de clauses contractuelles types de chaque transfert (article 11).
-- Les propositions de la sous-section précédente, une fois décidées par E-Com Shop.
+- Les décisions contractuelles arrêtées le 21 octobre 2026 (sous-section précédente).
 
 ### Développements nécessaires avant de proposer le DPA
 
-Aucun n'est réalisé ; ils n'ont pas été développés dans le cadre de ces corrections.
+Aucun n'est réalisé ; ils sont marqués « À METTRE EN ŒUVRE » dans le DPA.
 
 - La case à cocher de l'article 1 et la conservation des preuves : organisation contractante,
   compte et personne, date et heure, version exacte, trace de l'action d'acceptation.
-- Un moyen de restituer les données que les exports ne couvrent pas, si le client choisit la
-  restitution (article 15).
+- La procédure de restitution des données que les exports ne couvrent pas, dans les 30 jours, si
+  le client choisit la restitution (article 15).

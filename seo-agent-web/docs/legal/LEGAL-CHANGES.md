@@ -121,7 +121,21 @@ dans le service.
 | Annexe 3 | Rôle et données de chaque sous-traitant ultérieur ; Sentry, SerpAPI et Ahrefs « à confirmer » ; les services connectés par le client ne sont plus exclus d'office. |
 | Version anglaise | Mêmes clauses ; terminologie Controller, Processor, Subprocessor, Documented Instructions, Personal Data Breach, Return / Deletion of Personal Data, Technical and Organisational Measures ; orthographe britannique. |
 
-Les informations à compléter et les validations sont dans `LEGAL-VALIDATION-REQUIRED.md`, section 5.
+**Décisions contractuelles du 21 octobre 2026.** Le propriétaire a délégué les choix restés
+ouverts. Ils sont inscrits dans le DPA à la place des mentions « À VALIDER » :
+- preuves d'acceptation gardées pendant l'accord, puis 5 ans (article 1) ;
+- liste des sous-traitants ultérieurs sur demande à contact@noyaru.com ; préavis de 30 jours ;
+  remboursement au prorata en cas de résiliation après une objection (article 10) ;
+- notification d'une violation de données dans les 48 heures, dans la mesure du possible, et
+  contact de suivi (article 13) ;
+- forme du choix entre restitution et suppression ; restitution des données non exportables en 30
+  jours (article 15) ;
+- frais des audits sur place (article 16) ;
+- régime de responsabilité entre les parties (article 17) ;
+- qualification des services connectés par le client (annexe 3).
+
+Le détail et la raison de chaque choix sont dans `LEGAL-VALIDATION-REQUIRED.md`, section 5, avec les
+informations qui restent à compléter.
 
 ## Points en attente
 
