@@ -1,4 +1,5 @@
 .billing-overview { align-items: start; }
+.billing-scope .btn { max-width: 100%; min-height: 44px; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 .plan-usage, .quota-guide { --muted: #b9c2bd; color: var(--text); }
 .plan-usage .card-title-row { flex-wrap: wrap; gap: 8px; }
 .plan-usage .card-title-row a, .quota-guide > a, .quota-state a, .pricing-jumps a { display: inline-flex; align-items: center; min-height: 44px; }

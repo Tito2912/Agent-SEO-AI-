@@ -6,17 +6,32 @@ authorization audit. Dynamic JavaScript controls still need a manual review.
 """
 from __future__ import annotations
 
+import argparse
 import ast
+import subprocess
+from datetime import datetime, timezone
 import re
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parents[1]
 REPO = WEB.parent
-DESTINATION = WEB / "docs" / "UX_SCREEN_INVENTORY.md"
+DESTINATION = WEB / "docs" / "UX_SCREEN_INVENTORY_CURRENT.md"
+HISTORY = WEB / "docs" / "UX_SCREEN_INVENTORY.md"
 
 
 def cell(value: object) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ").strip()
+
+
+def revision() -> str:
+    try:
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True, check=True).stdout.strip()
+        inputs = [str((WEB / name).relative_to(REPO)) for name in ("backend", "templates", "static", "content", "ops")]
+        dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all", "--", *inputs],
+                               cwd=REPO, capture_output=True, text=True, check=True).stdout.strip()
+        return head + (" (modifications locales du code)" if dirty else "")
+    except (OSError, subprocess.CalledProcessError):
+        return "révision Git non disponible"
 
 
 def inventory() -> str:
@@ -39,12 +54,17 @@ def inventory() -> str:
         for function in ast.walk(tree):
             if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
-            templates = sorted({
-                node.args[0].value for node in ast.walk(function)
-                if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                and node.func.attr == "TemplateResponse" and node.args
-                and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str)
-            })
+            templates = {
+                node.value for node in ast.walk(function)
+                if isinstance(node, ast.Constant) and isinstance(node.value, str)
+                and node.value.endswith(".html") and (WEB / "templates" / node.value).is_file()
+            }
+            # The legal helper explicitly chooses the existing English sibling at runtime.
+            if any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "_legal_page"
+                   for node in ast.walk(function)):
+                templates.update(name.replace(".html", "_en.html") for name in list(templates)
+                                 if (WEB / "templates" / name.replace(".html", "_en.html")).is_file())
+            templates = sorted(templates)
             for decorator in function.decorator_list:
                 if not (isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute)
                         and isinstance(decorator.func.value, ast.Name)
@@ -59,15 +79,19 @@ def inventory() -> str:
 
     templates = sorted((WEB / "templates").glob("*.html"))
     rendered = {name for _, _, names, _, _, _ in rows for name in names.split(", ") if name != "—"}
-    parts = ["# Inventaire des écrans et interactions Noyaru", "",
-             "Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `41ad1b7` (main, 19 octobre 2026 ; preuves navigateur initiales sur `44f575c`).",
-             "", f"{len(rows)} déclarations de routes ; {len(rendered)} templates directement référencés par les routes ; "
+    parts = ["# Inventaire courant des écrans et interactions Noyaru", "",
+             f"Généré par `python seo-agent-web/ops/ux_inventory.py`. Révision du code : `{revision()}`. "
+             f"Date UTC : {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}. "
+             "Le [relevé initial et ses compléments](UX_SCREEN_INVENTORY.md) sont conservés.",
+             "", f"{len(rows)} déclarations de routes ; {len(rendered)} templates repérés dans les gestionnaires de routes ; "
              f"{len(templates)} templates HTML au total (inclusions et anciens templates compris). "
              f"{len(framework_routes)} routes automatiques FastAPI complètent les déclarations, "
-             f"soit {len(rows) + len(framework_routes)} routes HTTP sur la base auditée, hors montage statique.", "",
+             f"soit {len(rows) + len(framework_routes)} déclarations et routes automatiques, hors montage statique. Les alias de langue du middleware ne sont pas des déclarations supplémentaires.", "",
              "Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs états ou rediriger. "
              "Les droits sont déterminés par les middlewares et les contrôles de projet/compte, pas par cette extraction. "
-             "Voir [l’audit](UX_AUDIT_2026-10-19.md) pour les accès, constats et preuves navigateur.", "",
+             "Une référence littérale ou une variante du résolveur juridique n’atteste pas son exécution. "
+             "Les rendus entièrement dynamiques peuvent ne pas être attribués à une route par cette extraction. "
+             "Voir [le bilan transversal](UX_CROSS_JOURNEY_LOT16.md) pour les vérifications et leurs limites.", "",
              "## Routes, écrans, actions et sorties", "",
              "Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les étapes intermédiaires. "
              "Le montage des fichiers statiques est distingué des écrans. Les routes automatiques du framework "
@@ -78,8 +102,9 @@ def inventory() -> str:
         parts.append(f"| `{cell(path)}` | {methods} | {cell(names)} | "
                      f"[{cell(source)}:{line}](../{source.as_posix()}#L{line}) · `{function}` |")
     parts += ["", "## Routes automatiques de FastAPI", "",
-              "Ces chemins ont aussi été comparés au registre `app.routes` : 196 routes HTTP, "
-              "plus le montage `/static`. Ils ne passent pas par un template du dépôt. "
+              "Ces chemins sont extraits de la configuration FastAPI. Le rapprochement avec le registre "
+              "effectivement chargé est consigné dans les preuves du bilan transversal, pas déduit de ce relevé. "
+              "Ils ne passent pas par un template du dépôt. "
               "L’explorateur et son schéma exigent une session via le middleware ; le callback Swagger "
               "reste sous le préfixe public `/docs`. Aucun accès administrateur supplémentaire n’est "
               "déclaré pour l’explorateur. Le chemin de retour OAuth2 ci-dessous est le défaut "
@@ -96,7 +121,7 @@ def inventory() -> str:
         contents = source.read_text(encoding="utf-8")
         direct = source.name in rendered
         parts += [f"### {source.name}", "",
-                  "Template de route." if direct else "Inclusion, gabarit partagé ou ancien template sans référence directe de route.", ""]
+                  "Référence repérée dans un gestionnaire de route ou sa variante juridique." if direct else "Inclusion, gabarit partagé, rendu dynamique ou ancien template sans référence littérale de route.", ""]
         interactions = list(re.finditer(r"<(?:form|dialog|details)\b[^>]*>|<[^>]+role=[\"']dialog[\"'][^>]*>", contents, re.S))
         if not interactions:
             parts += ["Aucune balise de formulaire, fenêtre ou panneau repliable.", ""]
@@ -111,13 +136,23 @@ def inventory() -> str:
               "pas déduite de sa présence dans ce tableau.", "",
               "| URL | Contenu source |", "| --- | --- |"]
     for directory, prefix in (("docs", "/docs"), ("blog", "/ressources-seo")):
-        for source in sorted((WEB / "content" / directory).glob("*.md")):
+        for source in sorted((WEB / "content" / directory).rglob("*.md")):
             relative = source.relative_to(WEB).as_posix()
-            parts.append(f"| `{prefix}/{source.stem}` | [{source.name}](../{relative}) |")
+            language = source.parent.name if source.parent != WEB / "content" / directory else "fr"
+            localized = prefix if language == "fr" else "/" + language + prefix
+            parts.append(f"| `{localized}/{source.stem}` | [{source.name}](../{relative}) |")
     parts.append("")
     return "\n".join(parts)
 
 
 if __name__ == "__main__":
-    DESTINATION.write_text(inventory(), encoding="utf-8")
-    print(DESTINATION.relative_to(REPO))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=DESTINATION, help="Fichier courant à générer ; le relevé historique est préservé.")
+    args = parser.parse_args()
+    if args.output.resolve() == HISTORY.resolve():
+        parser.error("Le relevé historique est conservé ; choisissez un autre fichier --output.")
+    args.output.write_text(inventory(), encoding="utf-8")
+    try:
+        print(args.output.relative_to(REPO))
+    except ValueError:
+        print(args.output)
