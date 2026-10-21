@@ -1,0 +1,28 @@
+.billing-overview { align-items: start; }
+.plan-usage, .quota-guide { --muted: #b9c2bd; color: var(--text); }
+.plan-usage .card-title-row { flex-wrap: wrap; gap: 8px; }
+.plan-usage .card-title-row a, .quota-guide > a, .quota-state a, .pricing-jumps a { display: inline-flex; align-items: center; min-height: 44px; }
+.quota-capacity { border-bottom: 1px solid var(--border-2); padding-bottom: 14px; }
+.quota-period { font-weight: 600; margin: 16px 0 6px; }
+.quota-reset, .quota-state { color: #b9c2bd; font-size: 14px; line-height: 1.6; }
+.quota-list { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 18px; }
+.quota-row + .quota-row { border-top: 1px solid var(--border); padding-top: 16px; }
+.quota-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.quota-row h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.quota-amount { font-variant-numeric: tabular-nums; font-size: 17px; }
+.quota-meter { height: 7px; background: #343b38; border-radius: 6px; overflow: hidden; margin-top: 10px; }
+.quota-meter span { display: block; width: var(--quota-percent); height: 100%; background: #65b588; }
+.quota-meter--full span { background: #f5b05a; }
+.quota-state { margin: 4px 0 0; }
+.quota-guide { margin: 28px 0; padding: 24px; border: 1px solid var(--border-2); border-radius: var(--radius-lg); background: var(--surface-card-2); scroll-margin-top: 150px; }
+.quota-guide h2 { margin: 0 0 12px; font-size: 20px; }
+.quota-guide p { color: #b9c2bd; font-size: 15px; line-height: 1.65; }
+.quota-guide-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.quota-guide details { border-top: 1px solid var(--border-2); }
+.quota-guide summary { min-height: 44px; padding: 12px 0; font-size: 15px; cursor: pointer; font-weight: 600; }
+.pricing-jumps { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0 0 24px; }
+.pricing-jumps a, .quota-guide a, .plan-usage a { color: #82d4a6; }
+.pricing-jumps a:focus-visible, .quota-guide :is(a,summary):focus-visible, .plan-usage a:focus-visible { outline: 3px solid #82d4a6; outline-offset: 3px; }
+#billing-plans, #pricing-plans, #pricing-faq { scroll-margin-top: 150px; }
+@media(max-width: 900px) { .quota-guide-grid { grid-template-columns: 1fr; } }
+@media(max-width: 560px) { .quota-guide { padding: 18px; } }

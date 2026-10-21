@@ -103,6 +103,7 @@ try:
     from . import signup_attribution
     from . import customer_country
     from . import first_audit
+    from . import plan_usage
     from . import search_results
     from . import cms_guidance
     from . import i18n
@@ -117,6 +118,7 @@ except ImportError:
     import signup_attribution
     import customer_country
     import first_audit
+    import plan_usage
     import search_results
     import cms_guidance
     import i18n
@@ -10635,6 +10637,11 @@ def _plan_token_value(catalog: dict[str, Any], plan_key: str, group: str, field:
         number = int(raw)
     except (TypeError, ValueError):
         return str(raw)
+    if group == "limits" and field in {metric for metric, _label, _minimum in plan_usage.MONTHLY_METRICS} | {"projects"}:
+        if not plan_usage.accessible(plan_key, field, catalog):
+            return "—"
+        if number <= 0:
+            return "Illimité"
     if number == 0:
         return "0"
     # Narrow no-break space: the French thousands separator that never wraps mid-number.
@@ -13881,7 +13888,8 @@ def _comparatif_des_plans() -> dict[str, Any]:
     grille ecrite a la main se perimerait au premier reglage, et mentirait sur une page publique.
 
     ATTENTION A ZERO : pour `remaining_quota`, une limite nulle veut dire « pas de plafond ». Une
-    fonction fermee par son PLAN s'affiche donc « — », jamais « 0 » ni « illimite ».
+    fonction fermee par son PLAN s'affiche donc « — ». Une fonction accessible sans plafond
+    mensuel s'affiche « Illimité » : zero ne suffit pas a fermer sa porte.
     """
     cat = billing.plan_catalog()
     cles = [k for k in ("free", "solo", "pro", "business") if k in cat]
@@ -13900,8 +13908,10 @@ def _comparatif_des_plans() -> dict[str, Any]:
 
     def quota(k: str, m: str, *, plan_mini: str = "free", suffixe: str = "") -> str:
         v = lim(k, m)
-        if not des(k, plan_mini) or v <= 0:
+        if not des(k, plan_mini) or not plan_usage.accessible(k, m, cat):
             return ""
+        if v <= 0:
+            return "Illimité" if m in {metric for metric, _label, _minimum in plan_usage.MONTHLY_METRICS} | {"projects"} else ""
         return _nombre_fr(v) + suffixe
 
     def ligne(libelle: str, valeurs: list[str], note: str = "") -> dict[str, Any]:
@@ -14002,13 +14012,13 @@ def _comparatif_des_plans() -> dict[str, Any]:
             for l in s["lignes"]:
                 v = l["valeurs"][i]
                 forme, nom = formulations.get(l["libelle"], (None, l["libelle"]))
-                if not v or v == "Inclus":
+                if not v or v in {"Inclus", "Illimité"}:
                     texte = nom
                 elif forme is not None:
                     texte = forme(v)
                 else:
                     texte = "%s : %s" % (l["libelle"], v)
-                liste.append({"texte": texte, "inclus": bool(v),
+                liste.append({"texte": texte, "inclus": bool(v), "unlimited": v == "Illimité",
                               "phare": l["libelle"] == "Corrections écrites par l'IA, par mois",
                               "resume": l["libelle"] in {
                                   "Sites suivis", "Pages analysées par mois",
@@ -14500,9 +14510,12 @@ def billing_page(
         sub = billing.subscription_for_user(db, user_id=str(user.id))
         sub_active = bool(sub and str(getattr(sub, "status", "") or "").strip().lower() in billing.ACTIVE_SUB_STATUSES)
 
-        used_pages = billing.usage_sum(db, user_id=str(user.id), metric="pages_crawled_month")
-        used_ai = billing.usage_sum(db, user_id=str(user.id), metric="assistant_messages_month")
-        used_corrections = billing.usage_sum(db, user_id=str(user.id), metric="ai_corrections_month")
+        quota_period = billing._period_key()
+        monthly_usage = {metric: billing.usage_sum(db, user_id=str(user.id), metric=metric, period=quota_period)
+                         for metric, _label, _minimum in plan_usage.MONTHLY_METRICS}
+        used_pages = monthly_usage["pages_crawled_month"]
+        used_ai = monthly_usage["assistant_messages_month"]
+        used_corrections = monthly_usage["ai_corrections_month"]
         projects_count = int(
             db.scalar(select(func.count()).select_from(Project).where(Project.owner_user_id == str(user.id))) or 0
         )
@@ -14517,7 +14530,7 @@ def billing_page(
     def _limit_label(key: str) -> str:
         v = limits.get(key)
         if not isinstance(v, int) or v <= 0:
-            return "—"
+            return i18n.tr_current("Illimité") if key == "projects" else "—"
         return str(v)
 
     def _pct(used: int, key: str) -> int:
@@ -14549,6 +14562,9 @@ def billing_page(
             # promettaient des differences que le code n'a pas (« Monitoring + alertes »).
             "comparatif": _comparatif_du_compte(plan_key),
             "pending_change": pending_change,
+            "quota_period": quota_period,
+            "quota_rows": plan_usage.rows(plan_key=plan_key, catalog=catalog, limits=limits, usage=monthly_usage,
+                                          is_admin=bool(getattr(user, "is_admin", False))),
             "limits": limits,
             "limits_labels": {
                 "projects": _limit_label("projects"),

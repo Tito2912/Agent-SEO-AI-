@@ -6,8 +6,8 @@
 <ul class="tarif-cles">
   {% for f in c.fonctions %}
     {% if f.rubrique %}<li class="tarif-rubrique">{{ tr(f.rubrique) }}</li>
-    {% elif f.inclus %}<li{% if f.phare %} class="phare"{% endif %}>{{ tr(f.texte) }}</li>
-    {% else %}<li class="absent"><span class="sr">{{ tr("Non inclus :") }} </span>{{ tr(f.texte) }}</li>{% endif %}
+    {% elif f.inclus %}<li{% if f.phare %} class="phare"{% endif %}>{{ tr(f.texte) }}{% if f.unlimited %} : {{ tr("Illimité") }}{% endif %}</li>
+    {% else %}<li class="absent"><span>{{ tr("Non inclus :") }} </span>{{ tr(f.texte) }}{% if f.unlimited %} : {{ tr("Illimité") }}{% endif %}</li>{% endif %}
   {% endfor %}
 </ul>
 {%- endmacro %}

@@ -5,7 +5,7 @@ description: "Ce que chaque plan {{app_name}} inclut : projets, pages crawlées,
 kind: "Référence"
 section: "Compte et facturation"
 order: 50
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "Tous les plans"
 keywords: ["tarifs", "quotas", "limites", "abonnement"]
 app_href: "/billing"
@@ -16,7 +16,7 @@ faq:
   - question: "Que se passe-t-il quand j'atteins un quota ?"
     answer: "L'action concernée est refusée avec un message qui nomme le quota atteint, et un lien vers la page Abonnement. Rien d'autre ne s'arrête : un quota de corrections épuisé ne bloque ni les crawls, ni les rapports, ni les exports."
   - question: "Les quotas se reportent-ils d'un mois sur l'autre ?"
-    answer: "Non. Ils sont mensuels et repartent de zéro à chaque période de facturation."
+    answer: "Non. Les compteurs mensuels repartent à zéro le 1er de chaque mois à 00:00 UTC, indépendamment de la date de renouvellement de votre abonnement."
   - question: "Puis-je changer de plan en cours de mois ?"
     answer: "Oui, depuis la page Abonnement. Une montée de plan prend effet immédiatement ; une descente est programmée pour la fin de la période en cours et reste visible d'ici là."
 ---
@@ -46,14 +46,15 @@ page.
 
 ### Corrections IA — la règle qui compte
 
-**Une unité = un fichier écrit par le modèle.**
+**Dans GitHub : une unité = un fichier écrit par le modèle.**
 
-C'est la seule règle, et elle a une conséquence qu'il vaut la peine de comprendre : la
-correction qui règle 300 URLs en modifiant un seul gabarit coûte **une** unité. Le quota
+Une correction qui règle 300 URLs en modifiant un seul gabarit coûte **une** unité. Le quota
 mesure le travail du modèle, pas la taille du problème.
 
 Sur WordPress, la même règle s'applique page par page : chaque titre ou méta-description que
-{{app_name}} rédige compte pour une unité, et un texte que vous écrivez vous-même ne compte pas.
+{{app_name}} propose compte pour une unité dès la préparation, avant son enregistrement sur
+votre site. Vous relisez et confirmez toujours cet enregistrement. Un texte que vous écrivez
+vous-même et les réécritures sans IA ne consomment pas ce quota.
 → [Corriger dans WordPress](/docs/corriger-dans-wordpress)
 
 En pratique, un site de taille moyenne consomme quelques dizaines d'unités le premier mois —
@@ -109,7 +110,8 @@ du plan par crawl, et ce qu'il reste du quota mensuel.
 Le nombre d'URLs mesurées par PageSpeed à chaque crawl. La limite vient de l'API de Google,
 qui est lente et contingentée par jour, et cette limite est partagée par toute la plateforme.
 
-Choisissez cet échantillon : une URL par gabarit vaut mieux que vingt pages du même type.
+Le produit mesure les premières pages HTML valides par ordre alphabétique. Vous réglez
+leur nombre dans les réglages de l’analyse, dans la limite de votre formule.
 
 → [Suivre la performance](/docs/suivre-la-performance)
 
@@ -135,7 +137,7 @@ pertinents, pas en centaines d'envois.
 ## Ce qui n'est jamais limité
 
 - La lecture des rapports et de l'historique.
-- Tous les exports CSV et PDF, et le fix-pack.
+- Tous les exports CSV et PDF. Le fix-pack est disponible dès Solo, sans quota mensuel propre.
 - Les suggestions de contenu que vous copiez-collez vous-même.
 - La consultation des anomalies et de leurs URLs.
 
@@ -145,7 +147,11 @@ L'action concernée est refusée avec un message qui nomme le quota atteint et p
 page **Abonnement**. Le reste continue de fonctionner : un quota de corrections épuisé
 n'empêche ni les crawls, ni les rapports, ni les exports.
 
-Les quotas sont mensuels et ne se reportent pas.
+Les compteurs mensuels utilisent le mois civil en UTC : ils repartent à zéro le 1er de chaque
+mois à 00:00 UTC et ne se reportent pas. Cette date est distincte du renouvellement de votre
+abonnement. La page **Abonnement** indique le mois suivi et les six consommations mensuelles :
+pages, messages de l’assistant, corrections, articles, recherches de liens entrants et brouillons
+de messages pour ces liens. Les sites sont une capacité active, pas une consommation mensuelle.
 
 ## Quel compte est concerné ?
 

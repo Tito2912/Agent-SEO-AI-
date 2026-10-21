@@ -5,7 +5,7 @@ description: "What each {{app_name}} plan includes: projects, crawled pages, AI 
 kind: "Reference"
 section: "Account and billing"
 order: 50
-updated_at: "2026-10-20"
+updated_at: "2026-10-21"
 audience: "All plans"
 keywords: ["pricing", "quotas", "limits", "subscription"]
 app_href: "/billing"
@@ -16,7 +16,7 @@ faq:
   - question: "What happens when I reach a quota?"
     answer: "The action in question is refused with a message that names the quota reached, and a link to the Subscription page. Nothing else stops: an exhausted fixes quota does not block crawls, reports or exports."
   - question: "Do quotas carry over from one month to the next?"
-    answer: "No. They are monthly and reset to zero at the start of each billing period."
+    answer: "No. Monthly counters reset on the first day of each month at 00:00 UTC, independently of your subscription renewal date."
   - question: "Can I change plans in the middle of the month?"
     answer: "Yes, from the Subscription page. An upgrade takes effect immediately; a downgrade is scheduled for the end of the current period and remains visible until then."
 ---
@@ -46,14 +46,15 @@ page.
 
 ### AI fixes — the rule that matters
 
-**One unit = one file written by the model.**
+**In GitHub: one unit = one file written by the model.**
 
-That is the only rule, and it has a consequence worth understanding: the
-fix that resolves 300 URLs by modifying a single template costs **one** unit. The quota
+A fix that resolves 300 URLs by modifying a single template costs **one** unit. The quota
 measures the model's work, not the size of the problem.
 
 On WordPress, the same rule applies page by page: each title or meta description that
-{{app_name}} writes counts as one unit, and text you write yourself does not count.
+{{app_name}} proposes counts as one unit as soon as it is prepared, before it is saved on
+your site. You still review and confirm saving it. Text you write yourself and rewrites
+that use no AI do not consume this quota.
 → [Fix in WordPress](/docs/corriger-dans-wordpress)
 
 In practice, a medium-sized site uses a few dozen units in the first month —
@@ -109,7 +110,8 @@ per-crawl limit, and what remains of the monthly quota.
 The number of URLs measured by PageSpeed on each crawl. The limit comes from Google's API,
 which is slow and has a daily quota, and this limit is shared across the whole platform.
 
-Choose this sample carefully: one URL per template is better than twenty pages of the same type.
+The product measures the first valid HTML pages in alphabetical order. You set their
+number in the analysis settings, within your plan’s limit.
 
 → [Track performance](/docs/suivre-la-performance)
 
@@ -135,7 +137,7 @@ contacts, not in hundreds of messages sent.
 ## What is never limited
 
 - Reading reports and history.
-- All CSV and PDF exports, and the fix pack.
+- All CSV and PDF exports. The fix pack is available from Solo, with no separate monthly quota.
 - Content suggestions that you copy and paste yourself.
 - Viewing issues and their URLs.
 
@@ -145,7 +147,11 @@ The action in question is refused with a message that names the quota reached an
 **Subscription** page. Everything else keeps working: an exhausted fixes quota
 does not prevent crawls, reports or exports.
 
-Quotas are monthly and do not carry over.
+Monthly counters use the UTC calendar month: they reset on the first day of each month at
+00:00 UTC and do not carry over. This date is separate from your subscription renewal.
+**Subscription** shows the tracked month and six monthly usages: pages, assistant messages,
+fixes, articles, backlink searches and message drafts for those links. Sites are an active
+capacity, not a monthly usage.
 
 ## Which account is affected?
 

@@ -1,0 +1,44 @@
+{# Shared definitions: home, public pricing and the authenticated subscription screen. #}
+{% macro count(n) -%}{{ '{:,}'.format(n).replace(',', ' ' if current_lang() == 'fr' else ',') }}{%- endmacro %}
+{% macro correction_definition() -%}
+{{ tr("Une correction IA correspond à un fichier modifié par le modèle dans GitHub ou à un titre ou une méta-description proposé pour une page WordPress.") }}
+{%- endmacro %}
+{% macro correction_details() -%}
+{{ tr("Sur WordPress, elle est décomptée dès la préparation du texte, avant son enregistrement. Un texte saisi manuellement et les réécritures sans IA ne consomment pas ce quota.") }}
+{%- endmacro %}
+{% macro period_definition() -%}
+{{ tr("Les compteurs mensuels repartent à zéro le 1er de chaque mois à 00:00 UTC. Cette date est distincte du renouvellement de votre abonnement.") }}
+{%- endmacro %}
+{% macro guide() -%}
+<section class="quota-guide" id="quota-guide" aria-labelledby="quota-guide-title">
+  <h2 id="quota-guide-title">{{ tr("Comprendre ce qui est décompté") }}</h2>
+  <p>{{ correction_definition() }}</p>
+  <div class="quota-guide-grid">
+    <details><summary>{{ tr("Corrections IA") }}</summary><p>{{ correction_details() }}</p><p>{{ tr("Dans GitHub, trois fichiers écrits par le modèle comptent pour trois corrections. Une proposition reste à relire avant son application.") }}</p></details>
+    <details><summary>{{ tr("Articles rédigés par l'IA") }}</summary><p>{{ tr("Le compteur des articles est distinct de celui des corrections. Chaque version rédigée dans une langue compte pour un article ; rédiger la même page en deux langues compte pour deux articles.") }}</p></details>
+    <details><summary>{{ tr("Pages analysées") }}</summary><p>{{ tr("Une nouvelle analyse, y compris après une correction, utilise le quota de pages. Le décompte est ajusté aux pages réellement analysées.") }}</p></details>
+  </div>
+  <a href="{{ doc_path('plans-et-quotas') }}">{{ tr("Voir le détail des plans et quotas") }}</a>
+</section>
+{%- endmacro %}
+{% macro monthly_usage(rows, period, sites, site_limit) -%}
+<section class="card plan-usage" aria-labelledby="plan-usage-title">
+  <div class="card-title-row"><h2 id="plan-usage-title">{{ tr("Quotas") }}</h2><a href="#quota-guide">{{ tr("Comprendre le décompte") }}</a></div>
+  <p class="quota-capacity">{{ tr("Sites") }} : <strong>{{ sites }} / {% if rows[0].state == 'admin' %}{{ tr("Illimité") }}{% else %}{{ site_limit }}{% endif %}</strong></p>
+  <p class="quota-period">{{ tr("Mois suivi : {month} (UTC)", month=period) }}</p>
+  <p class="quota-reset">{{ period_definition() }}</p>
+  <ul class="quota-list">
+    {% for row in rows %}
+    <li class="quota-row" data-quota="{{ row.metric }}" data-state="{{ row.state }}">
+      <div class="quota-row-head"><h3 id="quota-{{ row.metric }}">{{ tr(row.label) }}</h3><span class="quota-amount">{% if row.state == 'admin' %}—{% else %}{{ count(row.used) }}{% endif %} / {% if row.state == 'finite' %}{{ count(row.limit) }}{% elif row.state in ['unlimited', 'admin'] %}{{ tr("Illimité") }}{% else %}—{% endif %}</span></div>
+      {% if row.state == 'finite' %}
+        <div class="quota-meter{% if row.remaining == 0 %} quota-meter--full{% endif %}" role="progressbar" aria-labelledby="quota-{{ row.metric }}" aria-valuemin="0" aria-valuemax="{{ row.limit }}" aria-valuenow="{{ row.bar_value }}" style="--quota-percent: {{ row.percent }}%"><span></span></div>
+        <p class="quota-state">{% if row.remaining == 0 %}{{ tr("Quota atteint") }} · <a href="#billing-plans">{{ tr("Voir les formules") }}</a>{% else %}{{ tr("Disponible ce mois-ci : {n}", n=count(row.remaining)) }}{% endif %}</p>
+      {% elif row.state == 'excluded' %}<p class="quota-state">{{ tr("Non inclus dans ce forfait") }} · <a href="#billing-plans">{{ tr("Voir les formules") }}</a></p>
+      {% elif row.state == 'admin' %}<p class="quota-state">{{ tr("Compte admin – quotas non limités") }}</p>
+      {% else %}<p class="quota-state">{{ tr("Aucun plafond mensuel configuré.") }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{%- endmacro %}
