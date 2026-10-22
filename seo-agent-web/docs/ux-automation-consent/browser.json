@@ -1,0 +1,276 @@
+{
+  "checks": [
+    {
+      "screen": "settings",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 1440,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 1440,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "corrections",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 1440,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "settings",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 1440,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 1440,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "corrections",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 1440,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "settings",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 768,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 768,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "corrections",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 768,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "settings",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 768,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 768,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "corrections",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 768,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "settings",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 390,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 390,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "corrections",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 390,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "settings",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 390,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 390,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "corrections",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 390,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "settings",
+      "state": "audit-failure",
+      "lang": "fr",
+      "width": 360,
+      "settings_unchanged": true,
+      "receipt_unchanged": true
+    },
+    {
+      "screen": "settings",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 360,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "audit-failure",
+      "lang": "fr",
+      "width": 360,
+      "settings_unchanged": true,
+      "receipt_unchanged": true
+    },
+    {
+      "screen": "content",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 360,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "corrections",
+      "state": "audit-failure",
+      "lang": "fr",
+      "width": 360,
+      "settings_unchanged": true,
+      "receipt_unchanged": true
+    },
+    {
+      "screen": "corrections",
+      "state": "explicit-new-target",
+      "lang": "fr",
+      "width": 360,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "settings",
+      "state": "audit-failure",
+      "lang": "en",
+      "width": 360,
+      "settings_unchanged": true,
+      "receipt_unchanged": true
+    },
+    {
+      "screen": "settings",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 360,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "audit-failure",
+      "lang": "en",
+      "width": 360,
+      "settings_unchanged": true,
+      "receipt_unchanged": true
+    },
+    {
+      "screen": "content",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 360,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    },
+    {
+      "screen": "corrections",
+      "state": "audit-failure",
+      "lang": "en",
+      "width": 360,
+      "settings_unchanged": true,
+      "receipt_unchanged": true
+    },
+    {
+      "screen": "corrections",
+      "state": "explicit-new-target",
+      "lang": "en",
+      "width": 360,
+      "previous_consent_cleared": true,
+      "explicit_consent_recorded": true,
+      "overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "scope": "Comptes et fournisseur fictifs ; vrais endpoints locaux, pannes SQL injectées ; aucune écriture distante.",
+  "source_revision": "6fd9b2effc3084f7b8c8eba2356e804e82ef772e",
+  "notes": [
+    "Accord activé au clavier (Espace) après refus sans confirmation.",
+    "Case de publication masquée hors mode automatique ; nouvelle cible → accord décoché."
+  ]
+}

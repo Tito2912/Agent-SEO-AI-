@@ -1,0 +1,26 @@
+{
+  "samples": [
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 4.385540256038352,
+      "gradient": false,
+      "height": 61,
+      "screen": "settings"
+    },
+    {
+      "text": "J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des ",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 97.5,
+      "screen": "content"
+    },
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 4.681788274214891,
+      "gradient": false,
+      "height": 79,
+      "screen": "corrections"
+    }
+  ],
+  "source_revision": "df2d591"
+}

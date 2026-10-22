@@ -1,0 +1,33 @@
+{
+  "postgresql_version": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+  "checks": [
+    {
+      "check": "Activation GitHub et preuve conservées",
+      "passed": true
+    },
+    {
+      "check": "Nouvelle cible sans accord refusée",
+      "passed": true
+    },
+    {
+      "check": "github: contrainte NOT NULL du journal → rollback complet, puis nouvel essai réussi",
+      "passed": true
+    },
+    {
+      "check": "content: contrainte NOT NULL du journal → rollback complet, puis nouvel essai réussi",
+      "passed": true
+    },
+    {
+      "check": "github: deux enregistrements concurrents, une seule activation prouvée",
+      "passed": true
+    },
+    {
+      "check": "content: deux enregistrements concurrents, une seule activation prouvée",
+      "passed": true
+    }
+  ],
+  "scope": "PostgreSQL jetable, socket Unix privée ; comptes et fournisseur GitHub fictifs ; aucun accès de production.",
+  "source_revision": "be4e4e6",
+  "server_stopped": true,
+  "system_installation": false
+}
