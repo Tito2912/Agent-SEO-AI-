@@ -35725,6 +35725,26 @@ class _ContentAutoBody(BaseModel):
     consent: bool = False
 
 
+def _content_auto_state(auto: dict[str, Any]) -> JSONResponse:
+    """Expose the same saved state after a write and during read-only recovery."""
+    public = {key: auto[key] for key in (
+        "enabled", "section", "taille", "ton", "langues", "frequence", "jour", "heure",
+        "fuseau", "publication",
+    )}
+    return JSONResponse({"ok": True, "enabled": auto["enabled"], "section": auto["section"],
+                         "settings": public,
+                         "prochain": _dire_creneau(_prochain_creneau(auto), auto,
+                                                   maintenant=time.time())
+                         if auto["enabled"] else ""}, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/projects/{slug}/content/auto")
+def api_content_auto_state(request: Request, slug: str) -> JSONResponse:
+    """Read without rescheduling, spending quota or repeating a consent receipt."""
+    proj = _db_project_or_404(request, slug)
+    return _content_auto_state(_reglages_contenu_auto(proj.settings))
+
+
 @app.post("/api/projects/{slug}/content/auto")
 def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBody) -> JSONResponse:
     """Allumer ou eteindre le mode automatique, et nommer la section ou les pages iront.
@@ -35801,11 +35821,7 @@ def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBod
     logger.info("[contenu-auto] %s : %s section=%s %s %s %02dh %s", slug,
                 "allumé" if body.enabled else "éteint", section, body.frequence,
                 _JOURS_AUTO[auto["jour"]], auto["heure"], body.publication)
-    return JSONResponse({"ok": True, "enabled": bool(body.enabled),
-                         "section": section if section != "/" else "",
-                         "prochain": _dire_creneau(_prochain_creneau(auto), auto,
-                                                   maintenant=time.time())
-                         if body.enabled else ""})
+    return _content_auto_state(auto)
 
 
 def _page_a_valider(request: Request, slug: str, task_id: str) -> "tuple[Any, Any, dict[str, Any]]":

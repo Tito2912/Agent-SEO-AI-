@@ -1,0 +1,101 @@
+{
+  "samples": [
+    {
+      "text": "éteint",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5
+    },
+    {
+      "text": "État actualisé.",
+      "ratio": 4.664632536995639,
+      "gradient": false,
+      "height": 18
+    },
+    {
+      "text": "off",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5
+    },
+    {
+      "text": "Status refreshed.",
+      "ratio": 4.664632536995639,
+      "gradient": false,
+      "height": 18
+    },
+    {
+      "text": "éteint",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5
+    },
+    {
+      "text": "État actualisé.",
+      "ratio": 4.664632536995639,
+      "gradient": false,
+      "height": 18
+    },
+    {
+      "text": "off",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5
+    },
+    {
+      "text": "Status refreshed.",
+      "ratio": 4.664632536995639,
+      "gradient": false,
+      "height": 18
+    },
+    {
+      "text": "éteint",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 21.046875
+    },
+    {
+      "text": "État actualisé.",
+      "ratio": 4.664632536995639,
+      "gradient": false,
+      "height": 20.140625
+    },
+    {
+      "text": "off",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 21.046875
+    },
+    {
+      "text": "Status refreshed.",
+      "ratio": 4.664632536995639,
+      "gradient": false,
+      "height": 20.140625
+    },
+    {
+      "text": "éteint",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 21.046875
+    },
+    {
+      "text": "État actualisé.",
+      "ratio": 4.664632536995639,
+      "gradient": false,
+      "height": 20.140625
+    },
+    {
+      "text": "off",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 21.046875
+    },
+    {
+      "text": "Status refreshed.",
+      "ratio": 4.664632536995639,
+      "gradient": false,
+      "height": 20.140625
+    }
+  ],
+  "scope": "Échantillons des nouveaux états ; pas un audit WCAG complet."
+}

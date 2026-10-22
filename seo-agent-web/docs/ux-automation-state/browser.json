@@ -1,0 +1,371 @@
+{
+  "checks": [
+    {
+      "screen": "content",
+      "state": "confirmed-stop",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-activation",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "screen": "content",
+      "state": "lost-response-after-real-commit",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "screen": "content",
+      "state": "read-only-recovery-preserves-composer",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "github",
+      "state": "503-then-read-only-recovery",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-stop",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-activation",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "screen": "content",
+      "state": "lost-response-after-real-commit",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "screen": "content",
+      "state": "read-only-recovery-preserves-composer",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "github",
+      "state": "503-then-read-only-recovery",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-stop",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-activation",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "screen": "content",
+      "state": "lost-response-after-real-commit",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "screen": "content",
+      "state": "read-only-recovery-preserves-composer",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "github",
+      "state": "503-then-read-only-recovery",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-stop",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-activation",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "screen": "content",
+      "state": "lost-response-after-real-commit",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "screen": "content",
+      "state": "read-only-recovery-preserves-composer",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "github",
+      "state": "503-then-read-only-recovery",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-stop",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-activation",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "screen": "content",
+      "state": "lost-response-after-real-commit",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "screen": "content",
+      "state": "read-only-recovery-preserves-composer",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "github",
+      "state": "503-then-read-only-recovery",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-stop",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-activation",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "screen": "content",
+      "state": "lost-response-after-real-commit",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "screen": "content",
+      "state": "read-only-recovery-preserves-composer",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "github",
+      "state": "503-then-read-only-recovery",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-stop",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-activation",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "screen": "content",
+      "state": "lost-response-after-real-commit",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "screen": "content",
+      "state": "read-only-recovery-preserves-composer",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "github",
+      "state": "503-then-read-only-recovery",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-stop",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "screen": "content",
+      "state": "confirmed-activation",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "screen": "content",
+      "state": "lost-response-after-real-commit",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "screen": "content",
+      "state": "read-only-recovery-preserves-composer",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "github",
+      "state": "503-then-read-only-recovery",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "content",
+      "state": "400",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "503",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "408",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "html",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "malformed-json",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "incomplete-success",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "session",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "refresh-fails",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "dirty-refresh",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "pending-languages",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "busy",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "github",
+      "state": "disconnect",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "no-javascript-read-only",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "content",
+      "state": "no-javascript-read-only",
+      "width": 360,
+      "lang": "en"
+    },
+    {
+      "screen": "github",
+      "state": "busy-save",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "github",
+      "state": "busy-picker",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "github",
+      "state": "known-refusal",
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "screen": "github",
+      "state": "expired-refresh",
+      "width": 360,
+      "lang": "fr"
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "scope": "Chromium local, comptes et fournisseurs fictifs ; vrais POST et GET locaux sauf formes de réponses explicitement simulées ; aucune publication distante."
+}

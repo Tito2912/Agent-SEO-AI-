@@ -3201,5 +3201,10 @@
   "Confirmez que vous acceptez la publication automatique.": "Confirm that you accept automatic publishing.",
   "Confirmez que vous acceptez la publication automatique : les articles seront publiés sans relecture humaine.": "Confirm that you accept automatic publishing: articles will be published without human review.",
   "Choisir un dépôt": "Choose a repository",
-  "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.": "Repositories come from the GitHub connection of the account that manages this site."
+  "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.": "Repositories come from the GitHub connection of the account that manages this site.",
+  "État enregistré": "Saved state",
+  "Modifications non enregistrées.": "Unsaved changes.",
+  "État actualisé.": "Status refreshed.",
+  "État actualisé. Vos modifications restent à enregistrer.": "Status refreshed. Your changes still need to be saved.",
+  "JavaScript est nécessaire pour modifier ces réglages. Leur état enregistré reste consultable.": "JavaScript is needed to change these settings. You can still view their saved state."
 }

@@ -2,7 +2,7 @@
 {% from '_correction_progress.html' import steps %}
 {% block title %}{{ tr("Contenu") }} - {{ project.site_name if project else slug }}{% endblock %}
 
-{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/content-journey.css?v=1" /><link rel="stylesheet" href="/static/automation-consent.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/content-journey.css?v=2" /><link rel="stylesheet" href="/static/automation-consent.css?v=1" />{% endblock %}
 {% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Contenu") }}</span>{% endblock %}
 {% block content %}
 <div class="content-journey-page">
@@ -209,12 +209,12 @@
     {% if a_depot %}
     <section class="card">
     <details class="content-automation" {% if auto.enabled %}open{% endif %}>
-      <summary>{{ tr("Rédaction automatique") }} · {{ tr('activée') if auto.enabled else tr('désactivée') }}</summary>
+      <summary>{{ tr("Rédaction automatique") }} · <span id="c-auto-summary">{{ tr('activée') if auto.enabled else tr('désactivée') }}</span></summary>
       <div>
       <div class="card-title-row">
         <h2 style="margin:0;">{{ tr("Mode automatique") }}</h2>
-        <span class="muted small">
-          {% if auto.enabled %}<span class="badge ok">{{ tr("allumé") }}</span>{% else %}{{ tr("éteint") }}{% endif %}
+        <span class="muted small">{{ tr("État enregistré") }} :
+          <span id="c-auto-badge" class="badge{% if auto.enabled %} ok{% endif %}">{{ tr("allumé") if auto.enabled else tr("éteint") }}</span>
         </span>
       </div>
 
@@ -223,6 +223,8 @@
       </p>
 
       <div class="setting-form">
+        <fieldset id="c-auto-fields" class="content-auto-fields" disabled>
+        <legend class="content-auto-legend">{{ tr("Mode automatique") }}</legend>
         <label class="checkbox">
           <input type="checkbox" id="c-auto" {% if auto.enabled %}checked{% endif %} />
           <span>{{ tr("Écrire des pages automatiquement") }}</span>
@@ -312,9 +314,13 @@
           </label>
         </fieldset>
 
-        <div class="modal-actions between">
+        </fieldset>
+        <p id="c-auto-dirty" class="muted small" hidden>{{ tr("Modifications non enregistrées.") }}</p>
+        <noscript><p class="muted small">{{ tr("JavaScript est nécessaire pour modifier ces réglages. Leur état enregistré reste consultable.") }}</p></noscript>
+        <div class="modal-actions between content-auto-actions">
           <span id="c-auto-status" class="muted small" role="status" aria-live="polite"></span>
-          <button class="btn" type="button" id="c-auto-save">{{ tr("Enregistrer") }}</button>
+          <button class="btn" type="button" id="c-auto-refresh" hidden>{{ tr("Actualiser l’état") }}</button>
+          <button class="btn" type="button" id="c-auto-save" hidden>{{ tr("Enregistrer") }}</button>
         </div>
       </div>
       </div>
@@ -965,6 +971,69 @@
       var autoSection = document.getElementById('c-auto-section');
       var autoSave = document.getElementById('c-auto-save');
       var autoStatus = document.getElementById('c-auto-status');
+      var autoFields = document.getElementById('c-auto-fields');
+      var autoRefresh = document.getElementById('c-auto-refresh');
+      var autoDirty = document.getElementById('c-auto-dirty');
+      var autoBusy = false, autoUncertain = false;
+      var autoApi = '/api/projects/' + encodeURIComponent(slug) + '/content/auto';
+      function autoControls() {
+        autoFields.disabled = autoBusy || autoUncertain;
+        autoSave.disabled = autoBusy || autoUncertain;
+        autoRefresh.disabled = autoBusy;
+        autoFields.setAttribute('aria-busy', String(autoBusy));
+      }
+      function autoMessage(text, error) {
+        autoStatus.className = error ? 'error small' : 'muted small';
+        autoStatus.textContent = text;
+      }
+      function autoUnknown(sessionExpired) {
+        autoUncertain = true;
+        autoDirty.hidden = true;
+        document.getElementById('c-auto-summary').textContent = {{ tr("À confirmer")|tojson }};
+        var badge = document.getElementById('c-auto-badge');
+        badge.className = 'badge'; badge.textContent = {{ tr("À confirmer")|tojson }};
+        document.getElementById('c-auto-prochain').hidden = true;
+        autoMessage(sessionExpired
+          ? {{ tr("Votre session a expiré. Reconnectez-vous pour reprendre ce contenu.")|tojson }}
+          : {{ tr("La réponse n’a pas pu être confirmée. Actualisez l’état avant de recommencer.")|tojson }}, true);
+        if (sessionExpired) {
+          var login = document.createElement('a');
+          login.href = '/auth/login?next=' + encodeURIComponent(location.pathname + location.search + location.hash);
+          login.textContent = {{ tr("Me reconnecter")|tojson }};
+          autoStatus.append(' ', login);
+        }
+      }
+      function validAutoState(d) {
+        var s = d && d.settings;
+        return d && d.ok === true && s && typeof s.enabled === 'boolean'
+          && typeof d.prochain === 'string' && Array.isArray(s.langues)
+          && s.langues.every(function (code) { return typeof code === 'string'; })
+          && ['section', 'taille', 'ton', 'frequence', 'fuseau', 'publication'].every(function (key) { return typeof s[key] === 'string'; })
+          && Number.isInteger(s.jour) && Number.isInteger(s.heure);
+      }
+      function autoConfirmed(d, replaceChoices) {
+        var s = d.settings;
+        autoUncertain = false;
+        document.getElementById('c-auto-summary').textContent = s.enabled ? {{ tr("activée")|tojson }} : {{ tr("désactivée")|tojson }};
+        var badge = document.getElementById('c-auto-badge');
+        badge.className = s.enabled ? 'badge ok' : 'badge';
+        badge.textContent = s.enabled ? {{ tr("allumé")|tojson }} : {{ tr("éteint")|tojson }};
+        var prochain = document.getElementById('c-auto-prochain');
+        prochain.hidden = !d.prochain;
+        prochain.textContent = d.prochain ? fill({{ tr("Prochaine page : {date}")|tojson }}, {date: d.prochain}) : '';
+        if (replaceChoices) {
+          autoBox.checked = s.enabled;
+          ['section', 'taille', 'ton', 'frequence', 'jour', 'heure', 'fuseau'].forEach(function (key) { document.getElementById('c-auto-' + key).value = s[key]; });
+          document.querySelectorAll('input[name="c-auto-publication"]').forEach(function (radio) { radio.checked = radio.value === s.publication; });
+          document.getElementById('c-auto-consent-wrap').hidden = s.publication !== 'auto';
+          autoLanguesChoisies = s.langues.slice();
+          document.querySelectorAll('#c-auto-langues input').forEach(function (box) { box.checked = s.langues.indexOf(box.value) >= 0; });
+          autoDirty.hidden = true;
+        }
+      }
+      function autoResponse(response) {
+        return readResponse(response).then(function (data) { return {status: response.status, ok: response.ok, data: data}; });
+      }
       function resetAutoConsent() {
         var consent = document.getElementById('c-auto-consent');
         if (consent) consent.checked = false;
@@ -979,7 +1048,28 @@
           if (wrap) wrap.hidden = radio.value !== 'auto' || !radio.checked;
         });
       });
+      if (autoFields) {
+        autoFields.addEventListener('input', function () { autoDirty.hidden = false; });
+        autoFields.addEventListener('change', function () { autoDirty.hidden = false; });
+        autoSave.hidden = autoRefresh.hidden = false;
+        autoControls();
+        autoRefresh.addEventListener('click', function () {
+          if (autoBusy) return;
+          var replaceChoices = autoUncertain || autoDirty.hidden;
+          autoBusy = true; autoControls();
+          autoMessage({{ tr("Lecture de la configuration…")|tojson }});
+          fetch(autoApi, {cache: 'no-store', headers: {Accept: 'application/json'}})
+            .then(autoResponse).then(function (result) {
+              if (!result.ok || !validAutoState(result.data)) { autoUnknown(result.data && result.data.session_expired); return; }
+              autoConfirmed(result.data, replaceChoices);
+              resetAutoConsent();
+              autoMessage(autoDirty.hidden ? {{ tr("État actualisé.")|tojson }} : {{ tr("État actualisé. Vos modifications restent à enregistrer.")|tojson }});
+            }).catch(function () { autoUnknown(false); })
+            .finally(function () { autoBusy = false; autoControls(); });
+        });
+      }
       if (autoSave) autoSave.addEventListener('click', function () {
+        if (autoBusy || autoUncertain) return;
         var publication = (document.querySelector('input[name="c-auto-publication"]:checked') || {}).value || 'verification';
         var consentBox = document.getElementById('c-auto-consent');
         if (autoBox.checked && publication === 'auto' && consentBox && !consentBox.checked) {
@@ -988,45 +1078,44 @@
           consentBox.focus();
           return;
         }
-        autoSave.disabled = true;
-        autoStatus.className = 'muted small';
-        autoStatus.textContent = {{ tr("Enregistrement…")|tojson }};
-        fetch('/api/projects/' + encodeURIComponent(slug) + '/content/auto', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        var languageBoxes = Array.from(document.querySelectorAll('#c-auto-langues input'));
+        // The language list can still be loading: preserve choices not represented in it.
+        var languages = languageBoxes.filter(function (box) { return box.checked; }).map(function (box) { return box.value; });
+        autoLanguesChoisies.forEach(function (code) {
+          if (!languageBoxes.some(function (box) { return box.value === code; })) languages.push(code);
+        });
+        var body = {
             enabled: autoBox.checked, section: autoSection.value || '',
             frequence: valeur('c-auto-frequence'), jour: parseInt(valeur('c-auto-jour'), 10),
             heure: parseInt(valeur('c-auto-heure'), 10), fuseau: valeur('c-auto-fuseau'),
             taille: valeur('c-auto-taille'), ton: valeur('c-auto-ton'),
-            langues: Array.prototype.map.call(
-              document.querySelectorAll('#c-auto-langues input:checked'), function (c) { return c.value; }),
+            langues: languages,
             publication: publication,
             consent: !!(consentBox && consentBox.checked)
-          })
+          };
+        autoBusy = true; autoControls();
+        autoMessage({{ tr("Enregistrement…")|tojson }});
+        fetch(autoApi, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(body)
         })
-          .then(readResponse)
-          .then(function (d) {
-            autoSave.disabled = false;
-            if (!d.ok) {
-              autoStatus.className = 'error small';
-              autoStatus.textContent = d.error || {{ tr("Enregistrement impossible.")|tojson }};
+          .then(autoResponse)
+          .then(function (result) {
+            var d = result.data;
+            if (!result.ok || !validAutoState(d)) {
+              if (d && !d.session_expired && result.status >= 400 && result.status < 500 && result.status !== 408 && typeof d.error === 'string') {
+                autoMessage(d.error, true);
+              } else autoUnknown(d && d.session_expired);
               return;
             }
+            autoConfirmed(d, true);
             autoStatus.className = 'ok small';
-            autoStatus.textContent = d.enabled
-              ? fill({{ tr("Mode automatique allumé sur {section}.")|tojson }}, {section: d.section})
+            autoStatus.textContent = d.settings.enabled
+              ? fill({{ tr("Mode automatique allumé sur {section}.")|tojson }}, {section: d.settings.section})
               : {{ tr("Mode automatique éteint.")|tojson }};
-            var prochain = document.getElementById('c-auto-prochain');
-            if (prochain) {
-              prochain.hidden = !d.prochain;
-              prochain.textContent = d.prochain ? fill({{ tr("Prochaine page : {date}")|tojson }}, {date: d.prochain}) : '';
-            }
           })
-          .catch(function () {
-            autoSave.disabled = false;
-            autoStatus.className = 'error small';
-            autoStatus.textContent = {{ tr("Erreur réseau.")|tojson }};
-          });
+          .catch(function () { autoUnknown(false); })
+          .finally(function () { autoBusy = false; autoControls(); });
       });
       document.getElementById('content-compose').addEventListener('input', function () {
         if (!drafting) { availability(); if (preparedFor && choiceStamp() !== preparedFor) contentStage(1); }
