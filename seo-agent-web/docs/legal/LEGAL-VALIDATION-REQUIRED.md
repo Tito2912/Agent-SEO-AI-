@@ -39,7 +39,7 @@ Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeu
 | Clause | Document | Question |
 | --- | --- | --- |
 | Clause de langue (français version de référence) | CGU article 14 | Proposition contractuelle de l'audit : son opposabilité n'est pas garantie dans tous les pays. |
-| Réserve « faute lourde ou dol » du plafond de responsabilité des professionnels | CGU article 10 | Rédaction à valider. |
+| Réserve « faute lourde ou dol » du plafond de responsabilité des professionnels | CGU article 10 | Rédaction à valider. Plafond porté au plus élevé des sommes payées sur 12 mois ou de 1 000 € (choix du 21/10/2026), pour qu'il ne soit pas dérisoire, notamment pour un client du plan gratuit. |
 | Compétence des tribunaux de Paris pour les professionnels | CGU article 12 | Conservée, et désormais limitée aux cas où elle est valable et opposable. |
 | Rôle de sous-traitant d'E-Com Shop et services du client (GitHub, WordPress, Search Console…) | Confidentialité § 1, DPA annexe 3 | Le DPA ne les exclut plus d'office des sous-traitants ultérieurs : leur qualification dépend des contrats et des opérations de traitement, à confirmer service par service (section 5). |
 | Cookie de langue `noyaru_lang` (1 an) | Confidentialité § 8 | Présenté comme un cookie de préférence choisie, sans consentement. À confirmer. |

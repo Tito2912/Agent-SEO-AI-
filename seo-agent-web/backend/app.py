@@ -19489,6 +19489,16 @@ class _GithubConnectBody(BaseModel):
     branch: str = "main"
     mode: str = "review"   # "review" or "auto"
     disconnect: bool = False
+    # Case « J'ai compris ces risques… » cochée : exigée pour passer en fusion automatique.
+    consent: bool = False
+
+
+def _journaliser_mode_auto(request: Request, action: str, slug: str, meta: dict[str, Any]) -> None:
+    """Garde la preuve qu'un client a activé ou retiré une fusion ou une publication automatique,
+    et la version de l'avertissement qu'il a vu. En cas de litige, c'est au prestataire de prouver
+    qu'il a mis son client en garde (CGU, articles 6 et 7)."""
+    _audit_log(request, action=action, target_type="project", target_id=slug,
+               meta={**meta, "warning_version": legal.AUTO_MODE_WARNING_VERSION, "lang": i18n.current_lang()})
 
 
 class _GithubFixBody(BaseModel):
@@ -19510,10 +19520,13 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
             if row is None:
                 raise HTTPException(status_code=404, detail="Projet introuvable.")
             settings = dict(row.settings) if isinstance(row.settings, dict) else {}
+            previous_mode = str(settings.get("github_mode") or "review")
             for key in ("github_repo", "github_branch", "github_mode"):
                 settings.pop(key, None)
             row.settings = settings
             db.commit()
+        if previous_mode == "auto":
+            _journaliser_mode_auto(request, "automation.github_mode", slug, {"mode": "disconnected", "previous": "auto"})
         return JSONResponse({"ok": True, "connected": False, "repo": "", "mode": "review"})
     token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
     if not token or source != "user":
@@ -19532,6 +19545,9 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
     if not perms.get("push"):
         return JSONResponse({"ok": False, "error": "Votre jeton GitHub n’a pas les droits d’écriture sur ce dépôt. Utilisez un jeton avec la portée « repo »."}, status_code=400)
     mode = body.mode if body.mode in ("review", "auto") else "review"
+    previous_mode = str((proj.settings or {}).get("github_mode") or "review") if isinstance(proj.settings, dict) else "review"
+    if mode == "auto" and previous_mode != "auto" and not body.consent:
+        return JSONResponse({"ok": False, "error": "Confirmez que vous autorisez la fusion automatique des corrections sur ce dépôt."}, status_code=400)
     branch = (body.branch or repo_info.get("default_branch") or "main").strip()
     if not _github_branch_allowed(branch):
         return JSONResponse({"ok": False, "error": "Branche GitHub invalide."}, status_code=400)
@@ -19544,6 +19560,9 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
         if p:
             p.settings = settings
             db.commit()
+    if mode != previous_mode:
+        _journaliser_mode_auto(request, "automation.github_mode", slug,
+                               {"mode": mode, "previous": previous_mode, "repo": repo, "consent": bool(body.consent)})
     return JSONResponse({"ok": True, "repo": repo, "branch": branch, "mode": mode, "html_url": str(repo_info.get("html_url") or "")})
 
 
@@ -35678,6 +35697,8 @@ class _ContentAutoBody(BaseModel):
     heure: int = 9
     fuseau: str = "Europe/Paris"
     publication: str = "verification"
+    # Case « J'ai compris… » cochée : exigée pour passer en publication automatique.
+    consent: bool = False
 
 
 @app.post("/api/projects/{slug}/content/auto")
@@ -35721,6 +35742,14 @@ def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBod
         if p is None:
             return JSONResponse({"ok": False, "error": "Projet introuvable."}, status_code=404)
         reglages = dict(p.settings or {})
+        avant = _reglages_contenu_auto(reglages)
+        devient_auto = bool(body.enabled) and body.publication == "auto"
+        etait_auto = bool(avant["enabled"]) and avant["publication"] == "auto"
+        if devient_auto and not etait_auto and not body.consent:
+            return JSONResponse({"ok": False, "error": (
+                "Confirmez que vous acceptez la publication automatique : les articles seront "
+                "publiés sans relecture humaine."
+            )}, status_code=400)
         reglages["content_auto"] = {
             "enabled": bool(body.enabled),
             "section": section if section != "/" else "",
@@ -35738,6 +35767,10 @@ def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBod
         p.settings = reglages
         db.commit()
         auto = _reglages_contenu_auto(reglages)
+    if devient_auto != etait_auto:
+        _journaliser_mode_auto(request, "automation.content_publication", slug, {
+            "publication": "auto" if devient_auto else "verification", "enabled": bool(body.enabled),
+            "section": section if section != "/" else "", "consent": bool(body.consent)})
     logger.info("[contenu-auto] %s : %s section=%s %s %s %02dh %s", slug,
                 "allumé" if body.enabled else "éteint", section, body.frequence,
                 _JOURS_AUTO[auto["jour"]], auto["heure"], body.publication)

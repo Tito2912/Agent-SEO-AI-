@@ -304,9 +304,9 @@ each party.
 This agreement does not restrict their rights.
 
 **Liability between the parties.** Each party's liability under this agreement is limited to
-direct and foreseeable damage, up to the amounts paid by the Customer in the 12 months preceding
-the event giving rise to liability, as provided for business customers in section 10 of the Terms
-and Conditions. These limits do not apply in the event of gross negligence or wilful misconduct,
+direct and foreseeable damage, up to the greater of the amounts paid by the Customer in the 12
+months preceding the event giving rise to liability or €1,000, as provided for business customers
+in section 10 of the Terms and Conditions. These limits do not apply in the event of gross negligence or wilful misconduct,
 nor to liability that a mandatory rule prohibits limiting. They do not reduce the rights of data
 subjects under Article 82 GDPR, and an administrative fine remains the responsibility of the party
 on which it is imposed.

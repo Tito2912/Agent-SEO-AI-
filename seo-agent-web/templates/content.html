@@ -306,6 +306,10 @@
             <span><strong>{{ tr("Automatique · fusion après contrôles") }}</strong>
               <span class="muted small">{{ tr("— la pull request est fusionnée seule dès que les vérifications de votre dépôt passent. Sans vérification, ou si elles échouent, elle attend votre validation et un e-mail vous prévient.") }}</span></span>
           </label>
+          <label class="checkbox" id="c-auto-consent-wrap" {% if auto.publication != 'auto' %}hidden{% endif %} style="margin-top:6px;">
+            <input type="checkbox" id="c-auto-consent" {% if auto.enabled and auto.publication == 'auto' %}checked{% endif %} />
+            {{ tr("J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des erreurs ; je reste responsable de ce qui est publié sur mon site (CGU, articles 6 et 7).") }}
+          </label>
         </fieldset>
 
         <div class="modal-actions between">
@@ -962,7 +966,21 @@
       var autoSave = document.getElementById('c-auto-save');
       var autoStatus = document.getElementById('c-auto-status');
       /* Le mode automatique ecrit par pull request : sans depot, sa carte n'est pas rendue. */
+      document.querySelectorAll('input[name="c-auto-publication"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+          var wrap = document.getElementById('c-auto-consent-wrap');
+          if (wrap) wrap.hidden = radio.value !== 'auto' || !radio.checked;
+        });
+      });
       if (autoSave) autoSave.addEventListener('click', function () {
+        var publication = (document.querySelector('input[name="c-auto-publication"]:checked') || {}).value || 'verification';
+        var consentBox = document.getElementById('c-auto-consent');
+        if (autoBox.checked && publication === 'auto' && consentBox && !consentBox.checked) {
+          autoStatus.className = 'error small';
+          autoStatus.textContent = {{ tr("Confirmez que vous acceptez la publication automatique.")|tojson }};
+          consentBox.focus();
+          return;
+        }
         autoSave.disabled = true;
         autoStatus.className = 'muted small';
         autoStatus.textContent = {{ tr("Enregistrement…")|tojson }};
@@ -975,7 +993,8 @@
             taille: valeur('c-auto-taille'), ton: valeur('c-auto-ton'),
             langues: Array.prototype.map.call(
               document.querySelectorAll('#c-auto-langues input:checked'), function (c) { return c.value; }),
-            publication: (document.querySelector('input[name="c-auto-publication"]:checked') || {}).value || 'verification'
+            publication: publication,
+            consent: !!(consentBox && consentBox.checked)
           })
         })
           .then(readResponse)

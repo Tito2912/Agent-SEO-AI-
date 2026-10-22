@@ -292,6 +292,21 @@ site seulement) l'envoie :
 - publier la nouvelle version du texte à la date d'entrée en vigueur (et mettre à jour sa date
   dans `backend/legal.py`) ; l'e-mail indique qu'elle peut être demandée avant au support.
 
+## Preuve des modes automatiques (litige)
+
+Un client qui active une fusion automatique des corrections (« Full Access ») ou la publication
+automatique des articles doit cocher une case d'accord ; sans elle, le serveur refuse. Chaque
+activation ou retrait est gardé dans le journal d'audit (`audit_logs`) :
+
+- `automation.github_mode` : dépôt, mode avant et après, accord ;
+- `automation.content_publication` : publication avant et après, section, accord ;
+- dans les deux cas `warning_version` (version de l'avertissement montré, `legal.AUTO_MODE_WARNING_VERSION`)
+  et la langue de l'écran.
+
+En cas de réclamation, ces lignes prouvent que le client a choisi le mode et vu l'avertissement.
+Changer le texte de l'avertissement (`crawl_settings.html`, `corrections.html`, `content.html`)
+impose de changer `AUTO_MODE_WARNING_VERSION`.
+
 ## Vente aux consommateurs : TVA, résiliation, rétractation
 
 Depuis le 30/09/2026 le service est ouvert aux professionnels ET aux particuliers, et EComShop est

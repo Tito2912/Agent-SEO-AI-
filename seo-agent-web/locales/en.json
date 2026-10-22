@@ -3109,8 +3109,6 @@
   "Branche cible": "Target branch",
   "Mode de correction": "Fix mode",
   "Vérification : vous validez chaque PR avant qu'elle soit créée.": "Verification: you approve each PR before it is created.",
-  "<strong>Full Access</strong> — autorise les traitements automatiques configurés pour ce dépôt. Relisez leur périmètre dans <a href=\"{url}\">Automatisation du site</a>. La fusion et la mise en ligne dépendent des réglages de ce site.": "<strong>Full Access</strong> — allows the automated tasks configured for this repository. Review their scope in <a href=\"{url}\">Site automation</a>. Merging and publishing depend on this site's settings.",
-  "J'autorise l'agent à créer des PRs automatiquement sur ce dépôt": "I allow the agent to create PRs automatically on this repository",
   "Connecter ce dépôt": "Connect this repository",
   "Full Access : autorisations des traitements automatiques de ce site.": "Full Access: permissions of this site's automated tasks.",
   "Vérification : préparez puis relisez chaque proposition avant de l’appliquer.": "Verification: prepare, then review each proposal before applying it.",
@@ -3194,5 +3192,12 @@
   "La PR de cette correction ne peut pas encore etre confirmee. Aucun travail ne sera repete.": "This fix's PR cannot be confirmed yet. No work will be repeated.",
   "Cette correction d'URL exige les destinations observees dans le rapport. Utilise la correction etendue : aucun apercu IA libre ni ancien apercu ne peut l'appliquer.": "This URL fix requires the destinations observed in the report. Use the extended fix: no free AI preview or older preview can apply it.",
   "Gabarit d'une autre page : son titre ne correspond pas a la page servie.": "Template of another page: its title does not match the page served.",
-  "Canonical refuse : page source non resolue ou ambigue.": "Canonical refused: source page unresolved or ambiguous."
+  "Canonical refuse : page source non resolue ou ambigue.": "Canonical refused: source page unresolved or ambiguous.",
+  "<strong>Full Access</strong> — les corrections concernées sont fusionnées dès que les vérifications de votre dépôt passent, sans relecture humaine préalable. Ces contrôles réduisent les risques sans garantir l’absence d’erreur ou de régression (CGU, article 6). Les modifications écrites par l’intelligence artificielle attendent toujours votre relecture, et un dépôt sans vérification n’est jamais fusionné automatiquement. Relisez le périmètre dans <a href=\"{url}\">Automatisation du site</a>.": "<strong>Full Access</strong> — the fixes concerned are merged as soon as your repository's checks pass, without prior human review. These checks reduce the risks without guaranteeing the absence of errors or regressions (Terms, section 6). Changes written by artificial intelligence always wait for your review, and a repository without checks is never merged automatically. Review the scope in <a href=\"{url}\">Site automation</a>.",
+  "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.": "I understand these risks and I allow fixes to be merged automatically on this repository.",
+  "Les corrections concernées sont fusionnées dès que les vérifications de votre dépôt passent, sans relecture humaine préalable. Ces contrôles réduisent les risques sans garantir l’absence d’erreur ou de régression (CGU, article 6).": "The fixes concerned are merged as soon as your repository's checks pass, without prior human review. These checks reduce the risks without guaranteeing the absence of errors or regressions (Terms, section 6).",
+  "Confirmez que vous autorisez la fusion automatique des corrections sur ce dépôt.": "Confirm that you allow fixes to be merged automatically on this repository.",
+  "J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des erreurs ; je reste responsable de ce qui est publié sur mon site (CGU, articles 6 et 7).": "I understand: articles will be published without human review and may contain errors; I remain responsible for what is published on my site (Terms, sections 6 and 7).",
+  "Confirmez que vous acceptez la publication automatique.": "Confirm that you accept automatic publishing.",
+  "Confirmez que vous acceptez la publication automatique : les articles seront publiés sans relecture humaine.": "Confirm that you accept automatic publishing: articles will be published without human review."
 }
