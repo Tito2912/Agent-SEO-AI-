@@ -1,6 +1,6 @@
 # Inventaire courant des écrans et interactions Noyaru
 
-Généré par `python seo-agent-web/ops/ux_inventory.py`. Révision du code : `89f6fabfd24ff50b8bfd5f00de531f12b0a667db`. Date UTC : 2026-10-22 01:57. Le [relevé initial et ses compléments](UX_SCREEN_INVENTORY.md) sont conservés.
+Généré par `python seo-agent-web/ops/ux_inventory.py`. Révision du code : `e910cf8e2a6ee3af8727b6b309fef92e62bf1fc6`. Date UTC : 2026-10-22 02:06. Le [relevé initial et ses compléments](UX_SCREEN_INVENTORY.md) sont conservés.
 
 198 déclarations de routes ; 55 templates repérés dans les gestionnaires de routes ; 89 templates HTML au total (inclusions et anciens templates compris). 3 routes automatiques FastAPI complètent les déclarations, soit 201 déclarations et routes automatiques, hors montage statique. Les alias de langue du middleware ne sont pas des déclarations supplémentaires.
 
@@ -110,7 +110,7 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/projects/add` | POST | — | [backend/app.py:16327](../backend/app.py#L16327) · `add_project` |
 | `/projects/crawl-batch` | POST | — | [backend/app.py:18641](../backend/app.py#L18641) · `crawl_projects_batch` |
 | `/projects/delete` | POST | — | [backend/app.py:16457](../backend/app.py#L16457) · `delete_projects` |
-| `/projects/first-audit` | POST | — | [backend/first_audit.py:136](../backend/first_audit.py#L136) · `start` |
+| `/projects/first-audit` | POST | — | [backend/first_audit.py:138](../backend/first_audit.py#L138) · `start` |
 | `/projects/{slug}` | GET | project_overview.html | [backend/app.py:18903](../backend/app.py#L18903) · `project_overview` |
 | `/projects/{slug}/automation` | GET | project_automation.html | [backend/app.py:31446](../backend/app.py#L31446) · `project_automation` |
 | `/projects/{slug}/backlinks` | GET | backlinks.html | [backend/app.py:36035](../backend/app.py#L36035) · `project_backlinks` |
