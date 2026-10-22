@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from backend import app as m, cms_guidance, cms_routes, first_correction, wordpress_cms as wp
 from backend.models import CmsChange, IssueTask, JobRecord, Project, UsageEvent
-from test_first_verified_correction import URL, _choose, _verify, journey as journey
+from test_first_verified_correction import OTHER, URL, _choose, _verify, journey as journey
 
 
 @pytest.fixture()
@@ -272,6 +272,28 @@ def test_unsuccessful_control_offers_clear_recovery_without_false_success(cms, o
     assert state == {"state": "unverified" if outcome == "missing_receipt" else outcome, "poll": False}
     page = change_page(cms, change)
     assert "Relancer la vérification" in page.text and "Correction vérifiée" not in page.text
+    assert len(writes(cms)) == 1
+
+
+def test_inconclusive_resume_opens_the_exact_wordpress_explanation_without_another_write(cms):
+    connect(cms)
+    change = preview(cms)
+    action(cms, change, "apply")
+    _verify(cms, urls=(OTHER,))
+    destination = cms["base"] + "/wordpress/changes/" + change
+    calls_before = len(cms["remote"]["calls"])
+    for source in ("/", f'/projects/{cms["slug"]}', f'/projects/{cms["slug"]}/issues'):
+        soup = BeautifulSoup(cms["client"].get(source).text, "html.parser")
+        link = soup.select_one('.journey-card .btn.primary')
+        assert link.get_text(strip=True) == "Comprendre le contrôle"
+        assert link["href"] == destination + "#verification"
+        detail = BeautifulSoup(cms["client"].get(link["href"]).text, "html.parser")
+        verification = detail.select_one("#verification")
+        assert "Le résultat n’a pas pu être confirmé" in verification.get_text()
+        assert "Certaines URL du correctif" in verification.get_text()
+        assert verification.select_one('form[action$="/verify"]')
+    assert cms["stranger"].get(destination).status_code == 404
+    assert len(cms["remote"]["calls"]) == calls_before
     assert len(writes(cms)) == 1
 
 
