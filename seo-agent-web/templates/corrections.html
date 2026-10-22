@@ -3,6 +3,7 @@
 
 {% block head_extra %}
   <link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=3" defer></script>
+  <link rel="stylesheet" href="/static/automation-consent.css?v=1" />
 <style>
 /* ── Stats summary bar ── */
 .corr-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
@@ -386,7 +387,7 @@
           '</div>',
           '<div id="gh-c-auto" hidden style="margin-top:8px;font-size:12px;">',
           '<p style="margin:0 0 6px;">' + esc({{ tr("Les corrections concernées sont fusionnées dès que les vérifications de votre dépôt passent, sans relecture humaine préalable. Ces contrôles réduisent les risques sans garantir l’absence d’erreur ou de régression (CGU, article 6).")|tojson }}) + '</p>',
-          '<label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" id="gh-c-consent"> ' + esc({{ tr("J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.")|tojson }}) + '</label>',
+          '<label class="automation-consent" style="display:flex;gap:6px;align-items:center;"><input type="checkbox" id="gh-c-consent"> ' + esc({{ tr("J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.")|tojson }}) + '</label>',
           '</div>',
           '<p id="gh-c-msg" style="margin:8px 0 0;font-size:11px;color:var(--muted);"></p>'
         ].join('');

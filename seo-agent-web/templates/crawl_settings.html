@@ -3,6 +3,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="/static/analysis-settings.css?v=1" />
+<link rel="stylesheet" href="/static/automation-consent.css?v=1" />
 <style>
 /* ── Crawl Settings v2 ───────────────────────────────── */
 .cs-page { display: flex; flex-direction: column; gap: 20px; }
@@ -902,7 +903,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
 
         <div id="gh-auto-warning" style="display:none;padding:10px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:5px;font-size:12px;">
           {{ tr_html('<strong>Full Access</strong> — les corrections concernées sont fusionnées dès que les vérifications de votre dépôt passent, sans relecture humaine préalable. Ces contrôles réduisent les risques sans garantir l’absence d’erreur ou de régression (CGU, article 6). Les modifications écrites par l’intelligence artificielle attendent toujours votre relecture, et un dépôt sans vérification n’est jamais fusionné automatiquement. Relisez le périmètre dans <a href="{url}">Automatisation du site</a>.', url="/projects/" ~ slug ~ "/automation") }}
-          <label style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer;">
+          <label class="automation-consent" style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer;">
             <input type="checkbox" id="gh-auto-confirm" /> {{ tr("J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.") }}
           </label>
         </div>

@@ -2,7 +2,7 @@
 {% from '_correction_progress.html' import steps %}
 {% block title %}{{ tr("Contenu") }} - {{ project.site_name if project else slug }}{% endblock %}
 
-{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/content-journey.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/content-journey.css?v=1" /><link rel="stylesheet" href="/static/automation-consent.css?v=1" />{% endblock %}
 {% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Contenu") }}</span>{% endblock %}
 {% block content %}
 <div class="content-journey-page">
@@ -306,7 +306,7 @@
             <span><strong>{{ tr("Automatique · fusion après contrôles") }}</strong>
               <span class="muted small">{{ tr("— la pull request est fusionnée seule dès que les vérifications de votre dépôt passent. Sans vérification, ou si elles échouent, elle attend votre validation et un e-mail vous prévient.") }}</span></span>
           </label>
-          <label class="checkbox" id="c-auto-consent-wrap" {% if auto.publication != 'auto' %}hidden{% endif %} style="margin-top:6px;">
+          <label class="checkbox automation-consent" id="c-auto-consent-wrap" {% if auto.publication != 'auto' %}hidden{% endif %} style="margin-top:6px;">
             <input type="checkbox" id="c-auto-consent" {% if auto.enabled and auto.publication == 'auto' %}checked{% endif %} />
             {{ tr("J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des erreurs ; je reste responsable de ce qui est publié sur mon site (CGU, articles 6 et 7).") }}
           </label>
