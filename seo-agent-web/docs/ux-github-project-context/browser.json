@@ -1,0 +1,145 @@
+{
+  "checks": [
+    {
+      "role": "owner",
+      "lang": "fr",
+      "width": 1440,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "owner",
+      "lang": "fr",
+      "width": 768,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "owner",
+      "lang": "fr",
+      "width": 390,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "owner",
+      "lang": "fr",
+      "width": 360,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "owner",
+      "lang": "en",
+      "width": 1440,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "owner",
+      "lang": "en",
+      "width": 768,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "owner",
+      "lang": "en",
+      "width": 390,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "owner",
+      "lang": "en",
+      "width": 360,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "member",
+      "lang": "fr",
+      "width": 1440,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "member",
+      "lang": "fr",
+      "width": 768,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "member",
+      "lang": "fr",
+      "width": 390,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "member",
+      "lang": "fr",
+      "width": 360,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "member",
+      "lang": "en",
+      "width": 1440,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "member",
+      "lang": "en",
+      "width": 768,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "member",
+      "lang": "en",
+      "width": 390,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "role": "member",
+      "lang": "en",
+      "width": 360,
+      "project_context_transported": true,
+      "repository_account": "project-owner",
+      "overflow": false
+    },
+    {
+      "screen": "automatic-mode-consent",
+      "lang": "fr",
+      "width": 390,
+      "missing_consent_blocks_post": true,
+      "explicit_consent_sent": true,
+      "script_version": 2,
+      "scope": "local-only"
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "scope": "Comptes et transport GitHub fictifs ; aucun dépôt distant modifié.",
+  "source_revision": "9d111f41b996cf9f2f40f02b8deac64244b74cda"
+}

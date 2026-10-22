@@ -1,6 +1,6 @@
 # Inventaire courant des écrans et interactions Noyaru
 
-Généré par `python seo-agent-web/ops/ux_inventory.py`. Révision du code : `e910cf8e2a6ee3af8727b6b309fef92e62bf1fc6`. Date UTC : 2026-10-22 02:06. Le [relevé initial et ses compléments](UX_SCREEN_INVENTORY.md) sont conservés.
+Généré par `python seo-agent-web/ops/ux_inventory.py`. Révision du code : `9d111f41b996cf9f2f40f02b8deac64244b74cda`. Date UTC : 2026-10-22 02:11. Le [relevé initial et ses compléments](UX_SCREEN_INVENTORY.md) sont conservés.
 
 198 déclarations de routes ; 55 templates repérés dans les gestionnaires de routes ; 89 templates HTML au total (inclusions et anciens templates compris). 3 routes automatiques FastAPI complètent les déclarations, soit 201 déclarations et routes automatiques, hors montage statique. Les alias de langue du middleware ne sont pas des déclarations supplémentaires.
 

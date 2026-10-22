@@ -76,7 +76,7 @@ const noyaruT = window.noyaruT || ((text) => text);
     if (pick.disabled) return;
     pick.disabled = true; feedback.textContent = noyaruT('Lecture des dépôts…'); list.replaceChildren();
     try {
-      const data = await read(await fetch('/api/github/repos',{cache:'no-store',headers:{Accept:'application/json'}}));
+      const data = await read(await fetch('/api/github/repos?slug=' + encodeURIComponent(root.dataset.projectSlug),{cache:'no-store',headers:{Accept:'application/json'}}));
       if (!data.ok) { feedback.textContent = data.error || noyaruT('Les dépôts ne sont pas disponibles.'); return; }
       (data.repos || []).forEach(item => {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'btn'; button.textContent = item.full_name + (item.private ? ' · ' + noyaruT('privé') : '');

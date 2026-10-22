@@ -3199,5 +3199,7 @@
   "Confirmez que vous autorisez la fusion automatique des corrections sur ce dépôt.": "Confirm that you allow fixes to be merged automatically on this repository.",
   "J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des erreurs ; je reste responsable de ce qui est publié sur mon site (CGU, articles 6 et 7).": "I understand: articles will be published without human review and may contain errors; I remain responsible for what is published on my site (Terms, sections 6 and 7).",
   "Confirmez que vous acceptez la publication automatique.": "Confirm that you accept automatic publishing.",
-  "Confirmez que vous acceptez la publication automatique : les articles seront publiés sans relecture humaine.": "Confirm that you accept automatic publishing: articles will be published without human review."
+  "Confirmez que vous acceptez la publication automatique : les articles seront publiés sans relecture humaine.": "Confirm that you accept automatic publishing: articles will be published without human review.",
+  "Choisir un dépôt": "Choose a repository",
+  "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.": "Repositories come from the GitHub connection of the account that manages this site."
 }

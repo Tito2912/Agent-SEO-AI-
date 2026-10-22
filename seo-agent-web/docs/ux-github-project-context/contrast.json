@@ -1,0 +1,295 @@
+{
+  "samples": [
+    {
+      "text": "Choisir un dépôt",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "role": "owner"
+    },
+    {
+      "text": "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 18,
+      "lang": "fr",
+      "width": 1440,
+      "role": "owner"
+    },
+    {
+      "text": "Choisir un dépôt",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "role": "owner"
+    },
+    {
+      "text": "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 18,
+      "lang": "fr",
+      "width": 768,
+      "role": "owner"
+    },
+    {
+      "text": "Choisir un dépôt",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "role": "owner"
+    },
+    {
+      "text": "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 40.28125,
+      "lang": "fr",
+      "width": 390,
+      "role": "owner"
+    },
+    {
+      "text": "Choisir un dépôt",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "role": "owner"
+    },
+    {
+      "text": "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 60.421875,
+      "lang": "fr",
+      "width": 360,
+      "role": "owner"
+    },
+    {
+      "text": "Choose a repository",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "role": "owner"
+    },
+    {
+      "text": "Repositories come from the GitHub connection of the account that manages this site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 18,
+      "lang": "en",
+      "width": 1440,
+      "role": "owner"
+    },
+    {
+      "text": "Choose a repository",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "role": "owner"
+    },
+    {
+      "text": "Repositories come from the GitHub connection of the account that manages this site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 18,
+      "lang": "en",
+      "width": 768,
+      "role": "owner"
+    },
+    {
+      "text": "Choose a repository",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "role": "owner"
+    },
+    {
+      "text": "Repositories come from the GitHub connection of the account that manages this site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 40.28125,
+      "lang": "en",
+      "width": 390,
+      "role": "owner"
+    },
+    {
+      "text": "Choose a repository",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "role": "owner"
+    },
+    {
+      "text": "Repositories come from the GitHub connection of the account that manages this site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 60.421875,
+      "lang": "en",
+      "width": 360,
+      "role": "owner"
+    },
+    {
+      "text": "Choisir un dépôt",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 1440,
+      "role": "member"
+    },
+    {
+      "text": "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 18,
+      "lang": "fr",
+      "width": 1440,
+      "role": "member"
+    },
+    {
+      "text": "Choisir un dépôt",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 768,
+      "role": "member"
+    },
+    {
+      "text": "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 18,
+      "lang": "fr",
+      "width": 768,
+      "role": "member"
+    },
+    {
+      "text": "Choisir un dépôt",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 390,
+      "role": "member"
+    },
+    {
+      "text": "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 40.28125,
+      "lang": "fr",
+      "width": 390,
+      "role": "member"
+    },
+    {
+      "text": "Choisir un dépôt",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "fr",
+      "width": 360,
+      "role": "member"
+    },
+    {
+      "text": "Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 60.421875,
+      "lang": "fr",
+      "width": 360,
+      "role": "member"
+    },
+    {
+      "text": "Choose a repository",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 1440,
+      "role": "member"
+    },
+    {
+      "text": "Repositories come from the GitHub connection of the account that manages this site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 18,
+      "lang": "en",
+      "width": 1440,
+      "role": "member"
+    },
+    {
+      "text": "Choose a repository",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 768,
+      "role": "member"
+    },
+    {
+      "text": "Repositories come from the GitHub connection of the account that manages this site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 18,
+      "lang": "en",
+      "width": 768,
+      "role": "member"
+    },
+    {
+      "text": "Choose a repository",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 390,
+      "role": "member"
+    },
+    {
+      "text": "Repositories come from the GitHub connection of the account that manages this site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 40.28125,
+      "lang": "en",
+      "width": 390,
+      "role": "member"
+    },
+    {
+      "text": "Choose a repository",
+      "ratio": 14.006611036764053,
+      "gradient": false,
+      "height": 44,
+      "lang": "en",
+      "width": 360,
+      "role": "member"
+    },
+    {
+      "text": "Repositories come from the GitHub connection of the account that manages this site.",
+      "ratio": 4.639218685544578,
+      "gradient": false,
+      "height": 60.421875,
+      "lang": "en",
+      "width": 360,
+      "role": "member"
+    }
+  ],
+  "minimum_text_ratio": 4.639218685544578,
+  "scope": "Aide et bouton retouchés, fonds composés ; pas un audit WCAG intégral.",
+  "source_revision": "9d111f41b996cf9f2f40f02b8deac64244b74cda"
+}
