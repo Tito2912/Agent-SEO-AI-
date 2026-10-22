@@ -1,0 +1,15 @@
+{
+  "checks": [
+    {
+      "role": "member",
+      "lang": "fr",
+      "width": 360,
+      "project_context_transported": false,
+      "repository_account": "personal-member",
+      "overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "scope": "Comptes et transport GitHub fictifs ; aucun dépôt distant modifié."
+}
