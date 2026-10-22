@@ -37,6 +37,12 @@ Code applicatif `e87f884dca6c853bc73aec21ec4c8147c7e10a34`. Le calcul des preuve
 
 Un premier passage local a échoué sur la reprise d’une correction suivante ; le cas isolé passe aussi bien sur la branche que sur une archive du main intact. La sélection ciblée finale de 112 tests passe, sans affaiblir cette assertion. La CI complète reste un contrôle distinct.
 
+### Actualisation après la fusion de Claude
+
+La CI initiale sur `d40df8e` réussit : **8 625 tests**, 45 ignorés, compilation, Ruff, audit des dépendances et Bandit medium/high verts ([exécution](https://github.com/Tito2912/Agent-SEO-AI-/actions/runs/39653158759)).
+
+Le main `77bddbc`, comprenant la PR #50 de Claude, est ensuite intégré dans cette branche isolée par `89f6fab`. La fusion conserve les traductions des deux lots, sans conflit ni modification supplémentaire des textes juridiques, des consentements ou du moteur de langues. **170 tests ciblés** passent sur cet ensemble : correction guidée, reprise, suivi, internationalisation, activation des modes automatiques et pages juridiques. Les **42 observations Chromium** sont rejouées, FR/EN à 1 440/768/390/360 px, sans débordement, erreur JavaScript ou requête distante ; la capture mobile est relue. L’inventaire courant est régénéré à cette révision, toujours **201 routes et 89 templates**. La CI de cette révision actualisée reste une validation distincte consignée dans la PR avant fusion.
+
 [Attente du contrôle sur mobile](ux-published-correction/waiting-fr-360.png) · [Contrôle non confirmé sur mobile](ux-published-correction/inconclusive-fr-360.png) · [Contrôle non confirmé en anglais](ux-published-correction/inconclusive-en-1440.png).
 
 ## Recette authentifiée de production
