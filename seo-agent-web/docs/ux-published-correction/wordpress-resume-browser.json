@@ -1,0 +1,177 @@
+{
+  "checks": [
+    {
+      "source": "home",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "source": "overview",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "source": "issues",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "source": "home",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "source": "overview",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "source": "issues",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "source": "home",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "source": "overview",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "source": "issues",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "source": "home",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "source": "overview",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "source": "issues",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "source": "home",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "source": "overview",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "source": "issues",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "source": "home",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "source": "overview",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "source": "issues",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "source": "home",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "source": "overview",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "source": "issues",
+      "target": "exact-wordpress-verification",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "source": "home",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "source": "overview",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "source": "issues",
+      "target": "exact-wordpress-verification",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "additional_cms_calls": 0,
+  "scope": "Comptes, rapports et transport WordPress fictifs ; aucune écriture distante.",
+  "source_revision": "e910cf8e2a6ee3af8727b6b309fef92e62bf1fc6"
+}

@@ -15,6 +15,12 @@
 .first-correction-url { overflow-wrap: anywhere; }
 .first-correction-result { border-color: rgba(var(--accent-rgb), .35); }
 .first-correction-result .btn { margin: 4px 8px 4px 0; }
+.first-correction-control .btn { min-height: 44px; }
+.first-correction-control .result-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.first-correction-page [data-correction-instructions] > summary,
+.first-correction-page .first-correction-retry > summary { min-height: 44px; }
+.first-correction-page [data-correction-instructions] > summary:focus-visible,
+.first-correction-page .first-correction-retry > summary:focus-visible { outline: 3px solid #82d4a6; outline-offset: 3px; }
 .onboarding-card > .onboarding-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .onboarding-success { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; border-color: rgba(var(--accent-rgb), .3); }
 .onboarding-success h2 { font-size: 16px; margin: 0 0 6px; }

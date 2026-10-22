@@ -1,0 +1,264 @@
+{
+  "checks": [
+    {
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "direct-job-link",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "exact-job-detail",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "direct-job-link",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "exact-job-detail",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "direct-job-link",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "exact-job-detail",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "direct-job-link",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "exact-job-detail",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "direct-job-link",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "exact-job-detail",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "direct-job-link",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "exact-job-detail",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "direct-job-link",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "exact-job-detail",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "direct-job-link",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "exact-job-detail",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "direct-link-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "direct-link-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-resume",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-resume",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-resume",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-resume",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-resume",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-resume",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-resume",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "inconclusive-resume",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "notes": [
+    "Comptes et rapports locaux fictifs ; contrôles du périmètre ancien inconnu conservés.",
+    "Les deux POST de préparation ne concernent que la base temporaire avant ouverture du navigateur. Aucun POST navigateur ni site distant.",
+    "Accès direct au suivi avec et sans JavaScript ; panneaux ouverts/fermés au clavier."
+  ],
+  "code_revision": "e87f884dca6c853bc73aec21ec4c8147c7e10a34"
+}

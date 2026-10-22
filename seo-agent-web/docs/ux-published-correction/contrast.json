@@ -1,0 +1,511 @@
+{
+  "samples": [
+    {
+      "text": "Faites vérifier le résultat",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "Revoir les instructions de cette correction",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 44,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "Have the result verified",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "Review the instructions for this fix",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 44,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "Faites vérifier le résultat",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "Revoir les instructions de cette correction",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 44,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "Have the result verified",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "Review the instructions for this fix",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 44,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "Faites vérifier le résultat",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "Revoir les instructions de cette correction",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 44,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "Have the result verified",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "Review the instructions for this fix",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 44,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "Faites vérifier le résultat",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "Revoir les instructions de cette correction",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 44,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "Have the result verified",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "text": "Review the instructions for this fix",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 44,
+      "screen": "waiting-instructions-keyboard",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "text": "Le contrôle n’a pas pu confirmer le résultat.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "Le périmètre complet de cet ancien correctif est inconnu.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 26.390625,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "Voir le bilan du contrôle",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "Choisir une autre correction",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "Relancer la vérification",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "The check could not confirm the result.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "The full scope of this older fix is unknown.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 26.390625,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "View the check's report",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "Choose another fix",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "Run the verification again",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "Le contrôle n’a pas pu confirmer le résultat.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "Le périmètre complet de cet ancien correctif est inconnu.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 26.390625,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "Voir le bilan du contrôle",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "Choisir une autre correction",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "Relancer la vérification",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "The check could not confirm the result.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 28.5,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "The full scope of this older fix is unknown.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 26.390625,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "View the check's report",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "Choose another fix",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "Run the verification again",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "Le contrôle n’a pas pu confirmer le résultat.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 57,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "Le périmètre complet de cet ancien correctif est inconnu.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 52.78125,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "Voir le bilan du contrôle",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "Choisir une autre correction",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "Relancer la vérification",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "The check could not confirm the result.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 57,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "The full scope of this older fix is unknown.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 52.78125,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "View the check's report",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "Choose another fix",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "Run the verification again",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "Le contrôle n’a pas pu confirmer le résultat.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 57,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "Le périmètre complet de cet ancien correctif est inconnu.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 52.78125,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "Voir le bilan du contrôle",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "Choisir une autre correction",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "Relancer la vérification",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "The check could not confirm the result.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 57,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "text": "The full scope of this older fix is unknown.",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 52.78125,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "text": "View the check's report",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "text": "Choose another fix",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "text": "Run the verification again",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "inconclusive-control-keyboard",
+      "lang": "en",
+      "width": 360
+    }
+  ],
+  "minimum_text_ratio": 6.820327051239553,
+  "scope": "Composants retouchés, fonds calculés ; pas un audit WCAG complet.",
+  "code_revision": "e87f884dca6c853bc73aec21ec4c8147c7e10a34"
+}

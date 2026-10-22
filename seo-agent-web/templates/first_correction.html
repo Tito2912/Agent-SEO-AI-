@@ -1,25 +1,41 @@
 {% extends "layout.html" %}
 {% from "_correction_progress.html" import steps %}
 {% block title %}{{ tr("Correction guidée") }} - {{ project.site_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/first_correction.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/first_correction.css?v=2" /><link rel="stylesheet" href="/static/cms.css?v=2" />{% endblock %}
 {% block crumbs %}
   <a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span>
   <a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span>
   <span class="crumb-current">{{ tr("Correction guidée") }}</span>
 {% endblock %}
+{% macro request_control() %}
+  <form method="post" action="/projects/{{ slug }}/crawl">
+    <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+    <button class="btn primary" type="submit">{{ tr("Lancer la vérification") }}</button>
+  </form>
+  <p class="muted small">{{ tr("Ce contrôle lance une nouvelle analyse, décomptée de votre quota habituel de pages.") }}</p>
+{% endmacro %}
 {% macro check_control() %}
       <section class="card first-correction-control" id="verification">
-        <h2>{{ tr("Faites vérifier le résultat") }}</h2>
-        <p class="muted">{{ tr("Noyaru doit revisiter la page et confirmer que le problème a disparu.") }}</p>
+        {% if state.verify.result == 'unverified' and not live_job %}
+          <h2>{{ tr("Le contrôle n’a pas pu confirmer le résultat.") }}</h2>
+          <p role="status">{{ tr(state.verify.reason or "Consultez le bilan du contrôle avant de poursuivre.") }}</p>
+          <p class="result-actions">
+            <a class="btn primary" href="/projects/{{ slug }}{% if state.verify.crawl_ts %}?crawl={{ state.verify.crawl_ts|urlencode }}{% endif %}">{{ tr("Voir le bilan du contrôle") }}</a>
+            <a class="btn" href="/projects/{{ slug }}/first-correction?choose=1">{{ tr("Choisir une autre correction") }}</a>
+          </p>
+          <details class="screen-options first-correction-retry">
+            <summary>{{ tr("Relancer la vérification") }}</summary>
+            {{ request_control() }}
+          </details>
+        {% else %}
+          <h2>{{ tr("Faites vérifier le résultat") }}</h2>
+          <p class="muted">{{ tr("Noyaru doit revisiter la page et confirmer que le problème a disparu.") }}</p>
         {% if live_job %}
           <p role="status">{{ tr("Une analyse est en cours. Le résultat apparaîtra une fois le contrôle terminé.") }}</p>
           <a class="btn primary" href="/projects/{{ slug }}?job={{ live_job.id }}">{{ tr("Voir la progression") }}</a>
         {% else %}
-          <form method="post" action="/projects/{{ slug }}/crawl">
-            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-            <button class="btn primary" type="submit">{{ tr("Lancer la vérification") }}</button>
-          </form>
-          <p class="muted small">{{ tr("Ce contrôle lance une nouvelle analyse, décomptée de votre quota habituel de pages.") }}</p>
+          {{ request_control() }}
+        {% endif %}
         {% endif %}
       </section>
 {% endmacro %}
@@ -120,6 +136,11 @@
     </section>
   {% else %}
     {% if state.declared and state.verify.result != 'still_present' %}{{ check_control() }}{% endif %}
+    {% set waiting_for_control = state.declared and not state.verify %}
+    {% if waiting_for_control %}
+    <details class="screen-options" data-correction-instructions>
+      <summary>{{ tr("Revoir les instructions de cette correction") }}</summary>
+    {% endif %}
     <section class="card">
       <h2>{{ tr(state.label) }}</h2>
       <p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>
@@ -140,8 +161,6 @@
       {% if state.pr_url %}<p><a href="{{ state.pr_url }}" target="_blank" rel="noreferrer">{{ tr("Voir la proposition GitHub") }}</a> · {{ tr("La modification doit être publiée sur votre site avant le contrôle.") }}</p>{% endif %}
       {% if state.verify.result == 'still_present' %}
         <div class="alert warning" role="status">{{ tr("Le problème est encore présent. Reprenez les instructions et vérifiez que la modification a bien été publiée.") }}</div>
-      {% elif state.verify.result == 'unverified' %}
-        <div class="alert warning" role="status">{{ tr("Le contrôle n’a pas pu confirmer le résultat.") }} {{ tr(state.verify.reason) }}</div>
       {% endif %}
       {% if not state.declared or state.verify %}
         <form method="post" action="/projects/{{ slug }}/first-correction">
@@ -149,11 +168,12 @@
           <input type="hidden" name="action" value="ready" />
           <input type="hidden" name="task_id" value="{{ state.task_id }}" />
           <p class="muted small">{{ tr("Signalez la modification une fois qu’elle est visible sur votre site. Noyaru la vérifiera lors d’une nouvelle analyse.") }}</p>
-          <button class="btn primary" type="submit">{% if state.verify %}{{ tr("J’ai à nouveau modifié cette page") }}{% else %}{{ tr("J’ai modifié cette page") }}{% endif %}</button>
+          <button class="btn{% if state.verify.result != 'unverified' %} primary{% endif %}" type="submit">{% if state.verify %}{{ tr("J’ai à nouveau modifié cette page") }}{% else %}{{ tr("J’ai modifié cette page") }}{% endif %}</button>
         </form>
       {% endif %}
       {% if wordpress_editor %}</details>{% endif %}
     </section>
+    {% if waiting_for_control %}</details>{% endif %}
     {% if state.declared and state.verify.result == 'still_present' %}{{ check_control() }}{% endif %}
   {% endif %}
 </div>

@@ -1,7 +1,7 @@
 """Create a personal site and use the existing, billed crawl entry point."""
 from __future__ import annotations
 
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
@@ -80,6 +80,12 @@ def resume(selected, state, live, last_job, has_crawl, clean):
         if (state.get("verify") or {}).get("result") == "still_present":
             result.update(title="La correction reste à ajuster",
                           detail="Le dernier contrôle retrouve encore ce problème. Reprenez la modification avant de la faire vérifier.")
+        elif (state.get("verify") or {}).get("result") == "unverified":
+            verification = (base + "/cms/wordpress/changes/" + quote(str(state["cms_change_id"]), safe="")
+                            if state.get("cms_change_id") else base + "/first-correction")
+            result.update(title="Le contrôle n’a pas pu confirmer le résultat.", label="Comprendre le contrôle",
+                          href=verification + "#verification",
+                          detail=state["verify"].get("reason") or "Consultez le bilan du contrôle avant de poursuivre.")
         elif state.get("declared"):
             result.update(title="Votre modification attend son contrôle",
                           detail="La modification est déclarée. Une nouvelle analyse doit confirmer que le problème a disparu.")
