@@ -15,8 +15,9 @@ const noyaruT = window.noyaruT || ((text) => text);
   const badge = document.getElementById('gh-repo-badge');
   const consent = document.getElementById('gh-auto-confirm');
   let mode = 'review', busy = false, known = false, uncertain = false, touched = false;
-  repo.addEventListener('input', () => { touched = true; });
-  branch.addEventListener('input', () => { touched = true; });
+  function changeTarget() { touched = true; consent.checked = false; }
+  repo.addEventListener('input', changeTarget);
+  branch.addEventListener('input', changeTarget);
   const read = window.noyaruSettingsJson;
   function chooseMode(value) {
     mode = value === 'auto' ? 'auto' : 'review';
@@ -80,7 +81,7 @@ const noyaruT = window.noyaruT || ((text) => text);
       if (!data.ok) { feedback.textContent = data.error || noyaruT('Les dépôts ne sont pas disponibles.'); return; }
       (data.repos || []).forEach(item => {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'btn'; button.textContent = item.full_name + (item.private ? ' · ' + noyaruT('privé') : '');
-        button.addEventListener('click', () => { repo.value = item.full_name; branch.value = item.default_branch || 'main'; touched = true; list.style.display = 'none'; repo.focus(); }); list.append(button);
+        button.addEventListener('click', () => { repo.value = item.full_name; branch.value = item.default_branch || 'main'; changeTarget(); list.style.display = 'none'; repo.focus(); }); list.append(button);
       });
       feedback.textContent = data.repos?.length ? noyaruT('Choisissez le dépôt de ce site.') : noyaruT('Aucun dépôt accessible avec cette connexion.');
       list.style.display = 'grid';

@@ -1,0 +1,14 @@
+/* The same explicit agreement stays readable and keyboard accessible on every entry. */
+label.automation-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+  cursor: pointer;
+}
+.automation-consent > input[type=checkbox] { flex: 0 0 auto; width: 20px; height: 20px; }
+.automation-consent[hidden] { display: none; }
+.automation-consent:focus-within { outline: 3px solid var(--accent-2); outline-offset: 3px; }

@@ -1,0 +1,223 @@
+{
+  "samples": [
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 13.268748784541696,
+      "gradient": false,
+      "height": 52.140625,
+      "screen": "settings",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des ",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "content",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 52.140625,
+      "screen": "corrections",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "text": "I understand these risks and I allow fixes to be merged automatically on this repository.",
+      "ratio": 13.268748784541696,
+      "gradient": false,
+      "height": 52.140625,
+      "screen": "settings",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "I understand: articles will be published without human review and may contain errors; I re",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "content",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "I understand these risks and I allow fixes to be merged automatically on this repository.",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 52.140625,
+      "screen": "corrections",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 13.268748784541696,
+      "gradient": false,
+      "height": 52.140625,
+      "screen": "settings",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des ",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "content",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 52.140625,
+      "screen": "corrections",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "text": "I understand these risks and I allow fixes to be merged automatically on this repository.",
+      "ratio": 13.268748784541696,
+      "gradient": false,
+      "height": 52.140625,
+      "screen": "settings",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "I understand: articles will be published without human review and may contain errors; I re",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 44,
+      "screen": "content",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "I understand these risks and I allow fixes to be merged automatically on this repository.",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 52.140625,
+      "screen": "corrections",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 13.268748784541696,
+      "gradient": false,
+      "height": 72.28125,
+      "screen": "settings",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des ",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 80.5625,
+      "screen": "content",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 92.421875,
+      "screen": "corrections",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "text": "I understand these risks and I allow fixes to be merged automatically on this repository.",
+      "ratio": 13.268748784541696,
+      "gradient": false,
+      "height": 72.28125,
+      "screen": "settings",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "I understand: articles will be published without human review and may contain errors; I re",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 100.703125,
+      "screen": "content",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "I understand these risks and I allow fixes to be merged automatically on this repository.",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 72.28125,
+      "screen": "corrections",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 13.268748784541696,
+      "gradient": false,
+      "height": 92.421875,
+      "screen": "settings",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des ",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 100.703125,
+      "screen": "content",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "J’ai compris ces risques et j’autorise la fusion automatique des corrections sur ce dépôt.",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 92.421875,
+      "screen": "corrections",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "text": "I understand these risks and I allow fixes to be merged automatically on this repository.",
+      "ratio": 13.268748784541696,
+      "gradient": false,
+      "height": 92.421875,
+      "screen": "settings",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "text": "I understand: articles will be published without human review and may contain errors; I re",
+      "ratio": 15.887601249326433,
+      "gradient": false,
+      "height": 100.703125,
+      "screen": "content",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "text": "I understand these risks and I allow fixes to be merged automatically on this repository.",
+      "ratio": 16.402787571073237,
+      "gradient": false,
+      "height": 92.421875,
+      "screen": "corrections",
+      "lang": "en",
+      "width": 360
+    }
+  ],
+  "minimum_text_ratio": 13.268748784541696,
+  "scope": "Libellés d’accord, fonds composés ; pas un audit WCAG intégral.",
+  "source_revision": "6fd9b2effc3084f7b8c8eba2356e804e82ef772e"
+}

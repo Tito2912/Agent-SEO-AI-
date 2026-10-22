@@ -1,0 +1,13 @@
+{
+  "source_revision": "d3697d26be889cf5877ec0aaec74bc6a50cfa3ff",
+  "expected_failing_tests": 6,
+  "cases": [
+    "autre dépôt sans accord accepté",
+    "autre branche sans accord acceptée",
+    "panne du journal : activation annoncée réussie",
+    "panne du journal : retrait annoncé réussi",
+    "panne du journal : déconnexion annoncée réussie",
+    "panne du journal : nouvelle cible annoncée réussie"
+  ],
+  "scope": "Tests locaux avant modification ; fournisseur et comptes fictifs ; aucune écriture distante."
+}
