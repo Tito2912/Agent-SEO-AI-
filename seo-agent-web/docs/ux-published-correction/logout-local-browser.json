@@ -1,0 +1,35 @@
+{
+  "checks": [
+    {
+      "screen": "logout-and-protected-return",
+      "lang": "fr",
+      "width": 1440,
+      "status": "passed",
+      "scope": "local-only"
+    },
+    {
+      "screen": "logout-and-protected-return",
+      "lang": "en",
+      "width": 1440,
+      "status": "passed",
+      "scope": "local-only"
+    },
+    {
+      "screen": "logout-and-protected-return",
+      "lang": "fr",
+      "width": 360,
+      "status": "passed",
+      "scope": "local-only"
+    },
+    {
+      "screen": "logout-and-protected-return",
+      "lang": "en",
+      "width": 360,
+      "status": "passed",
+      "scope": "local-only"
+    }
+  ],
+  "errors": [],
+  "external": [],
+  "source_revision": "608a611bb7179a4b4bc7cbb6cddad66badf7ae51"
+}
