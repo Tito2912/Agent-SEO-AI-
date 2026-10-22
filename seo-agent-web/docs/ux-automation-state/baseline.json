@@ -1,0 +1,27 @@
+{
+  "source_revision": "6a59cc77e0d2eea2e054e9045dc816e7a495e758",
+  "checks": [
+    {
+      "screen": "stale-content-state",
+      "actual_saved_enabled": false,
+      "summary": "Rédaction automatique · activée",
+      "heading": "Mode automatique\nallumé",
+      "message": "Mode automatique éteint.",
+      "mutation_still_enabled": true
+    },
+    {
+      "screen": "lost-content-response",
+      "actual_saved_enabled": false,
+      "summary": "Rédaction automatique · activée",
+      "heading": "Mode automatique\nallumé",
+      "message": "Erreur réseau.",
+      "mutation_still_enabled": true
+    },
+    {
+      "screen": "github-503",
+      "actual_saved_mode": "auto",
+      "mutation_still_enabled": true
+    }
+  ],
+  "scope": "Comptes et GitHub fictifs ; vrais endpoints locaux ; coupure après enregistrement simulée par le pilote."
+}
