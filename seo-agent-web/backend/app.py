@@ -45,7 +45,7 @@ from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlsplit, urluns
 import requests
 import yaml
 from sqlalchemy import func, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 try:
     from bs4 import BeautifulSoup  # type: ignore
 except Exception:
@@ -19493,12 +19493,62 @@ class _GithubConnectBody(BaseModel):
     consent: bool = False
 
 
-def _journaliser_mode_auto(request: Request, action: str, slug: str, meta: dict[str, Any]) -> None:
+@contextmanager
+def _automation_settings_transaction(project_id: str):
+    """Re-read the project under a short write lock; no provider calls run here."""
+    with DB.session() as db:
+        if db.bind.dialect.name == "sqlite":
+            db.connection().exec_driver_sql("BEGIN IMMEDIATE")
+        project = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
+        if project is None:
+            raise HTTPException(status_code=404, detail="Projet introuvable.")
+        yield db, project
+        db.commit()
+
+
+def _journaliser_mode_auto(request: Request, action: str, slug: str, meta: dict[str, Any], *, db, project) -> None:
     """Garde la preuve qu'un client a activé ou retiré une fusion ou une publication automatique,
     et la version de l'avertissement qu'il a vu. En cas de litige, c'est au prestataire de prouver
     qu'il a mis son client en garde (CGU, articles 6 et 7)."""
-    _audit_log(request, action=action, target_type="project", target_id=slug,
-               meta={**meta, "warning_version": legal.AUTO_MODE_WARNING_VERSION, "lang": i18n.current_lang()})
+    actor = request.state.user
+    db.add(AuditLog(
+        actor_user_id=str(actor.id), actor_email=str(actor.email or "").strip().lower() or None,
+        action=action, status="ok", target_type="project", target_id=slug,
+        ip_address=_request_client_ip(request) or None,
+        user_agent=str(request.headers.get("user-agent") or "").strip()[:512] or None,
+        meta={**meta, "project_id": str(project.id), "owner_user_id": str(project.owner_user_id),
+              "warning_version": legal.AUTO_MODE_WARNING_VERSION, "lang": i18n.current_lang()},
+    ))
+
+
+def _save_github_settings(request: Request, proj: Project, *, repo="", branch="main", mode="review", consent=False, disconnect=False, html_url=""):
+    try:
+        with _automation_settings_transaction(proj.id) as (db, project):
+            previous = _project_github_cfg(project)
+            settings = dict(project.settings) if isinstance(project.settings, dict) else {}
+            target_changed = previous["repo"].casefold() != repo.casefold() or previous["branch"] != branch
+            if not disconnect and mode == "auto" and (previous["mode"] != "auto" or target_changed) and not consent:
+                return JSONResponse({"ok": False, "error": "Confirmez que vous autorisez la fusion automatique des corrections sur ce dépôt."}, status_code=400)
+            if disconnect:
+                for key in ("github_repo", "github_branch", "github_mode"):
+                    settings.pop(key, None)
+            else:
+                settings.update(github_repo=repo, github_branch=branch, github_mode=mode)
+            project.settings = settings
+            changed = (previous["mode"] == "auto" if disconnect else
+                       mode != previous["mode"] or target_changed and "auto" in {mode, previous["mode"]})
+            if changed:
+                _journaliser_mode_auto(request, "automation.github_mode", proj.slug, {
+                    "mode": "disconnected" if disconnect else mode, "previous": previous["mode"],
+                    "repo": previous["repo"] if disconnect else repo, "previous_repo": previous["repo"],
+                    "branch": previous["branch"] if disconnect else branch, "previous_branch": previous["branch"],
+                    "consent": bool(consent),
+                }, db=db, project=project)
+    except SQLAlchemyError as exc:
+        logger.error("[automation] GitHub settings not confirmed: %s", type(exc).__name__)
+        return JSONResponse({"ok": False, "error": "La réponse n’a pas pu être confirmée. Actualisez l’état avant de recommencer."}, status_code=503)
+    return JSONResponse({"ok": True, **({"connected": False, "repo": "", "mode": "review"} if disconnect else
+                                       {"repo": repo, "branch": branch, "mode": mode, "html_url": html_url})})
 
 
 class _GithubFixBody(BaseModel):
@@ -19515,19 +19565,7 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
     user = getattr(request.state, "user", None)
     if body.disconnect:
         # An explicit detach does not revoke the account token or touch the remote repository.
-        with DB.session() as db:
-            row = db.get(type(proj), proj.id)
-            if row is None:
-                raise HTTPException(status_code=404, detail="Projet introuvable.")
-            settings = dict(row.settings) if isinstance(row.settings, dict) else {}
-            previous_mode = str(settings.get("github_mode") or "review")
-            for key in ("github_repo", "github_branch", "github_mode"):
-                settings.pop(key, None)
-            row.settings = settings
-            db.commit()
-        if previous_mode == "auto":
-            _journaliser_mode_auto(request, "automation.github_mode", slug, {"mode": "disconnected", "previous": "auto"})
-        return JSONResponse({"ok": True, "connected": False, "repo": "", "mode": "review"})
+        return _save_github_settings(request, proj, disconnect=True)
     token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté. Connectez-le dans « Mon compte → Connexions »."}, status_code=400)
@@ -19545,25 +19583,11 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
     if not perms.get("push"):
         return JSONResponse({"ok": False, "error": "Votre jeton GitHub n’a pas les droits d’écriture sur ce dépôt. Utilisez un jeton avec la portée « repo »."}, status_code=400)
     mode = body.mode if body.mode in ("review", "auto") else "review"
-    previous_mode = str((proj.settings or {}).get("github_mode") or "review") if isinstance(proj.settings, dict) else "review"
-    if mode == "auto" and previous_mode != "auto" and not body.consent:
-        return JSONResponse({"ok": False, "error": "Confirmez que vous autorisez la fusion automatique des corrections sur ce dépôt."}, status_code=400)
     branch = (body.branch or repo_info.get("default_branch") or "main").strip()
     if not _github_branch_allowed(branch):
         return JSONResponse({"ok": False, "error": "Branche GitHub invalide."}, status_code=400)
-    settings = dict(proj.settings) if isinstance(proj.settings, dict) else {}
-    settings["github_repo"] = repo
-    settings["github_branch"] = branch
-    settings["github_mode"] = mode
-    with DB.session() as db:
-        p = db.get(type(proj), proj.id)
-        if p:
-            p.settings = settings
-            db.commit()
-    if mode != previous_mode:
-        _journaliser_mode_auto(request, "automation.github_mode", slug,
-                               {"mode": mode, "previous": previous_mode, "repo": repo, "consent": bool(body.consent)})
-    return JSONResponse({"ok": True, "repo": repo, "branch": branch, "mode": mode, "html_url": str(repo_info.get("html_url") or "")})
+    return _save_github_settings(request, proj, repo=repo, branch=branch, mode=mode, consent=body.consent,
+                                 html_url=str(repo_info.get("html_url") or ""))
 
 
 @app.get("/api/projects/{slug}/github/status")
@@ -35737,40 +35761,43 @@ def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBod
             "relira l'adresse avant publication : nous ne la devinons pas."
         )}, status_code=400)
 
-    with DB.session() as db:
-        p = db.get(Project, proj.id)
-        if p is None:
-            return JSONResponse({"ok": False, "error": "Projet introuvable."}, status_code=404)
-        reglages = dict(p.settings or {})
-        avant = _reglages_contenu_auto(reglages)
-        devient_auto = bool(body.enabled) and body.publication == "auto"
-        etait_auto = bool(avant["enabled"]) and avant["publication"] == "auto"
-        if devient_auto and not etait_auto and not body.consent:
-            return JSONResponse({"ok": False, "error": (
-                "Confirmez que vous acceptez la publication automatique : les articles seront "
-                "publiés sans relecture humaine."
-            )}, status_code=400)
-        reglages["content_auto"] = {
-            "enabled": bool(body.enabled),
-            "section": section if section != "/" else "",
-            # La derniere date SURVIT a une extinction : rallumer ne doit pas offrir une page
-            # de plus dans la meme semaine.
-            "last_run": _reglages_contenu_auto(reglages)["last_run"],
-            # A partir de MAINTENANT : un creneau deja passe aujourd'hui ne part pas a
-            # l'enregistrement.
-            "depuis": time.time(),
-            "taille": style["taille"], "ton": style["ton"],
-            "langues": [str(x).strip().lower() for x in body.langues][:10],
-            "frequence": body.frequence, "jour": int(body.jour), "heure": int(body.heure),
-            "fuseau": body.fuseau, "publication": body.publication,
-        }
-        p.settings = reglages
-        db.commit()
-        auto = _reglages_contenu_auto(reglages)
-    if devient_auto != etait_auto:
-        _journaliser_mode_auto(request, "automation.content_publication", slug, {
-            "publication": "auto" if devient_auto else "verification", "enabled": bool(body.enabled),
-            "section": section if section != "/" else "", "consent": bool(body.consent)})
+    try:
+        with _automation_settings_transaction(proj.id) as (db, p):
+            reglages = dict(p.settings or {})
+            avant = _reglages_contenu_auto(reglages)
+            devient_auto = bool(body.enabled) and body.publication == "auto"
+            etait_auto = bool(avant["enabled"]) and avant["publication"] == "auto"
+            target_changed = section != avant["section"]
+            if devient_auto and (not etait_auto or target_changed) and not body.consent:
+                return JSONResponse({"ok": False, "error": (
+                    "Confirmez que vous acceptez la publication automatique : les articles seront "
+                    "publiés sans relecture humaine."
+                )}, status_code=400)
+            reglages["content_auto"] = {
+                "enabled": bool(body.enabled),
+                "section": section if section != "/" else "",
+                # La derniere date SURVIT a une extinction : rallumer ne doit pas offrir une page
+                # de plus dans la meme semaine.
+                "last_run": avant["last_run"],
+                # A partir de MAINTENANT : un creneau deja passe aujourd'hui ne part pas a
+                # l'enregistrement.
+                "depuis": time.time(),
+                "taille": style["taille"], "ton": style["ton"],
+                "langues": [str(x).strip().lower() for x in body.langues][:10],
+                "frequence": body.frequence, "jour": int(body.jour), "heure": int(body.heure),
+                "fuseau": body.fuseau, "publication": body.publication,
+            }
+            p.settings = reglages
+            auto = _reglages_contenu_auto(reglages)
+            if devient_auto != etait_auto or devient_auto and target_changed:
+                _journaliser_mode_auto(request, "automation.content_publication", slug, {
+                    "publication": "auto" if devient_auto else "verification", "enabled": bool(body.enabled),
+                    "section": section if section != "/" else "", "previous_section": avant["section"],
+                    "consent": bool(body.consent),
+                }, db=db, project=p)
+    except SQLAlchemyError as exc:
+        logger.error("[automation] Content settings not confirmed: %s", type(exc).__name__)
+        return JSONResponse({"ok": False, "error": "La réponse n’a pas pu être confirmée. Actualisez l’état avant de recommencer."}, status_code=503)
     logger.info("[contenu-auto] %s : %s section=%s %s %s %02dh %s", slug,
                 "allumé" if body.enabled else "éteint", section, body.frequence,
                 _JOURS_AUTO[auto["jour"]], auto["heure"], body.publication)

@@ -965,9 +965,16 @@
       var autoSection = document.getElementById('c-auto-section');
       var autoSave = document.getElementById('c-auto-save');
       var autoStatus = document.getElementById('c-auto-status');
+      function resetAutoConsent() {
+        var consent = document.getElementById('c-auto-consent');
+        if (consent) consent.checked = false;
+      }
+      if (autoSection) autoSection.addEventListener('input', resetAutoConsent);
+      if (autoBox) autoBox.addEventListener('change', resetAutoConsent);
       /* Le mode automatique ecrit par pull request : sans depot, sa carte n'est pas rendue. */
       document.querySelectorAll('input[name="c-auto-publication"]').forEach(function (radio) {
         radio.addEventListener('change', function () {
+          resetAutoConsent();
           var wrap = document.getElementById('c-auto-consent-wrap');
           if (wrap) wrap.hidden = radio.value !== 'auto' || !radio.checked;
         });
