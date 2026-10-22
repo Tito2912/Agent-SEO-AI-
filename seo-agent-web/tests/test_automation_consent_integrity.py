@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import copy
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 
 import pytest
 from sqlalchemy import event, select
 from sqlalchemy.exc import OperationalError
 
 from backend import app as m, legal
-from backend.models import AccountMember, AuditLog, Project
+from backend.models import AccountMember, AuditLog, Project, User
 from test_customer_activation import client, user
 from test_les_modes_automatiques_sont_prouves import (
     _auto, client_connecte as client_connecte, connect, depot as depot,
@@ -184,3 +187,48 @@ def test_member_consent_keeps_the_actor_and_the_project_owner_distinct(depot, la
     assert stranger.post(path, json={"repo": "atelier/site", "mode": "auto", "consent": True},
                          headers={m._CSRF_HEADER_NAME: stranger.cookies.get(m._CSRF_COOKIE_NAME)}).status_code == 404
     assert len(receipts(depot["slug"])) == 1
+
+
+@pytest.mark.parametrize("channel", ["github", "content"])
+def test_concurrent_identical_activations_keep_a_single_receipt(depot, plan, monkeypatch, channel):
+    assert connect(depot, mode="review").status_code == 200
+    with m.DB.session() as db:
+        owner = db.get(User, db.get(Project, depot["project_id"]).owner_user_id)
+    browsers = [client(owner), client(owner)]
+    for browser in browsers:
+        browser.get("/settings/accounts")
+    before = len(receipts(depot["slug"]))
+    barrier = threading.Barrier(2)
+    transaction = m._automation_settings_transaction
+
+    @contextmanager
+    def simultaneous(project_id):
+        barrier.wait(timeout=10)
+        with transaction(project_id) as value:
+            yield value
+
+    monkeypatch.setattr(m, "_automation_settings_transaction", simultaneous)
+
+    def activate(browser):
+        if channel == "github":
+            return connect({**depot, "client": browser}, mode="auto", consent=True)
+        return _auto._regler(browser, depot["slug"], enabled=True, section="/blog", publication="auto", consent=True)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(activate, browsers))
+    assert [response.status_code for response in responses] == [200, 200]
+    assert len(receipts(depot["slug"])) == before + 1
+    saved = settings(depot["project_id"])
+    assert (saved["github_mode"] if channel == "github" else saved["content_auto"]["publication"]) == "auto"
+
+
+def test_a_project_deleted_during_provider_read_cannot_report_success(depot, monkeypatch):
+    def provider(*args, **kwargs):
+        with m.DB.session() as db:
+            db.delete(db.get(Project, depot["project_id"]))
+            db.commit()
+        return {"permissions": {"push": True}, "default_branch": "main"}
+
+    monkeypatch.setattr(m, "_github_api_get", provider)
+    assert connect(depot, mode="auto", consent=True).status_code == 404
+    assert receipts(depot["slug"]) == []
