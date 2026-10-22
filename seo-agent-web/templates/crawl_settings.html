@@ -878,9 +878,10 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
         <div>
           <label for="gh-repo-input" style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">{{ tr("Dépôt (owner/repo)") }}</label>
           <div style="display:flex;gap:8px;">
-            <input id="gh-repo-input" type="text" placeholder="{{ tr('ex: moncompte/mon-site') }}" style="flex:1;font-size:13px;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:inherit;" />
-            <button type="button" id="gh-pick-repo-btn" class="btn" style="font-size:12px;white-space:nowrap;">{{ tr("Mes dépôts") }}</button>
+            <input id="gh-repo-input" type="text" aria-describedby="gh-repo-help" placeholder="{{ tr('ex: moncompte/mon-site') }}" style="flex:1;font-size:13px;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:inherit;" />
+            <button type="button" id="gh-pick-repo-btn" class="btn" style="font-size:12px;white-space:nowrap;">{{ tr("Choisir un dépôt") }}</button>
           </div>
+          <p class="muted small" id="gh-repo-help">{{ tr("Les dépôts proposés viennent de la connexion GitHub du compte qui gère ce site.") }}</p>
           <div id="gh-repo-list" style="display:none;margin-top:6px;border:1px solid var(--border);border-radius:5px;max-height:180px;overflow-y:auto;background:var(--bg-card);"></div>
         </div>
 
@@ -915,5 +916,5 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
     </div>
   </details>
 
-  <script src="/static/analysis-github.js?v=1" defer></script>
+  <script src="/static/analysis-github.js?v=2" defer></script>
 {% endblock %}
