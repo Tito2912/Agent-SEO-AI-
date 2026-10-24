@@ -3209,5 +3209,10 @@
   "JavaScript est nécessaire pour modifier ces réglages. Leur état enregistré reste consultable.": "JavaScript is needed to change these settings. You can still view their saved state.",
   "Contacter l’assistance": "Contact support",
   "Préparation à vérifier": "Preparation needs checking",
-  "Une préparation précédente doit être vérifiée avant de continuer. Consultez le suivi ou contactez l’assistance.": "A previous preparation needs to be checked before you continue. View the progress or contact support."
+  "Une préparation précédente doit être vérifiée avant de continuer. Consultez le suivi ou contactez l’assistance.": "A previous preparation needs to be checked before you continue. View the progress or contact support.",
+  "Aucun aperçu à proposer": "No preview to propose",
+  "La préparation s’est arrêtée. Choisissez une action ci-dessous pour continuer.": "Preparation stopped. Choose an action below to continue.",
+  "Vérifier le dépôt du projet": "Check the project's repository",
+  "Noyaru ne peut pas identifier avec certitude le fichier de cette page dans le dépôt. Vérifiez le dépôt du projet avant de poursuivre. Aucune correction IA n’a été décomptée.": "Noyaru cannot identify this page's source file with certainty in the repository. Check the project's repository before continuing. No AI correction has been deducted.",
+  "Aucune modification n’a été proposée pour le fichier de cette page. Le problème reste à vérifier. Aucune correction IA n’a été décomptée.": "No change was proposed for this page's source file. The issue still needs checking. No AI correction has been deducted."
 }
