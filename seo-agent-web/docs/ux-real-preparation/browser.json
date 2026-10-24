@@ -1,0 +1,310 @@
+{
+  "checks": [
+    {
+      "screen": "guided-choice",
+      "state": "expected-redirect-excluded-loop-preserved",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "single",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "deep",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "bulk",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "guided-choice",
+      "state": "expected-redirect-excluded-loop-preserved",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "single",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "deep",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "bulk",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "guided-choice",
+      "state": "expected-redirect-excluded-loop-preserved",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "single",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "deep",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "bulk",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "guided-choice",
+      "state": "expected-redirect-excluded-loop-preserved",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "single",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "deep",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "bulk",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "guided-choice",
+      "state": "expected-redirect-excluded-loop-preserved",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "single",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "deep",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "bulk",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "guided-choice",
+      "state": "expected-redirect-excluded-loop-preserved",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "single",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "deep",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "bulk",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "guided-choice",
+      "state": "expected-redirect-excluded-loop-preserved",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "single",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "deep",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "bulk",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "fr",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "guided-choice",
+      "state": "expected-redirect-excluded-loop-preserved",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "single",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "deep",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "kind": "bulk",
+      "state": "recovery-refusal-blocks-resend-and-offers-help",
+      "lang": "en",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "known-validation-refusal-still-editable",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "screen": "correction-review",
+      "state": "confirmation-refusal-keeps-preview-and-blocks-resend",
+      "lang": "fr",
+      "width": 360,
+      "posts": 2
+    },
+    {
+      "screen": "correction-review",
+      "state": "connection-link-opens-exact-project-panel",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "screen": "guided-choice",
+      "state": "server-filter-without-javascript",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "screen": "guided-choice",
+      "state": "server-filter-without-javascript",
+      "lang": "en",
+      "width": 360
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "scope": "Local fictitious accounts and reports; production-shaped responses simulated in Chromium, no providers or real writes."
+}

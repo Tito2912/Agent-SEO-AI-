@@ -49,6 +49,26 @@ def web_url(value):
         return ""
 
 
+def candidate_urls(issue_key, urls, report):
+    """Expected redirects stay in diagnostics, outside the guided correction choice.
+
+    Only unambiguous crawler evidence excludes an exact URL. Missing, legacy or conflicting
+    evidence keeps the manual choice available; a healthy redirect is never inferred from its URL.
+    """
+    if issue_key != "redirect_3xx":
+        return urls
+    block = (report.get("issues") or {}).get(issue_key)
+    evidence = block.get("evidence") if isinstance(block, dict) else None
+    if not isinstance(evidence, dict) or evidence.get("kind") != "page_values":
+        return urls
+    items = evidence.get("items")
+    fields = {}
+    for item in items if isinstance(items, list) else []:
+        if isinstance(item, dict) and isinstance(item.get("page"), str):
+            fields.setdefault(item["page"], set()).add(str(item.get("field") or ""))
+    return [url for url in urls if fields.get(url) != {"canonicalisation attendue"}]
+
+
 def progress(tasks, *, prefer_selection=False):
     """A declared correction is distinct from a newer crawl confirming its resolution."""
     states = []

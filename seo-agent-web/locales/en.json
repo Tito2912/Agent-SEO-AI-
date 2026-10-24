@@ -3206,5 +3206,8 @@
   "Modifications non enregistrées.": "Unsaved changes.",
   "État actualisé.": "Status refreshed.",
   "État actualisé. Vos modifications restent à enregistrer.": "Status refreshed. Your changes still need to be saved.",
-  "JavaScript est nécessaire pour modifier ces réglages. Leur état enregistré reste consultable.": "JavaScript is needed to change these settings. You can still view their saved state."
+  "JavaScript est nécessaire pour modifier ces réglages. Leur état enregistré reste consultable.": "JavaScript is needed to change these settings. You can still view their saved state.",
+  "Contacter l’assistance": "Contact support",
+  "Préparation à vérifier": "Preparation needs checking",
+  "Une préparation précédente doit être vérifiée avant de continuer. Consultez le suivi ou contactez l’assistance.": "A previous preparation needs to be checked before you continue. View the progress or contact support."
 }

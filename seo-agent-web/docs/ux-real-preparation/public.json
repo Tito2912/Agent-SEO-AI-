@@ -1,0 +1,306 @@
+{
+  "checked_at_utc": "2026-10-24T10:14:47.553716+00:00",
+  "reference_revision": "32ba38dca37435427c586bc83b5caec401e00e0b",
+  "deployed_revision": "not attested; static matches only",
+  "checks": [
+    {
+      "path": "/",
+      "width": 1440,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/pricing",
+      "width": 1440,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/pricing",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/support",
+      "width": 1440,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/support",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/status",
+      "width": 1440,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/status",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/docs",
+      "width": 1440,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/docs",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/login",
+      "width": 1440,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/auth/login",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/signup",
+      "width": 1440,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/auth/signup",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/",
+      "width": 1440,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/pricing",
+      "width": 1440,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/pricing",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/support",
+      "width": 1440,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/support",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/status",
+      "width": 1440,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/status",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/docs",
+      "width": 1440,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/docs",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/login",
+      "width": 1440,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/auth/login",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/signup",
+      "width": 1440,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/auth/signup",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/",
+      "width": 390,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/pricing",
+      "width": 390,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/pricing",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/support",
+      "width": 390,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/support",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/status",
+      "width": 390,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/status",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/docs",
+      "width": 390,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/docs",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/login",
+      "width": 390,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/auth/login",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/auth/signup",
+      "width": 390,
+      "lang": "fr",
+      "status": 200,
+      "final_path": "/auth/signup",
+      "html_lang": "fr",
+      "overflow": false
+    },
+    {
+      "path": "/",
+      "width": 390,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/pricing",
+      "width": 390,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/pricing",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/support",
+      "width": 390,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/support",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/status",
+      "width": 390,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/status",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/docs",
+      "width": 390,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/docs",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/login",
+      "width": 390,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/auth/login",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/auth/signup",
+      "width": 390,
+      "lang": "en",
+      "status": 200,
+      "final_path": "/auth/signup",
+      "html_lang": "en",
+      "overflow": false
+    },
+    {
+      "path": "/projects/voiceoverstudioai-com/content",
+      "profile": "anonymous",
+      "status": 200,
+      "final_path": "/auth/login",
+      "login_required": true
+    },
+    {
+      "path": "/projects/voiceoverstudioai-com/settings/crawl",
+      "profile": "anonymous",
+      "status": 200,
+      "final_path": "/auth/login",
+      "login_required": true
+    },
+    {
+      "path": "/api/projects/voiceoverstudioai-com/content/auto",
+      "profile": "anonymous",
+      "status": 401,
+      "scope": "Middleware authentication only; does not attest route implementation."
+    },
+    {
+      "path": "/healthz",
+      "status": 200
+    }
+  ],
+  "assets": [
+    {
+      "path": "/static/analysis-github.js?v=4",
+      "status": 200,
+      "sha256": "fd5d036969dfff9ccd4e4299000ff020dbf226ab486a86e0e2f3f5b96c83e91b",
+      "matches_main": true
+    },
+    {
+      "path": "/static/content-journey.css?v=2",
+      "status": 200,
+      "sha256": "943773c67d7c7db8a9cc1dfca0f290f239bf716e4350bb0640cd90cb81fbd0c3",
+      "matches_main": true
+    },
+    {
+      "path": "/static/automation-consent.css?v=1",
+      "status": 200,
+      "sha256": "f05635adb7bd23de6c9edbd1e1ca4b9b1344ac08cfa1909e7f09fb1e46890cb8",
+      "matches_main": true
+    }
+  ],
+  "javascript_errors": [],
+  "blocked_requests": [],
+  "scope": "Anonymous production Chromium, GET/HEAD only. No submitted forms, accounts, OAuth or provider writes."
+}
