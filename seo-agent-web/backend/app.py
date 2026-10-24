@@ -19347,6 +19347,7 @@ def project_issue_detail(
     page: int = 1,
     per_page: int = 200,
     q: str | None = None,
+    page_url: str | None = None,
 ) -> HTMLResponse:
     proj_row = _db_project_or_404(request, slug)
     runs_dir = _runs_dir_pour_slug(request, slug)
@@ -19381,6 +19382,20 @@ def project_issue_detail(
             site_name=str(proj_row.site_name or slug),
             base_url=str(proj_row.base_url or ""),
         )
+    # A guided link identifies a page, never a new task or a filtering rule for the report.
+    # Validate it against this issue in the actual displayed crawl, not a cached suggestion.
+    focused_url = ""
+    if page_url:
+        candidate = first_correction.web_url(page_url)
+        issue_node = data.get("issue") or {}
+        raw = issue_node.get("raw")
+        impacted = dash.extract_impacted_pages(issue_key, raw, limit=5000) if isinstance(raw, dict) else set()
+        if candidate and (not crawl or crawl == ts) and candidate in impacted:
+            focused_url = candidate
+            fix_suggestion = {**(fix_suggestion or {}), "sample_urls": [candidate] + [
+                u for u in (fix_suggestion or {}).get("sample_urls", []) if u != candidate
+            ][:5]}
+
     # Load existing GitHub PR tasks for this issue (keyed by URL)
     gh_tasks: dict[str, dict[str, Any]] = {}
     try:
@@ -19419,6 +19434,8 @@ def project_issue_detail(
             "page": int(page or 1),
             "per_page": int(per_page or 200),
             "q": (q or ""),
+            "focused_url": focused_url,
+            "focus_unavailable": bool(page_url) and not focused_url,
             "fix_suggestion": fix_suggestion,
             "fix_suggestions_path": fix_path,
             "gh_tasks": gh_tasks,

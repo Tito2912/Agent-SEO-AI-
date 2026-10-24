@@ -1,0 +1,132 @@
+{
+  "checks": [
+    {
+      "state": "guided-page-crawl-modal-and-return-preserved",
+      "lang": "fr",
+      "width": 1440,
+      "requests_that_modify_data": 0,
+      "overflow": false
+    },
+    {
+      "state": "unknown-context-explained-without-inventing-a-target",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "state": "guided-page-crawl-modal-and-return-preserved",
+      "lang": "en",
+      "width": 1440,
+      "requests_that_modify_data": 0,
+      "overflow": false
+    },
+    {
+      "state": "unknown-context-explained-without-inventing-a-target",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "state": "guided-page-crawl-modal-and-return-preserved",
+      "lang": "fr",
+      "width": 768,
+      "requests_that_modify_data": 0,
+      "overflow": false
+    },
+    {
+      "state": "unknown-context-explained-without-inventing-a-target",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "state": "guided-page-crawl-modal-and-return-preserved",
+      "lang": "en",
+      "width": 768,
+      "requests_that_modify_data": 0,
+      "overflow": false
+    },
+    {
+      "state": "unknown-context-explained-without-inventing-a-target",
+      "lang": "en",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "state": "guided-page-crawl-modal-and-return-preserved",
+      "lang": "fr",
+      "width": 390,
+      "requests_that_modify_data": 0,
+      "overflow": false
+    },
+    {
+      "state": "unknown-context-explained-without-inventing-a-target",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "state": "guided-page-crawl-modal-and-return-preserved",
+      "lang": "en",
+      "width": 390,
+      "requests_that_modify_data": 0,
+      "overflow": false
+    },
+    {
+      "state": "unknown-context-explained-without-inventing-a-target",
+      "lang": "en",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "state": "guided-page-crawl-modal-and-return-preserved",
+      "lang": "fr",
+      "width": 360,
+      "requests_that_modify_data": 0,
+      "overflow": false
+    },
+    {
+      "state": "unknown-context-explained-without-inventing-a-target",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "state": "guided-page-crawl-modal-and-return-preserved",
+      "lang": "en",
+      "width": 360,
+      "requests_that_modify_data": 0,
+      "overflow": false
+    },
+    {
+      "state": "unknown-context-explained-without-inventing-a-target",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "state": "page-context-and-manual-instructions-without-javascript",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "state": "page-context-and-manual-instructions-without-javascript",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "state": "existing-proposal-prioritizes-review-and-keeps-explicit-restart",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "state": "existing-proposal-prioritizes-review-and-keeps-explicit-restart",
+      "lang": "en",
+      "width": 360
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "unexpected_writes": [],
+  "scope": "Fictitious local accounts and reports; navigation and modal opening only. No AI, GitHub or production writes."
+}

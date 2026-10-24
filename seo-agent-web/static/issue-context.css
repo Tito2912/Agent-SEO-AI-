@@ -1,0 +1,11 @@
+#page-selection { scroll-margin-block-start:160px; }
+.issue-selected-page {
+  margin-block:12px;
+  padding:12px !important;
+  border:1px solid var(--accent) !important;
+  border-radius:8px;
+}
+.issue-context-heading { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px; }
+.issue-context-url { flex:1 1 100%; }
+.issue-selected-page .btn { min-height:44px; }
+#page-selection:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
