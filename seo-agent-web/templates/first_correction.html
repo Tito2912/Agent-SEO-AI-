@@ -157,7 +157,7 @@
       <h3>{{ tr("Modifiez votre page") }}</h3>
       <p class="muted">{{ tr("Appliquez ces instructions dans votre site, ou faites-les suivre à votre prestataire.") }}</p>
       <ul class="help-steps">{% for instruction in instructions %}<li>{{ tr(instruction) }}</li>{% endfor %}</ul>
-      <p><a href="/projects/{{ slug }}/issues/{{ state.issue_key }}?crawl={{ state.crawl_ts }}">{{ tr("Ouvrir les instructions détaillées") }}</a></p>
+      <p><a href="/projects/{{ slug }}/issues/{{ state.issue_key }}?crawl={{ state.crawl_ts|urlencode }}&amp;page_url={{ state.url|urlencode }}#page-selection">{{ tr("Ouvrir les instructions détaillées") }}</a></p>
       {% if state.pr_url %}<p><a href="{{ state.pr_url }}" target="_blank" rel="noreferrer">{{ tr("Voir la proposition GitHub") }}</a> · {{ tr("La modification doit être publiée sur votre site avant le contrôle.") }}</p>{% endif %}
       {% if state.verify.result == 'still_present' %}
         <div class="alert warning" role="status">{{ tr("Le problème est encore présent. Reprenez les instructions et vérifiez que la modification a bien été publiée.") }}</div>

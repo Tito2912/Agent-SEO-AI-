@@ -50,6 +50,13 @@
       <details class="technical-details"><summary>{{ tr("Détails techniques") }}</summary><code>{{ project.issue.key }}</code> · <code>{{ project.timestamp }}</code></details>
     </div>
 
+    {% if focus_unavailable %}
+      <section class="card" role="status" id="page-selection" tabindex="-1">
+        <p>{{ tr("Le contexte de cette page n’a pas pu être retrouvé dans cette analyse. Consultez les pages disponibles ou revenez à votre correction.") }}</p>
+        <a class="btn" href="/projects/{{ project.slug }}/first-correction">{{ tr("Revenir à ma correction") }}</a>
+      </section>
+    {% endif %}
+
     {% include "_cms_guidance.html" %}
     {% if wordpress_batch_href %}<p><a class="btn primary" href="{{ wordpress_batch_href }}">{{ tr("Corriger ces pages dans WordPress") }}</a></p>{% endif %}
 
@@ -142,9 +149,14 @@
           {% for u in fix_suggestion.sample_urls %}
             {% set _gh = gh_tasks.get(u) if gh_tasks else none %}
             {% set _gh_pr = _gh.pr if _gh else none %}
-            <div class="url-ai-row" style="padding:7px 0;border-top:1px solid var(--border);">
+            <div class="url-ai-row{% if u == focused_url %} issue-selected-page{% endif %}" {% if u == focused_url %}id="page-selection" tabindex="-1"{% endif %} style="padding:7px 0;border-top:1px solid var(--border);">
+              {% if u == focused_url %}
+                <p class="issue-context-heading"><span class="badge notice">{{ tr("Page à corriger") }}</span><a class="btn" href="/projects/{{ project.slug }}/first-correction">{{ tr("Revenir à ma correction") }}</a></p>
+                <p class="muted small">{{ tr("Analyse du") }} <span data-ts-datetime="{{ project.timestamp }}">{{ project.timestamp[:4] }}-{{ project.timestamp[4:6] }}-{{ project.timestamp[6:8] }}</span></p>
+                <noscript><p class="muted small">{{ tr("La préparation GitHub nécessite JavaScript. Vous pouvez toujours consulter les instructions et modifier votre page manuellement.") }}</p></noscript>
+              {% endif %}
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <a href="{{ u }}" target="_blank" rel="noreferrer" class="mono" style="font-size:12px;flex:1;min-width:0;word-break:break-all;">{{ u }}</a>
+                <a href="{{ u }}" target="_blank" rel="noreferrer" class="mono{% if u == focused_url %} issue-context-url{% endif %}" style="font-size:12px;{% if u != focused_url %}flex:1;{% endif %}min-width:0;word-break:break-all;">{{ u }}</a>
                 {# ── GitHub PR badge ── #}
                 {% if _gh_pr and _gh_pr.pr_url %}
                   {% if _gh.verified %}
@@ -152,9 +164,13 @@
                   {% else %}
                     <span class="badge warning" style="font-size:10px;padding:2px 7px;">{{ tr("PR en cours") }}</span>
                   {% endif %}
+                  {% if u == focused_url %}
+                    <a class="btn primary" href="{{ _gh_pr.pr_url }}" target="_blank" rel="noopener noreferrer">{{ tr("Relire la proposition GitHub") }}</a>
+                  {% else %}
                   <a href="{{ _gh_pr.pr_url }}" target="_blank" rel="noreferrer"
                      style="font-size:11px;color:var(--muted);text-decoration:none;padding:2px 7px;border:1px solid var(--border);border-radius:4px;font-family:monospace;"
                      title="{{ tr("Voir le commit") }}">{% if _gh_pr.pr_number %}#{{ _gh_pr.pr_number }}{% endif %}{% if _gh_pr.commit_sha %} {{ _gh_pr.commit_sha }}{% endif %} ↗</a>
+                  {% endif %}
                 {% endif %}
                 {# ── Verification badge (set by last crawl) ── #}
                 {% set _v = _gh.verify if _gh else none %}
@@ -171,13 +187,13 @@
                   data-slug="{{ project.slug }}">{{ tr("Correction IA") }}</button>
                 {% endif %}
                 {% if correction_controls.deep_fix %}
-                <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+                <button type="button" class="btn gh-fix-btn{% if u == focused_url and not (_gh_pr and _gh_pr.pr_url) %} primary{% endif %}" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
                   data-fix-route="{{ 'github-fix' if correction_controls.url_fix else 'deep-fix' }}"
                   title="{{ tr('Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR') }}"
                   data-url="{{ u }}"
                   data-issue="{{ project.issue.key }}"
                   data-crawl="{{ project.timestamp }}"
-                  data-slug="{{ project.slug }}">&#8982; GitHub</button>
+                  data-slug="{{ project.slug }}">{% if u == focused_url %}{{ tr('Préparer l’aperçu' if correction_controls.url_fix else 'Préparer le brouillon GitHub') }}{% else %}&#8982; GitHub{% endif %}</button>
                 {% endif %}
               </div>
               <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
@@ -201,6 +217,7 @@
 
       <form method="get" class="filters" style="margin-top: 8px;">
         <input type="hidden" name="crawl" value="{{ project.timestamp }}" />
+        {% if focused_url %}<input type="hidden" name="page_url" value="{{ focused_url }}" />{% endif %}
         <label class="grow">
           {{ tr("Recherche") }}
           <input type="text" name="q" value="{{ q or '' }}" placeholder="{{ tr("URL, état, code, etc.") }}" />
@@ -304,7 +321,7 @@
               {% set next = pag.page + 1 %}
               <div>
                 {% if pag.page > 1 %}
-                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ prev }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}">{{ tr("← Précédent") }}</a>
+                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ prev }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}{% if focused_url %}&amp;page_url={{ focused_url|urlencode }}{% endif %}">{{ tr("← Précédent") }}</a>
                 {% else %}
                   <span class="btn" style="opacity:.5; pointer-events:none;">{{ tr("← Précédent") }}</span>
                 {% endif %}
@@ -312,7 +329,7 @@
               <div class="muted small">{{ tr("Page") }} <span class="mono">{{ pag.page }}</span> / <span class="mono">{{ pag.pages }}</span></div>
               <div>
                 {% if pag.page < pag.pages %}
-                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ next }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}">{{ tr("Suivant →") }}</a>
+                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ next }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}{% if focused_url %}&amp;page_url={{ focused_url|urlencode }}{% endif %}">{{ tr("Suivant →") }}</a>
                 {% else %}
                   <span class="btn" style="opacity:.5; pointer-events:none;">{{ tr("Suivant →") }}</span>
                 {% endif %}
@@ -457,6 +474,7 @@
 {% endblock %}
 
 {% block head_extra %}
+  <link rel="stylesheet" href="/static/issue-context.css?v=1" />
   <link rel="stylesheet" href="/static/report-exports.css?v=1" />
 <link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=4" defer></script>
 <link rel="stylesheet" href="/static/cms.css?v=1" />
