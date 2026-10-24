@@ -1,0 +1,198 @@
+{
+  "samples": [
+    {
+      "text": "Une préparation précédente doit être vérifiée avant de continuer. Consultez le suivi ou co",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 1440,
+      "lang": "fr"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "fr"
+    },
+    {
+      "text": "Contacter l’assistance",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "fr"
+    },
+    {
+      "text": "A previous preparation needs to be checked before you continue. View the progress or conta",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 1440,
+      "lang": "en"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "en"
+    },
+    {
+      "text": "Contact support",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "en"
+    },
+    {
+      "text": "Une préparation précédente doit être vérifiée avant de continuer. Consultez le suivi ou co",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 768,
+      "lang": "fr"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "fr"
+    },
+    {
+      "text": "Contacter l’assistance",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "fr"
+    },
+    {
+      "text": "A previous preparation needs to be checked before you continue. View the progress or conta",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 768,
+      "lang": "en"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "en"
+    },
+    {
+      "text": "Contact support",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "en"
+    },
+    {
+      "text": "Une préparation précédente doit être vérifiée avant de continuer. Consultez le suivi ou co",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 103.171875,
+      "width": 390,
+      "lang": "fr"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "fr"
+    },
+    {
+      "text": "Contacter l’assistance",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "fr"
+    },
+    {
+      "text": "A previous preparation needs to be checked before you continue. View the progress or conta",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 103.171875,
+      "width": 390,
+      "lang": "en"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "en"
+    },
+    {
+      "text": "Contact support",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "en"
+    },
+    {
+      "text": "Une préparation précédente doit être vérifiée avant de continuer. Consultez le suivi ou co",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 129.5625,
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "text": "Contacter l’assistance",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "text": "A previous preparation needs to be checked before you continue. View the progress or conta",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 103.171875,
+      "width": 360,
+      "lang": "en"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "en"
+    },
+    {
+      "text": "Contact support",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "en"
+    }
+  ],
+  "minimum": 5.012016032236808,
+  "scope": "Changed dialog message and recovery links only; not a full accessibility audit."
+}

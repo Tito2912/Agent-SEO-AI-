@@ -1,6 +1,6 @@
 # Inventaire courant des écrans et interactions Noyaru
 
-Généré par `python seo-agent-web/ops/ux_inventory.py`. Révision du code : `d2b4ea75503c0ea75bf309de89a6bbe17dd1f358`. Date UTC : 2026-10-22 04:21. Le [relevé initial et ses compléments](UX_SCREEN_INVENTORY.md) sont conservés.
+Généré par `python seo-agent-web/ops/ux_inventory.py`. Révision du code : `e38a0d62f9eb164c211abedbffe9d2d15a4861da`. Date UTC : 2026-10-24 10:42. Le [relevé initial et ses compléments](UX_SCREEN_INVENTORY.md) sont conservés.
 
 199 déclarations de routes ; 55 templates repérés dans les gestionnaires de routes ; 89 templates HTML au total (inclusions et anciens templates compris). 3 routes automatiques FastAPI complètent les déclarations, soit 202 déclarations et routes automatiques, hors montage statique. Les alias de langue du middleware ne sont pas des déclarations supplémentaires.
 
@@ -22,25 +22,25 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/api/github/repos` | GET | — | [backend/app.py:17000](../backend/app.py#L17000) · `github_repos` |
 | `/api/gsc/properties` | GET | — | [backend/app.py:17603](../backend/app.py#L17603) · `gsc_properties` |
 | `/api/gsc/properties/via-oauth` | GET | — | [backend/app.py:17713](../backend/app.py#L17713) · `gsc_properties_via_oauth` |
-| `/api/jobs/{job_id}` | GET | — | [backend/app.py:37645](../backend/app.py#L37645) · `job_api` |
+| `/api/jobs/{job_id}` | GET | — | [backend/app.py:37646](../backend/app.py#L37646) · `job_api` |
 | `/api/netlify/sites` | GET | — | [backend/app.py:17172](../backend/app.py#L17172) · `netlify_sites` |
-| `/api/projects/{slug}/backlinks/auto-settings` | POST | — | [backend/app.py:37070](../backend/app.py#L37070) · `backlinks_auto_settings_save` |
-| `/api/projects/{slug}/backlinks/generate-reply` | POST | — | [backend/app.py:36860](../backend/app.py#L36860) · `api_backlinks_generate_reply` |
-| `/api/projects/{slug}/backlinks/queue/{opp_id}/approve` | POST | — | [backend/app.py:37115](../backend/app.py#L37115) · `backlinks_queue_approve` |
-| `/api/projects/{slug}/backlinks/queue/{opp_id}/mark-sent` | POST | — | [backend/app.py:37151](../backend/app.py#L37151) · `backlinks_queue_mark_sent` |
-| `/api/projects/{slug}/backlinks/queue/{opp_id}/reject` | POST | — | [backend/app.py:37133](../backend/app.py#L37133) · `backlinks_queue_reject` |
-| `/api/projects/{slug}/backlinks/search` | POST | — | [backend/app.py:36791](../backend/app.py#L36791) · `api_backlinks_search` |
+| `/api/projects/{slug}/backlinks/auto-settings` | POST | — | [backend/app.py:37071](../backend/app.py#L37071) · `backlinks_auto_settings_save` |
+| `/api/projects/{slug}/backlinks/generate-reply` | POST | — | [backend/app.py:36861](../backend/app.py#L36861) · `api_backlinks_generate_reply` |
+| `/api/projects/{slug}/backlinks/queue/{opp_id}/approve` | POST | — | [backend/app.py:37116](../backend/app.py#L37116) · `backlinks_queue_approve` |
+| `/api/projects/{slug}/backlinks/queue/{opp_id}/mark-sent` | POST | — | [backend/app.py:37152](../backend/app.py#L37152) · `backlinks_queue_mark_sent` |
+| `/api/projects/{slug}/backlinks/queue/{opp_id}/reject` | POST | — | [backend/app.py:37134](../backend/app.py#L37134) · `backlinks_queue_reject` |
+| `/api/projects/{slug}/backlinks/search` | POST | — | [backend/app.py:36792](../backend/app.py#L36792) · `api_backlinks_search` |
 | `/api/projects/{slug}/bing/sites` | GET | — | [backend/app.py:17513](../backend/app.py#L17513) · `bing_sites_for_project` |
-| `/api/projects/{slug}/competitors/etat` | GET | — | [backend/app.py:35213](../backend/app.py#L35213) · `api_competitors_etat` |
-| `/api/projects/{slug}/competitors/suggest` | POST | — | [backend/app.py:35155](../backend/app.py#L35155) · `api_competitors_suggest` |
-| `/api/projects/{slug}/content/article` | POST | — | [backend/app.py:34494](../backend/app.py#L34494) · `api_content_article` |
-| `/api/projects/{slug}/content/article/{task_id}` | GET | — | [backend/app.py:34666](../backend/app.py#L34666) · `api_content_article_lire` |
-| `/api/projects/{slug}/content/auto` | GET | — | [backend/app.py:35742](../backend/app.py#L35742) · `api_content_auto_state` |
-| `/api/projects/{slug}/content/auto` | POST | — | [backend/app.py:35749](../backend/app.py#L35749) · `api_content_auto_settings` |
-| `/api/projects/{slug}/content/draft` | POST | — | [backend/app.py:33980](../backend/app.py#L33980) · `api_content_draft` |
-| `/api/projects/{slug}/content/langues` | GET | — | [backend/app.py:34053](../backend/app.py#L34053) · `api_content_langues` |
-| `/api/projects/{slug}/content/suivi/{jeton}` | GET | — | [backend/app.py:33278](../backend/app.py#L33278) · `api_content_suivi` |
-| `/api/projects/{slug}/content/sujet` | POST | — | [backend/app.py:34625](../backend/app.py#L34625) · `api_content_sujet` |
+| `/api/projects/{slug}/competitors/etat` | GET | — | [backend/app.py:35214](../backend/app.py#L35214) · `api_competitors_etat` |
+| `/api/projects/{slug}/competitors/suggest` | POST | — | [backend/app.py:35156](../backend/app.py#L35156) · `api_competitors_suggest` |
+| `/api/projects/{slug}/content/article` | POST | — | [backend/app.py:34495](../backend/app.py#L34495) · `api_content_article` |
+| `/api/projects/{slug}/content/article/{task_id}` | GET | — | [backend/app.py:34667](../backend/app.py#L34667) · `api_content_article_lire` |
+| `/api/projects/{slug}/content/auto` | GET | — | [backend/app.py:35743](../backend/app.py#L35743) · `api_content_auto_state` |
+| `/api/projects/{slug}/content/auto` | POST | — | [backend/app.py:35750](../backend/app.py#L35750) · `api_content_auto_settings` |
+| `/api/projects/{slug}/content/draft` | POST | — | [backend/app.py:33981](../backend/app.py#L33981) · `api_content_draft` |
+| `/api/projects/{slug}/content/langues` | GET | — | [backend/app.py:34054](../backend/app.py#L34054) · `api_content_langues` |
+| `/api/projects/{slug}/content/suivi/{jeton}` | GET | — | [backend/app.py:33279](../backend/app.py#L33279) · `api_content_suivi` |
+| `/api/projects/{slug}/content/sujet` | POST | — | [backend/app.py:34626](../backend/app.py#L34626) · `api_content_sujet` |
 | `/api/projects/{slug}/github/bulk-fix` | POST | — | [backend/app.py:19833](../backend/app.py#L19833) · `api_github_bulk_fix` |
 | `/api/projects/{slug}/github/connect` | POST | — | [backend/app.py:19563](../backend/app.py#L19563) · `api_github_connect` |
 | `/api/projects/{slug}/github/status` | GET | — | [backend/app.py:19594](../backend/app.py#L19594) · `api_github_status` |
@@ -49,7 +49,7 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/api/projects/{slug}/issues/{issue_key}/github-fix` | POST | — | [backend/app.py:19602](../backend/app.py#L19602) · `api_github_fix` |
 | `/api/projects/{slug}/issues/{issue_key}/task` | POST | — | [backend/app.py:31414](../backend/app.py#L31414) · `api_issue_task_upsert` |
 | `/api/projects/{slug}/issues/{issue_key}/url-fix` | GET | — | [backend/app.py:19437](../backend/app.py#L19437) · `api_issue_url_fix` |
-| `/api/projects/{slug}/keywords/rewrite-pr` | POST | — | [backend/app.py:33048](../backend/app.py#L33048) · `api_keyword_rewrite_pr` |
+| `/api/projects/{slug}/keywords/rewrite-pr` | POST | — | [backend/app.py:33049](../backend/app.py#L33049) · `api_keyword_rewrite_pr` |
 | `/api/projects/{slug}/search-items` | GET | — | [backend/app.py:17957](../backend/app.py#L17957) · `project_search_items` |
 | `/api/projects/{slug}/search-series` | GET | — | [backend/app.py:17898](../backend/app.py#L17898) · `project_search_series` |
 | `/api/projects/{slug}/tasks` | GET | — | [backend/app.py:31448](../backend/app.py#L31448) · `api_project_tasks` |
@@ -76,23 +76,23 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/billing/cancel-scheduled-change` | POST | — | [backend/app.py:14712](../backend/app.py#L14712) · `billing_cancel_scheduled_change` |
 | `/billing/checkout` | POST | — | [backend/app.py:14601](../backend/app.py#L14601) · `billing_checkout` |
 | `/billing/portal` | POST | — | [backend/app.py:14752](../backend/app.py#L14752) · `billing_portal` |
-| `/cron/auto-content` | POST | — | [backend/app.py:35931](../backend/app.py#L35931) · `cron_auto_content` |
-| `/cron/auto-post-backlinks` | GET | — | [backend/app.py:37461](../backend/app.py#L37461) · `cron_auto_post_backlinks` |
-| `/cron/auto-search-backlinks` | GET | — | [backend/app.py:37284](../backend/app.py#L37284) · `cron_auto_search_backlinks` |
+| `/cron/auto-content` | POST | — | [backend/app.py:35932](../backend/app.py#L35932) · `cron_auto_content` |
+| `/cron/auto-post-backlinks` | GET | — | [backend/app.py:37462](../backend/app.py#L37462) · `cron_auto_post_backlinks` |
+| `/cron/auto-search-backlinks` | GET | — | [backend/app.py:37285](../backend/app.py#L37285) · `cron_auto_search_backlinks` |
 | `/cron/autopilot` | GET | — | [backend/app.py:18170](../backend/app.py#L18170) · `cron_autopilot` |
-| `/cron/check-backlinks` | GET | — | [backend/app.py:37194](../backend/app.py#L37194) · `cron_check_backlinks` |
-| `/cron/refresh-competitors` | POST | — | [backend/app.py:35341](../backend/app.py#L35341) · `cron_refresh_competitors` |
-| `/cron/verify-pull-requests` | POST | — | [backend/app.py:38403](../backend/app.py#L38403) · `cron_verify_pull_requests` |
+| `/cron/check-backlinks` | GET | — | [backend/app.py:37195](../backend/app.py#L37195) · `cron_check_backlinks` |
+| `/cron/refresh-competitors` | POST | — | [backend/app.py:35342](../backend/app.py#L35342) · `cron_refresh_competitors` |
+| `/cron/verify-pull-requests` | POST | — | [backend/app.py:38404](../backend/app.py#L38404) · `cron_verify_pull_requests` |
 | `/docs` | GET, HEAD | docs_index.html | [backend/app.py:14265](../backend/app.py#L14265) · `docs_index_public` |
 | `/docs/{slug}` | GET, HEAD | docs_article.html | [backend/app.py:14291](../backend/app.py#L14291) · `docs_article_public` |
 | `/favicon.ico` | GET, HEAD | — | [backend/app.py:10426](../backend/app.py#L10426) · `favicon_ico` |
 | `/file` | GET | file.html | [backend/app.py:18374](../backend/app.py#L18374) · `view_file` |
 | `/healthz` | GET | — | [backend/app.py:11901](../backend/app.py#L11901) · `healthz` |
 | `/jobs` | GET | jobs.html | [backend/app.py:18262](../backend/app.py#L18262) · `jobs` |
-| `/jobs/{job_id}` | GET | job.html | [backend/app.py:37469](../backend/app.py#L37469) · `job_detail` |
-| `/jobs/{job_id}/apply-corrections` | POST | — | [backend/app.py:37866](../backend/app.py#L37866) · `apply_corrections` |
-| `/jobs/{job_id}/cancel` | POST | — | [backend/app.py:37570](../backend/app.py#L37570) · `job_cancel` |
-| `/jobs/{job_id}/retry` | POST | — | [backend/app.py:37597](../backend/app.py#L37597) · `job_retry` |
+| `/jobs/{job_id}` | GET | job.html | [backend/app.py:37470](../backend/app.py#L37470) · `job_detail` |
+| `/jobs/{job_id}/apply-corrections` | POST | — | [backend/app.py:37867](../backend/app.py#L37867) · `apply_corrections` |
+| `/jobs/{job_id}/cancel` | POST | — | [backend/app.py:37571](../backend/app.py#L37571) · `job_cancel` |
+| `/jobs/{job_id}/retry` | POST | — | [backend/app.py:37598](../backend/app.py#L37598) · `job_retry` |
 | `/mentions-legales` | GET, HEAD | legal_notice_public.html, legal_notice_public_en.html | [backend/app.py:14142](../backend/app.py#L14142) · `legal_notice_public` |
 | `/oauth/bing/callback` | GET | — | [backend/app.py:17297](../backend/app.py#L17297) · `bing_oauth_callback` |
 | `/oauth/bing/connect` | GET | — | [backend/app.py:17257](../backend/app.py#L17257) · `bing_oauth_connect` |
@@ -114,14 +114,14 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/projects/first-audit` | POST | — | [backend/first_audit.py:138](../backend/first_audit.py#L138) · `start` |
 | `/projects/{slug}` | GET | project_overview.html | [backend/app.py:18903](../backend/app.py#L18903) · `project_overview` |
 | `/projects/{slug}/automation` | GET | project_automation.html | [backend/app.py:31470](../backend/app.py#L31470) · `project_automation` |
-| `/projects/{slug}/backlinks` | GET | backlinks.html | [backend/app.py:36078](../backend/app.py#L36078) · `project_backlinks` |
-| `/projects/{slug}/backlinks/ahrefs/sync` | POST | — | [backend/app.py:36442](../backend/app.py#L36442) · `backlinks_ahrefs_sync` |
-| `/projects/{slug}/backlinks/clear` | POST | — | [backend/app.py:36404](../backend/app.py#L36404) · `backlinks_clear` |
-| `/projects/{slug}/backlinks/import` | POST | — | [backend/app.py:36313](../backend/app.py#L36313) · `backlinks_import` |
-| `/projects/{slug}/backlinks/opportunities` | GET | backlinks_opportunities.html | [backend/app.py:36693](../backend/app.py#L36693) · `project_backlinks_opportunities` |
-| `/projects/{slug}/backlinks/opportunities/save` | POST | — | [backend/app.py:36929](../backend/app.py#L36929) · `backlinks_opportunity_save` |
-| `/projects/{slug}/backlinks/opportunities/{opp_id}/delete` | POST | — | [backend/app.py:36998](../backend/app.py#L36998) · `backlinks_opportunity_delete` |
-| `/projects/{slug}/backlinks/opportunities/{opp_id}/status` | POST | — | [backend/app.py:37021](../backend/app.py#L37021) · `backlinks_opportunity_status` |
+| `/projects/{slug}/backlinks` | GET | backlinks.html | [backend/app.py:36079](../backend/app.py#L36079) · `project_backlinks` |
+| `/projects/{slug}/backlinks/ahrefs/sync` | POST | — | [backend/app.py:36443](../backend/app.py#L36443) · `backlinks_ahrefs_sync` |
+| `/projects/{slug}/backlinks/clear` | POST | — | [backend/app.py:36405](../backend/app.py#L36405) · `backlinks_clear` |
+| `/projects/{slug}/backlinks/import` | POST | — | [backend/app.py:36314](../backend/app.py#L36314) · `backlinks_import` |
+| `/projects/{slug}/backlinks/opportunities` | GET | backlinks_opportunities.html | [backend/app.py:36694](../backend/app.py#L36694) · `project_backlinks_opportunities` |
+| `/projects/{slug}/backlinks/opportunities/save` | POST | — | [backend/app.py:36930](../backend/app.py#L36930) · `backlinks_opportunity_save` |
+| `/projects/{slug}/backlinks/opportunities/{opp_id}/delete` | POST | — | [backend/app.py:36999](../backend/app.py#L36999) · `backlinks_opportunity_delete` |
+| `/projects/{slug}/backlinks/opportunities/{opp_id}/status` | POST | — | [backend/app.py:37022](../backend/app.py#L37022) · `backlinks_opportunity_status` |
 | `/projects/{slug}/cms` | GET | cms_settings.html | [backend/cms_routes.py:133](../backend/cms_routes.py#L133) · `cms_settings` |
 | `/projects/{slug}/cms/platform` | POST | — | [backend/cms_routes.py:149](../backend/cms_routes.py#L149) · `cms_platform` |
 | `/projects/{slug}/cms/wordpress/changes/{change_id}` | GET | cms_wordpress_change.html | [backend/cms_routes.py:339](../backend/cms_routes.py#L339) · `wordpress_change` |
@@ -136,37 +136,37 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/projects/{slug}/cms/wordpress/issues/{issue_key}/verify` | POST | — | [backend/cms_routes.py:792](../backend/cms_routes.py#L792) · `wordpress_batch_verify` |
 | `/projects/{slug}/cms/wordpress/preview` | POST | — | [backend/cms_routes.py:261](../backend/cms_routes.py#L261) · `wordpress_preview` |
 | `/projects/{slug}/cms/wordpress/suggest` | POST | — | [backend/cms_routes.py:310](../backend/cms_routes.py#L310) · `wordpress_suggest` |
-| `/projects/{slug}/competitors` | GET | competitors.html | [backend/app.py:34987](../backend/app.py#L34987) · `project_competitors` |
-| `/projects/{slug}/competitors/add` | POST | — | [backend/app.py:35238](../backend/app.py#L35238) · `project_competitor_add` |
-| `/projects/{slug}/competitors/analyze` | POST | — | [backend/app.py:35297](../backend/app.py#L35297) · `project_competitor_analyze` |
-| `/projects/{slug}/competitors/remove` | POST | — | [backend/app.py:35279](../backend/app.py#L35279) · `project_competitor_remove` |
-| `/projects/{slug}/content` | GET | content.html | [backend/app.py:34814](../backend/app.py#L34814) · `project_content` |
-| `/projects/{slug}/content/valider/{task_id}` | GET | content_valider.html | [backend/app.py:35847](../backend/app.py#L35847) · `page_contenu_valider` |
-| `/projects/{slug}/content/valider/{task_id}` | POST | — | [backend/app.py:35871](../backend/app.py#L35871) · `page_contenu_valider_post` |
-| `/projects/{slug}/corrections` | GET | corrections.html | [backend/app.py:31668](../backend/app.py#L31668) · `project_corrections` |
+| `/projects/{slug}/competitors` | GET | competitors.html | [backend/app.py:34988](../backend/app.py#L34988) · `project_competitors` |
+| `/projects/{slug}/competitors/add` | POST | — | [backend/app.py:35239](../backend/app.py#L35239) · `project_competitor_add` |
+| `/projects/{slug}/competitors/analyze` | POST | — | [backend/app.py:35298](../backend/app.py#L35298) · `project_competitor_analyze` |
+| `/projects/{slug}/competitors/remove` | POST | — | [backend/app.py:35280](../backend/app.py#L35280) · `project_competitor_remove` |
+| `/projects/{slug}/content` | GET | content.html | [backend/app.py:34815](../backend/app.py#L34815) · `project_content` |
+| `/projects/{slug}/content/valider/{task_id}` | GET | content_valider.html | [backend/app.py:35848](../backend/app.py#L35848) · `page_contenu_valider` |
+| `/projects/{slug}/content/valider/{task_id}` | POST | — | [backend/app.py:35872](../backend/app.py#L35872) · `page_contenu_valider_post` |
+| `/projects/{slug}/corrections` | GET | corrections.html | [backend/app.py:31669](../backend/app.py#L31669) · `project_corrections` |
 | `/projects/{slug}/crawl` | POST | — | [backend/app.py:18502](../backend/app.py#L18502) · `crawl_project` |
-| `/projects/{slug}/crawls` | GET | crawls.html | [backend/app.py:32379](../backend/app.py#L32379) · `project_crawls` |
-| `/projects/{slug}/export/fix-pack.zip` | GET | — | [backend/app.py:31915](../backend/app.py#L31915) · `export_project_fix_pack_zip` |
-| `/projects/{slug}/export/issues-all-urls.csv` | GET | — | [backend/app.py:32028](../backend/app.py#L32028) · `export_project_issues_all_urls_csv` |
-| `/projects/{slug}/export/issues.csv` | GET | — | [backend/app.py:31959](../backend/app.py#L31959) · `export_project_issues_csv` |
-| `/projects/{slug}/export/issues.pdf` | GET | — | [backend/app.py:32151](../backend/app.py#L32151) · `export_project_issues_pdf` |
-| `/projects/{slug}/export/issues/{issue_key}.csv` | GET | — | [backend/app.py:32216](../backend/app.py#L32216) · `export_project_issue_csv` |
-| `/projects/{slug}/export/issues/{issue_key}.pdf` | GET | — | [backend/app.py:32309](../backend/app.py#L32309) · `export_project_issue_pdf` |
-| `/projects/{slug}/export/report.csv` | GET | — | [backend/app.py:31833](../backend/app.py#L31833) · `export_project_report_csv` |
-| `/projects/{slug}/export/report.pdf` | GET | — | [backend/app.py:31872](../backend/app.py#L31872) · `export_project_report_pdf` |
-| `/projects/{slug}/first-correction` | GET | first_correction.html | [backend/app.py:31579](../backend/app.py#L31579) · `project_first_correction` |
-| `/projects/{slug}/first-correction` | POST | — | [backend/app.py:31592](../backend/app.py#L31592) · `project_first_correction_update` |
+| `/projects/{slug}/crawls` | GET | crawls.html | [backend/app.py:32380](../backend/app.py#L32380) · `project_crawls` |
+| `/projects/{slug}/export/fix-pack.zip` | GET | — | [backend/app.py:31916](../backend/app.py#L31916) · `export_project_fix_pack_zip` |
+| `/projects/{slug}/export/issues-all-urls.csv` | GET | — | [backend/app.py:32029](../backend/app.py#L32029) · `export_project_issues_all_urls_csv` |
+| `/projects/{slug}/export/issues.csv` | GET | — | [backend/app.py:31960](../backend/app.py#L31960) · `export_project_issues_csv` |
+| `/projects/{slug}/export/issues.pdf` | GET | — | [backend/app.py:32152](../backend/app.py#L32152) · `export_project_issues_pdf` |
+| `/projects/{slug}/export/issues/{issue_key}.csv` | GET | — | [backend/app.py:32217](../backend/app.py#L32217) · `export_project_issue_csv` |
+| `/projects/{slug}/export/issues/{issue_key}.pdf` | GET | — | [backend/app.py:32310](../backend/app.py#L32310) · `export_project_issue_pdf` |
+| `/projects/{slug}/export/report.csv` | GET | — | [backend/app.py:31834](../backend/app.py#L31834) · `export_project_report_csv` |
+| `/projects/{slug}/export/report.pdf` | GET | — | [backend/app.py:31873](../backend/app.py#L31873) · `export_project_report_pdf` |
+| `/projects/{slug}/first-correction` | GET | first_correction.html | [backend/app.py:31580](../backend/app.py#L31580) · `project_first_correction` |
+| `/projects/{slug}/first-correction` | POST | — | [backend/app.py:31593](../backend/app.py#L31593) · `project_first_correction_update` |
 | `/projects/{slug}/fix-suggestions/generate` | POST | — | [backend/app.py:19307](../backend/app.py#L19307) · `project_generate_fix_suggestions` |
 | `/projects/{slug}/gsc/oauth/connect` | GET | — | [backend/app.py:16637](../backend/app.py#L16637) · `project_gsc_oauth_connect` |
 | `/projects/{slug}/gsc/oauth/disconnect` | POST | — | [backend/app.py:16838](../backend/app.py#L16838) · `project_gsc_oauth_disconnect` |
 | `/projects/{slug}/issues` | GET | issues.html | [backend/app.py:19248](../backend/app.py#L19248) · `project_issues` |
 | `/projects/{slug}/issues/{issue_key}` | GET | issue_detail.html | [backend/app.py:19342](../backend/app.py#L19342) · `project_issue_detail` |
-| `/projects/{slug}/keywords` | GET | performance.html | [backend/app.py:35951](../backend/app.py#L35951) · `project_performance` |
-| `/projects/{slug}/keywords/opportunities` | GET | keyword_opportunities.html | [backend/app.py:32884](../backend/app.py#L32884) · `project_keyword_opportunities` |
-| `/projects/{slug}/keywords/track` | POST | — | [backend/app.py:32962](../backend/app.py#L32962) · `project_keyword_track` |
-| `/projects/{slug}/keywords/untrack` | POST | — | [backend/app.py:33008](../backend/app.py#L33008) · `project_keyword_untrack` |
-| `/projects/{slug}/netlinking` | GET | backlinks.html | [backend/app.py:36078](../backend/app.py#L36078) · `project_backlinks` |
-| `/projects/{slug}/performance` | GET | performance.html | [backend/app.py:35951](../backend/app.py#L35951) · `project_performance` |
+| `/projects/{slug}/keywords` | GET | performance.html | [backend/app.py:35952](../backend/app.py#L35952) · `project_performance` |
+| `/projects/{slug}/keywords/opportunities` | GET | keyword_opportunities.html | [backend/app.py:32885](../backend/app.py#L32885) · `project_keyword_opportunities` |
+| `/projects/{slug}/keywords/track` | POST | — | [backend/app.py:32963](../backend/app.py#L32963) · `project_keyword_track` |
+| `/projects/{slug}/keywords/untrack` | POST | — | [backend/app.py:33009](../backend/app.py#L33009) · `project_keyword_untrack` |
+| `/projects/{slug}/netlinking` | GET | backlinks.html | [backend/app.py:36079](../backend/app.py#L36079) · `project_backlinks` |
+| `/projects/{slug}/performance` | GET | performance.html | [backend/app.py:35952](../backend/app.py#L35952) · `project_performance` |
 | `/projects/{slug}/search-connections/{source}` | POST | — | [backend/app.py:18869](../backend/app.py#L18869) · `project_search_connection_update` |
 | `/projects/{slug}/settings/crawl` | GET | crawl_settings.html | [backend/app.py:19038](../backend/app.py#L19038) · `project_crawl_settings` |
 | `/projects/{slug}/settings/crawl` | POST | — | [backend/app.py:19124](../backend/app.py#L19124) · `project_crawl_settings_save` |
@@ -199,17 +199,17 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/settings/system` | GET | settings_system.html | [backend/app.py:16027](../backend/app.py#L16027) · `settings_system` |
 | `/settings/system` | POST | — | [backend/app.py:16259](../backend/app.py#L16259) · `settings_system_save` |
 | `/settings/system/secrets/rotate` | POST | — | [backend/app.py:16219](../backend/app.py#L16219) · `settings_system_rotate_secrets` |
-| `/settings/team` | GET | settings_team.html | [backend/app.py:37978](../backend/app.py#L37978) · `settings_team` |
-| `/settings/team/invite` | POST | — | [backend/app.py:38045](../backend/app.py#L38045) · `settings_team_invite` |
-| `/settings/team/invite/{invite_id}/revoke` | POST | — | [backend/app.py:38085](../backend/app.py#L38085) · `settings_team_invite_revoke` |
-| `/settings/team/leave` | POST | — | [backend/app.py:38111](../backend/app.py#L38111) · `settings_team_leave` |
-| `/settings/team/member/{member_id}/remove` | POST | — | [backend/app.py:38099](../backend/app.py#L38099) · `settings_team_member_remove` |
+| `/settings/team` | GET | settings_team.html | [backend/app.py:37979](../backend/app.py#L37979) · `settings_team` |
+| `/settings/team/invite` | POST | — | [backend/app.py:38046](../backend/app.py#L38046) · `settings_team_invite` |
+| `/settings/team/invite/{invite_id}/revoke` | POST | — | [backend/app.py:38086](../backend/app.py#L38086) · `settings_team_invite_revoke` |
+| `/settings/team/leave` | POST | — | [backend/app.py:38112](../backend/app.py#L38112) · `settings_team_leave` |
+| `/settings/team/member/{member_id}/remove` | POST | — | [backend/app.py:38100](../backend/app.py#L38100) · `settings_team_member_remove` |
 | `/site.webmanifest` | GET, HEAD | — | [backend/app.py:10436](../backend/app.py#L10436) · `site_webmanifest` |
 | `/sitemap.xml` | GET, HEAD | — | [backend/app.py:14394](../backend/app.py#L14394) · `sitemap_xml` |
 | `/status` | GET, HEAD | status_public.html | [backend/app.py:14166](../backend/app.py#L14166) · `status_public` |
 | `/stripe/webhook` | POST | — | [backend/app.py:14828](../backend/app.py#L14828) · `stripe_webhook` |
 | `/support` | GET, HEAD | support_public.html | [backend/app.py:14151](../backend/app.py#L14151) · `support_public` |
-| `/team/accept` | GET | — | [backend/app.py:38136](../backend/app.py#L38136) · `team_accept` |
+| `/team/accept` | GET | — | [backend/app.py:38137](../backend/app.py#L38137) · `team_accept` |
 | `/terms` | GET, HEAD | terms_public.html, terms_public_en.html | [backend/app.py:14099](../backend/app.py#L14099) · `terms_public` |
 
 ## Routes automatiques de FastAPI

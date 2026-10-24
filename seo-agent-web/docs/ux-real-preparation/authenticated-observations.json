@@ -1,0 +1,103 @@
+{
+  "checks": [
+    {
+      "name": "project-entry",
+      "expected_account": true,
+      "path": "/projects/voiceoverstudioai-com",
+      "overflow": false
+    },
+    {
+      "name": "current-correction-choices",
+      "count": 3,
+      "issues": [
+        "image_file_size_too_large",
+        "meta_description_too_long_indexable",
+        "redirect_3xx"
+      ],
+      "overflow": false
+    },
+    {
+      "name": "deployed-read-endpoints",
+      "github/status": {
+        "status": 200,
+        "ok": true,
+        "has_settings": false,
+        "mode": "review",
+        "has_repo": true
+      },
+      "content/auto": {
+        "status": 200,
+        "ok": true,
+        "has_settings": true,
+        "enabled": false,
+        "has_repo": false
+      }
+    },
+    {
+      "name": "deployed-settings-interface",
+      "script_v4": true,
+      "picker_present": true,
+      "mode": "review"
+    },
+    {
+      "name": "real-github-repository-list",
+      "started": true,
+      "completed": true,
+      "count": 12,
+      "saved_repository_in_list": true,
+      "selection_unchanged": true,
+      "elapsed_ms": 944,
+      "feedback": "Choisissez le dépôt de ce site.",
+      "overflow": false
+    },
+    {
+      "name": "before-correction-quotas",
+      "plan": "Free",
+      "overflow": false,
+      "corrections_state": "finite"
+    },
+    {
+      "name": "issue-instructions",
+      "path": "/projects/voiceoverstudioai-com/issues/meta_description_too_long_indexable",
+      "single_actions": 6,
+      "overflow": false
+    },
+    {
+      "name": "explicit-new-guided-choice",
+      "target": "/blog/kling-ai-alternatives-2026-fr",
+      "issue": "meta_description_too_long_indexable",
+      "confirmed": true,
+      "overflow": false
+    },
+    {
+      "name": "single-preview-requested",
+      "issue": "meta_description_too_long_indexable",
+      "target": "/blog/kling-ai-alternatives-2026-fr",
+      "confirm_clicked": false,
+      "old_receipt_kept": true
+    },
+    {
+      "name": "preview-refused-interrupted-operation",
+      "message": "Une correction interrompue doit etre reprise avant une nouvelle demande.",
+      "recovery": {
+        "visible": false,
+        "text": "",
+        "path": null
+      },
+      "followup": {
+        "visible": true,
+        "text": "Retrouver le suivi",
+        "path": "/projects/voiceoverstudioai-com/corrections"
+      },
+      "prepare_enabled": true,
+      "prepare_visible": true,
+      "confirm_visible": false
+    },
+    {
+      "name": "after-refused-preview-quota",
+      "status": 200,
+      "amount": "0 / 2",
+      "state": "finite"
+    }
+  ]
+}

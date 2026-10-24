@@ -1,0 +1,29 @@
+[
+  {
+    "path": "/blog/kling-ai-alternatives-2026-fr",
+    "status": 200,
+    "lang": "fr",
+    "description_lengths": [
+      172
+    ],
+    "description_count": 1
+  },
+  {
+    "path": "/blog/kling-ai-avis-2026-fr",
+    "status": 200,
+    "lang": "fr",
+    "description_lengths": [
+      165
+    ],
+    "description_count": 1
+  },
+  {
+    "path": "/blog/index-de",
+    "status": 200,
+    "lang": "de",
+    "description_lengths": [
+      165
+    ],
+    "description_count": 1
+  }
+]
