@@ -31540,6 +31540,7 @@ def _first_correction_context(request: Request, project: Project) -> dict[str, A
                 continue
             scope = dash.extract_impacted_pages(action.issue_key, (report.get("issues") or {}).get(action.issue_key))
             urls = [url for url in action.sample_urls if url in scope and _verification_url(url)]
+            urls = first_correction.candidate_urls(action.issue_key, urls, report)
             if not urls:
                 continue
             candidates.append({**asdict(action), "urls": urls})

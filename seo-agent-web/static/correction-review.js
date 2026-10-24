@@ -8,7 +8,7 @@
   if (!dialog || !context) return;
   const cfg = JSON.parse(context.textContent);
   const el = name => dialog.querySelector('[data-review-' + name + ']');
-  let selection, proposal, busy = false, opener, poll;
+  let selection, proposal, busy = false, recoveryRequired = false, opener, poll;
 
   async function receipts(target) {
     const response = await fetch('/api/projects/' + encodeURIComponent(target.slug) + '/tasks', {cache: 'no-store'});
@@ -54,8 +54,8 @@
   }
   function setBusy(value) {
     busy = value;
-    el('prepare').disabled = value;
-    el('confirm').disabled = value || !el('consent').checked;
+    el('prepare').disabled = value || recoveryRequired;
+    el('confirm').disabled = value || recoveryRequired || !el('consent').checked;
   }
   function recovery(href, label) {
     el('recovery').href = href;
@@ -89,8 +89,15 @@
     if (!response.ok || !data.ok) {
       if (data.pr_url) prLink(data.pr_url);
       if (data.billing_url) recovery('/billing', noyaruT('Voir mon abonnement'));
-      if (data.needs_setup) recovery('/projects/' + encodeURIComponent(selection.slug) + '/settings/crawl#github-section', noyaruT('Vérifier la connexion GitHub'));
-      const error = new Error(data.error || noyaruT('La demande n’a pas abouti. Retrouvez le suivi pour poursuivre.'));
+      if (data.needs_setup) recovery('/projects/' + encodeURIComponent(selection.slug) + '/settings/crawl#github-repo', noyaruT('Vérifier la connexion GitHub'));
+      if (data.recovery_required === true) {
+        recoveryRequired = true;
+        recovery('/support', noyaruT('Contacter l’assistance'));
+        document.getElementById('review-title').textContent = noyaruT('Préparation à vérifier');
+      }
+      const error = new Error(recoveryRequired
+        ? noyaruT('Une préparation précédente doit être vérifiée avant de continuer. Consultez le suivi ou contactez l’assistance.')
+        : data.error || noyaruT('La demande n’a pas abouti. Retrouvez le suivi pour poursuivre.'));
       error.known = true;
       throw error;
     }
@@ -127,7 +134,7 @@
     };
     const labels = keyword ? [noyaruT('Préparer'), noyaruT('Créer'), noyaruT('Relire'), noyaruT('Vérifier')] : [noyaruT('Préparer'), noyaruT('Relire'), noyaruT('Proposer'), noyaruT('Vérifier')];
     dialog.querySelectorAll('.correction-steps li').forEach((item, i) => { item.lastChild.textContent = labels[i]; });
-    proposal = null;
+    proposal = null; recoveryRequired = false;
     for (const name of ['preview', 'confirm', 'result', 'recovery', 'followup']) el(name).hidden = true;
     el('consent').checked = false;
     el('prepare').hidden = false;
@@ -158,10 +165,10 @@
   });
   el('close').addEventListener('click', close);
   el('cancel').addEventListener('click', close);
-  el('consent').addEventListener('change', () => { el('confirm').disabled = busy || !el('consent').checked; });
+  el('consent').addEventListener('change', () => { el('confirm').disabled = busy || recoveryRequired || !el('consent').checked; });
 
   el('prepare').addEventListener('click', async () => {
-    if (busy) return;
+    if (busy || recoveryRequired) return;
     setBusy(true); el('recovery').hidden = true; el('result').hidden = true;
     message(noyaruT('Préparation en cours. Vous pourrez retrouver la proposition dans le suivi des corrections.'));
     const base = '/api/projects/' + encodeURIComponent(selection.slug);
@@ -199,7 +206,7 @@
     } finally { setBusy(false); }
   });
   el('confirm').addEventListener('click', async () => {
-    if (busy || !proposal || !el('consent').checked) return;
+    if (busy || recoveryRequired || !proposal || !el('consent').checked) return;
     setBusy(true); message(noyaruT('Création de la proposition sur GitHub…'));
     const target = selection;
     const before = await baseline(target);

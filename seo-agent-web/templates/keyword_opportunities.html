@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block title %}{{ tr("Mots-clés") }} - {{ project.site_name if project else slug }}{% endblock %}
 
-{% block head_extra %}<link rel="stylesheet" href="/static/search-results.css?v=1" /><link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=3" defer></script>{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/search-results.css?v=1" /><link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=4" defer></script>{% endblock %}
 
 {% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Mots-clés") }}</span>{% endblock %}
 
