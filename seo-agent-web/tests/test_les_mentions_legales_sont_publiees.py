@@ -90,10 +90,12 @@ def test_une_valeur_INCONNUE_n_est_pas_inventee_et_bloque_la_publication(monkeyp
 
 
 def test_le_capital_social_est_publie_dans_les_deux_langues() -> None:
-    assert "<dt>Capital social</dt><dd>10\u00a0000\u00a0€</dd>" in _page()
-    assert "<dt>Share Capital</dt><dd>€10,000</dd>" in _page("/en/mentions-legales")
-    assert "au capital de 10\u00a0000\u00a0€" in _page("/terms")
-    assert "with a share capital of €10,000" in _page("/en/terms")
+    # Celui des statuts : 1 €. Le 10 000 € publié du 21 au 24/10/2026 était faux.
+    assert "<dt>Capital social</dt><dd>1\u00a0€</dd>" in _page()
+    assert "<dt>Share Capital</dt><dd>€1</dd>" in _page("/en/mentions-legales")
+    assert "au capital de 1\u00a0€." in _page("/terms")
+    assert "with a share capital of €1." in _page("/en/terms")
+    assert "10\u00a0000\u00a0€" not in _page() and "€10,000" not in _page("/en/terms")
     assert "share_capital" not in m.legal.missing()
 
 

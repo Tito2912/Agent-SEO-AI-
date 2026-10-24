@@ -18,9 +18,10 @@ from typing import Any
 PUBLISHER: dict[str, str | int | None] = {
     "name": "E-Com Shop",
     "form": "SASU",
-    # En euros, donné par le propriétaire le 21/10/2026. Écrit dans la langue de la page par
+    # En euros : celui des statuts du 30/10/2024, confirmé par le propriétaire le 24/10/2026 (le
+    # 10 000 € publié du 21 au 24/10/2026 était faux). Écrit dans la langue de la page par
     # share_capital().
-    "share_capital": 10_000,
+    "share_capital": 1,
     "address": "60 rue François 1er, 75008 Paris, France",
     "registration": "934 934 308 R.C.S. Paris",
     "vat_number": "FR18934934308",
@@ -47,9 +48,9 @@ HOST: dict[str, str] = {
 # La date de chaque document : celle de sa publication (validée par le propriétaire le
 # 21/10/2026), jamais celle du jour de la visite. À changer à chaque nouvelle version du texte.
 UPDATED: dict[str, date] = {
-    "terms": date(2026, 10, 21),
+    "terms": date(2026, 10, 24),
     "privacy": date(2026, 10, 21),
-    "legal_notice": date(2026, 10, 21),
+    "legal_notice": date(2026, 10, 24),
 }
 
 # Version de l'avertissement montré avant d'activer une fusion ou une publication automatique
@@ -75,7 +76,7 @@ def identity() -> str:
 
 
 def share_capital(lang: str) -> str | None:
-    """Le capital social, écrit dans la langue de la page : « 10 000 € », "€10,000"."""
+    """Le capital social, écrit dans la langue de la page : « 10 000 € », "€10,000" ; « 1 € », "€1"."""
     amount = PUBLISHER["share_capital"]
     if not amount:
         return None
