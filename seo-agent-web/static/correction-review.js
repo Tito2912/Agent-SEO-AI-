@@ -8,7 +8,7 @@
   if (!dialog || !context) return;
   const cfg = JSON.parse(context.textContent);
   const el = name => dialog.querySelector('[data-review-' + name + ']');
-  let selection, proposal, busy = false, recoveryRequired = false, opener, poll;
+  let selection, proposal, busy = false, recoveryRequired = false, previewUnavailable = false, opener, poll;
 
   async function receipts(target) {
     const response = await fetch('/api/projects/' + encodeURIComponent(target.slug) + '/tasks', {cache: 'no-store'});
@@ -54,8 +54,8 @@
   }
   function setBusy(value) {
     busy = value;
-    el('prepare').disabled = value || recoveryRequired;
-    el('confirm').disabled = value || recoveryRequired || !el('consent').checked;
+    el('prepare').disabled = value || recoveryRequired || previewUnavailable;
+    el('confirm').disabled = value || recoveryRequired || previewUnavailable || !el('consent').checked;
   }
   function recovery(href, label) {
     el('recovery').href = href;
@@ -94,6 +94,18 @@
         recoveryRequired = true;
         recovery('/support', noyaruT('Contacter l’assistance'));
         document.getElementById('review-title').textContent = noyaruT('Préparation à vérifier');
+      }
+      if (data.preview_unavailable === true) {
+        previewUnavailable = true;
+        el('prepare').hidden = true;
+        el('confirm').hidden = true;
+        el('cancel').textContent = noyaruT('Fermer');
+        document.getElementById('review-title').textContent = noyaruT('Aucun aperçu à proposer');
+        document.getElementById('review-intro').textContent = noyaruT('La préparation s’est arrêtée. Choisissez une action ci-dessous pour continuer.');
+        recovery(data.source_unresolved
+          ? '/projects/' + encodeURIComponent(selection.slug) + '/settings/crawl#github-repo'
+          : '/projects/' + encodeURIComponent(selection.slug) + '/first-correction?choose=1',
+        data.source_unresolved ? noyaruT('Vérifier le dépôt du projet') : noyaruT('Choisir une autre correction'));
       }
       const error = new Error(recoveryRequired
         ? noyaruT('Une préparation précédente doit être vérifiée avant de continuer. Consultez le suivi ou contactez l’assistance.')
@@ -134,7 +146,7 @@
     };
     const labels = keyword ? [noyaruT('Préparer'), noyaruT('Créer'), noyaruT('Relire'), noyaruT('Vérifier')] : [noyaruT('Préparer'), noyaruT('Relire'), noyaruT('Proposer'), noyaruT('Vérifier')];
     dialog.querySelectorAll('.correction-steps li').forEach((item, i) => { item.lastChild.textContent = labels[i]; });
-    proposal = null; recoveryRequired = false;
+    proposal = null; recoveryRequired = false; previewUnavailable = false;
     for (const name of ['preview', 'confirm', 'result', 'recovery', 'followup']) el(name).hidden = true;
     el('consent').checked = false;
     el('prepare').hidden = false;
@@ -165,10 +177,10 @@
   });
   el('close').addEventListener('click', close);
   el('cancel').addEventListener('click', close);
-  el('consent').addEventListener('change', () => { el('confirm').disabled = busy || recoveryRequired || !el('consent').checked; });
+  el('consent').addEventListener('change', () => { el('confirm').disabled = busy || recoveryRequired || previewUnavailable || !el('consent').checked; });
 
   el('prepare').addEventListener('click', async () => {
-    if (busy || recoveryRequired) return;
+    if (busy || recoveryRequired || previewUnavailable) return;
     setBusy(true); el('recovery').hidden = true; el('result').hidden = true;
     message(noyaruT('Préparation en cours. Vous pourrez retrouver la proposition dans le suivi des corrections.'));
     const base = '/api/projects/' + encodeURIComponent(selection.slug);
@@ -206,7 +218,7 @@
     } finally { setBusy(false); }
   });
   el('confirm').addEventListener('click', async () => {
-    if (busy || recoveryRequired || !proposal || !el('consent').checked) return;
+    if (busy || recoveryRequired || previewUnavailable || !proposal || !el('consent').checked) return;
     setBusy(true); message(noyaruT('Création de la proposition sur GitHub…'));
     const target = selection;
     const before = await baseline(target);

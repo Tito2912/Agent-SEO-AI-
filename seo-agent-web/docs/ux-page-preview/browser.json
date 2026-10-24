@@ -1,0 +1,203 @@
+{
+  "checks": [
+    {
+      "screen": "correction-review",
+      "state": "no_change",
+      "lang": "fr",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "source_unresolved",
+      "lang": "fr",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "valid-preview-waits-for-explicit-confirmation",
+      "lang": "fr",
+      "width": 1440,
+      "posts": 1
+    },
+    {
+      "screen": "correction-review",
+      "state": "no_change",
+      "lang": "en",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "source_unresolved",
+      "lang": "en",
+      "width": 1440,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "valid-preview-waits-for-explicit-confirmation",
+      "lang": "en",
+      "width": 1440,
+      "posts": 1
+    },
+    {
+      "screen": "correction-review",
+      "state": "no_change",
+      "lang": "fr",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "source_unresolved",
+      "lang": "fr",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "valid-preview-waits-for-explicit-confirmation",
+      "lang": "fr",
+      "width": 768,
+      "posts": 1
+    },
+    {
+      "screen": "correction-review",
+      "state": "no_change",
+      "lang": "en",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "source_unresolved",
+      "lang": "en",
+      "width": 768,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "valid-preview-waits-for-explicit-confirmation",
+      "lang": "en",
+      "width": 768,
+      "posts": 1
+    },
+    {
+      "screen": "correction-review",
+      "state": "no_change",
+      "lang": "fr",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "source_unresolved",
+      "lang": "fr",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "valid-preview-waits-for-explicit-confirmation",
+      "lang": "fr",
+      "width": 390,
+      "posts": 1
+    },
+    {
+      "screen": "correction-review",
+      "state": "no_change",
+      "lang": "en",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "source_unresolved",
+      "lang": "en",
+      "width": 390,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "valid-preview-waits-for-explicit-confirmation",
+      "lang": "en",
+      "width": 390,
+      "posts": 1
+    },
+    {
+      "screen": "correction-review",
+      "state": "no_change",
+      "lang": "fr",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "source_unresolved",
+      "lang": "fr",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "valid-preview-waits-for-explicit-confirmation",
+      "lang": "fr",
+      "width": 360,
+      "posts": 1
+    },
+    {
+      "screen": "correction-review",
+      "state": "no_change",
+      "lang": "en",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "source_unresolved",
+      "lang": "en",
+      "width": 360,
+      "posts": 1,
+      "overflow": false
+    },
+    {
+      "screen": "correction-review",
+      "state": "valid-preview-waits-for-explicit-confirmation",
+      "lang": "en",
+      "width": 360,
+      "posts": 1
+    },
+    {
+      "screen": "recovery-destination",
+      "state": "no_change",
+      "width": 390,
+      "project_preserved": true
+    },
+    {
+      "screen": "recovery-destination",
+      "state": "source_unresolved",
+      "width": 390,
+      "project_preserved": true
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "scope": "Local fictitious accounts and reports. Responses simulated; no real IA or GitHub writes."
+}

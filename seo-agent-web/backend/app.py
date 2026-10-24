@@ -4969,8 +4969,12 @@ def _ai_map_urls_to_files(
     return out
 
 
+class _GithubPreviewSourceUnavailable(RuntimeError):
+    """A single-page proposal cannot safely identify its one source file."""
+
+
 def _github_find_seo_files(
-    owner: str, repo: str, branch: str, token: str, issue_key: str
+    owner: str, repo: str, branch: str, token: str, issue_key: str, url: str = ""
 ) -> list[dict[str, Any]]:
     """Return [{path, content_str, sha}] for the most relevant SEO file in the repo."""
     if _github_repo_parts(f"{owner}/{repo}") is None:
@@ -4992,15 +4996,27 @@ def _github_find_seo_files(
         if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
     ]
 
-    candidates = _seo_file_candidates_for_issue(issue_key)
     matches: list[str] = []
-    for candidate in candidates:
-        for p in all_paths:
-            filename = p.split("/")[-1]
-            if (p == candidate or p.endswith(f"/{candidate}") or filename == candidate) and p not in matches:
-                matches.append(p)
-                break
-    if not matches:
+    per_page = bool(url) and (issue_key in _PER_PAGE_CONTENT_KEYS or _length_family_name(issue_key) is not None)
+    if per_page:
+        # Use the same route map as the extended corrector. A layout's default description
+        # is not the description of an article served from a content collection.
+        index = repo_index.build_repo_index(all_paths)
+        matches = [path for path in repo_index.route_files(index, url)
+                   if not repo_index.is_shared_path(index, path) and not repo_index.is_dead_path(index, path)]
+        if tree_data.get("truncated") or len(matches) != 1:
+            raise _GithubPreviewSourceUnavailable(
+                "Noyaru ne peut pas identifier avec certitude le fichier de cette page dans le dépôt. "
+                "Vérifiez le dépôt du projet avant de poursuivre. Aucune correction IA n’a été décomptée."
+            )
+    else:
+        for candidate in _seo_file_candidates_for_issue(issue_key):
+            for p in all_paths:
+                filename = p.split("/")[-1]
+                if (p == candidate or p.endswith(f"/{candidate}") or filename == candidate) and p not in matches:
+                    matches.append(p)
+                    break
+    if not matches and not per_page:
         # No hardcoded candidate exists in this repo — let the AI pick from the real tree.
         meta = dash.issue_meta(issue_key)
         issue_label = meta.label if meta else issue_key
@@ -19781,7 +19797,10 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
 
     # ── Step 1: Find file + generate patch (preview) ─────────────────────
     try:
-        seo_files = _github_find_seo_files(owner, repo_name, branch, token, issue_key)
+        seo_files = _github_find_seo_files(owner, repo_name, branch, token, issue_key, url)
+    except _GithubPreviewSourceUnavailable as e:
+        return JSONResponse({"ok": False, "preview_unavailable": True, "source_unresolved": True,
+                             "error": str(e)}, status_code=422)
     except RuntimeError as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
     best = seo_files[0]
@@ -19801,6 +19820,10 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             {"ok": False, "error": str(patch.get("description") or patch.get("error"))},
             status_code=422,
         )
+    if patch.get("no_change") or patch.get("patched_content") == best["content"]:
+        return JSONResponse({"ok": False, "preview_unavailable": True, "no_change": True,
+            "error": "Aucune modification n’a été proposée pour le fichier de cette page. "
+                     "Le problème reste à vérifier. Aucune correction IA n’a été décomptée."}, status_code=422)
     content_error = _github_patched_content_error(str(patch.get("patched_content") or ""), str(best.get("path") or ""))
     if content_error:
         return JSONResponse({"ok": False, "error": content_error}, status_code=400)

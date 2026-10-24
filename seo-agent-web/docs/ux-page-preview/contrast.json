@@ -1,0 +1,437 @@
+{
+  "samples": [
+    {
+      "text": "Aucune modification n’a été proposée pour le fichier de cette page. Le problème reste à vé",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 1440,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Choisir une autre correction",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Noyaru ne peut pas identifier avec certitude le fichier de cette page dans le dépôt. Vérif",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 1440,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Vérifier le dépôt du projet",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "No change was proposed for this page's source file. The issue still needs checking. No AI ",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 1440,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Choose another fix",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Noyaru cannot identify this page's source file with certainty in the repository. Check the",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 1440,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Check the project's repository",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Aucune modification n’a été proposée pour le fichier de cette page. Le problème reste à vé",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 768,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Choisir une autre correction",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Noyaru ne peut pas identifier avec certitude le fichier de cette page dans le dépôt. Vérif",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 103.171875,
+      "width": 768,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Vérifier le dépôt du projet",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "No change was proposed for this page's source file. The issue still needs checking. No AI ",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 768,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Choose another fix",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Noyaru cannot identify this page's source file with certainty in the repository. Check the",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 76.78125,
+      "width": 768,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Check the project's repository",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Aucune modification n’a été proposée pour le fichier de cette page. Le problème reste à vé",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 129.5625,
+      "width": 390,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Choisir une autre correction",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Noyaru ne peut pas identifier avec certitude le fichier de cette page dans le dépôt. Vérif",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 155.953125,
+      "width": 390,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Vérifier le dépôt du projet",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "No change was proposed for this page's source file. The issue still needs checking. No AI ",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 129.5625,
+      "width": 390,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Choose another fix",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Noyaru cannot identify this page's source file with certainty in the repository. Check the",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 155.953125,
+      "width": 390,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Check the project's repository",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Aucune modification n’a été proposée pour le fichier de cette page. Le problème reste à vé",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 155.953125,
+      "width": 360,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Choisir une autre correction",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "fr",
+      "state": "no_change"
+    },
+    {
+      "text": "Noyaru ne peut pas identifier avec certitude le fichier de cette page dans le dépôt. Vérif",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 155.953125,
+      "width": 360,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Retrouver le suivi",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Vérifier le dépôt du projet",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "fr",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "No change was proposed for this page's source file. The issue still needs checking. No AI ",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 129.5625,
+      "width": 360,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Choose another fix",
+      "ratio": 13.87038057373471,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "en",
+      "state": "no_change"
+    },
+    {
+      "text": "Noyaru cannot identify this page's source file with certainty in the repository. Check the",
+      "ratio": 5.012016032236808,
+      "gradient": false,
+      "height": 155.953125,
+      "width": 360,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Go to the tracker",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "en",
+      "state": "source_unresolved"
+    },
+    {
+      "text": "Check the project's repository",
+      "ratio": 15.032584054117994,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "en",
+      "state": "source_unresolved"
+    }
+  ],
+  "minimum": 5.012016032236808
+}
