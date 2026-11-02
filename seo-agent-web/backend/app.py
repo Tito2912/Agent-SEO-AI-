@@ -17190,6 +17190,9 @@ async def assistant_chat(request: Request) -> JSONResponse:
                 )
 
     history = _assistant_clean_history(payload.get("history") if isinstance(payload, dict) else None)
+    if authorized_project is not None:
+        context = {**context, "project": {"slug": authorized_project.slug,
+                   "site_name": authorized_project.site_name, "base_url": authorized_project.base_url}}
     system = _assistant_system_prompt(context if isinstance(context, dict) else None)
     if authorized_project is not None:
         try:

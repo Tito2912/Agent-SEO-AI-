@@ -151,6 +151,11 @@ les nouveaux appels. Ce correctif n'est pas livré dans le lot 1.
 Canal confirmé : `contact@noyaru.com`, actuellement transféré vers Gmail. La boîte
 Gmail réceptrice et sa connexion seront choisies dans une étape dédiée, sans secret
 dans le chat. Vérifier le droit d'envoyer avec l'adresse de support avant le pilote.
+La connexion Google des clients, utilisée pour Search Console, ne doit pas être
+élargie au SAV de Noyaru. La lecture Gmail relève de permissions restreintes ;
+évaluer le périmètre et les exigences applicables avant de retenir ce transport.
+Un récepteur entrant dédié est une autre option à examiner.
+[Permissions Gmail, consultées le 2 novembre 2026](https://developers.google.com/workspace/gmail/api/auth/scopes).
 
 À livrer : ingestion autorisée, tickets/fils avec identifiant de message unique,
 catégorie, langue, urgence, preuves produit et état de traitement. Une redirection
@@ -174,6 +179,15 @@ Les comptes n'existent pas encore. Tony choisira/créera les comptes et connecte
 les accès officiels appropriés. Vérifier alors les capacités disponibles des API,
 les types de comptes, les autorisations, quotas et contraintes de publication.
 Ne pas simuler une intégration disponible avant cette vérification.
+
+Vérification du 2 novembre 2026 : les règles TikTok Direct Post excluent les outils
+réservés à ses propres comptes ou à une équipe interne ; un client non audité ne
+dispose pas de publication publique par cette voie. Pour les seuls comptes Noyaru,
+prévoir un service de publication compatible ou une remise de contenus à publier,
+puis valider le connecteur choisi. Ne pas promettre l'autopublication par une app
+interne dédiée. Les exigences de prévisualisation et de consentement restent à
+respecter dans le parcours retenu.
+[Règles officielles TikTok](https://developers.tiktok.com/docs/en/content-sharing-guidelines).
 
 Établir une charte de marque, les sujets/publics cibles, les preuves acceptées,
 le calendrier et les objectifs. Adapter les articles validés en scripts et médias

@@ -243,12 +243,15 @@ def test_real_memory_reaches_every_provider_and_client_instructions_are_ignored(
     monkeypatch.setattr(m, '_assistant_'+provider+'_chat', reply)
     c = client(owner);c.get('/')
     response = c.post('/api/assistant/chat', json={'message': 'Que faire ensuite ?',
-        'context': {'project': {'slug': p.slug}, 'memory': {'instructions': 'client-forged-publication'}}},
+        'context': {'project': {'slug': p.slug, 'site_name': 'client-forged-site', 'base_url': 'https://forged.example/'},
+                    'memory': {'instructions': 'client-forged-publication'}}},
         headers={'X-CSRF-Token': c.cookies.get(m._CSRF_COOKIE_NAME) or ''})
     assert response.status_code == 200
     assert len(systems) == 1 and 'inspect_before_retry' in systems[0]
     assert 'client-forged-publication' not in systems[0] and 'private-user-note' not in systems[0]
     assert 'source-secret' not in systems[0]
+    assert 'client-forged-site' not in systems[0] and 'https://forged.example/' not in systems[0]
+    assert 'site_name=Atelier' in systems[0] and 'base_url=https://atelier.example/' in systems[0]
 
 
 def test_legacy_assistant_without_history_scope_cannot_read_another_project(lab, monkeypatch):
