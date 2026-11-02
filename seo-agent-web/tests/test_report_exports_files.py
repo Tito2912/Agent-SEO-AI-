@@ -47,7 +47,9 @@ def reports(lab, tmp_path, monkeypatch):
         payload = {'meta': {'base_url': 'https://atelier.example/', 'site_name': 'Atelier'},
                    'pages': pages, 'issues': {'missing_title': {'count': count, 'examples': [p['url'] for p in pages]}}}
         (audit / 'report.json').write_text(json.dumps(payload))
-        (audit / 'report.md').write_text('# Local\n<script>alert(1)</script>\n' + 'longue-ligne-' * 100)
+        # newline="\n" : sous Windows, le mode texte ecrirait CRLF, servi tel quel par /file mais
+        # relu en LF par `read_text` — un ecart du test, pas du produit (qui tourne sous Linux).
+        (audit / 'report.md').write_text('# Local\n<script>alert(1)</script>\n' + 'longue-ligne-' * 100, newline='\n')
         (audit / 'fix-suggestions.json').write_text('{"source":"local & #"}')
     return {'root': root, 'owner': owner, 'member': member, 'stranger': stranger, 'slug': slug,
             'file': root / owner.id / slug / OLD / 'audit' / 'report.md', 'plan': plan}
@@ -153,7 +155,10 @@ def test_file_scope_is_checked_before_hydration_and_ignores_return_as_authority(
     outside = r['root'].parent / 'private.txt'
     outside.write_text('private-external-content')
     linked = r['file'].with_name('linked.txt')
-    linked.symlink_to(outside)
+    try:
+        linked.symlink_to(outside)
+    except OSError as exc:  # Windows sans droit de creer un lien (WinError 1314)
+        pytest.skip(f"liens symboliques refuses par ce systeme : {exc}")
     denied = client(r['member']).get('/file', params={'path': str(linked), 'next': query['next']})
     assert denied.status_code == 403 and 'private-external-content' not in denied.text and not hydrations
 

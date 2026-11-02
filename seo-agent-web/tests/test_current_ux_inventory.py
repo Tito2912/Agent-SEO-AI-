@@ -25,7 +25,7 @@ def test_cli_writes_a_separate_current_inventory_and_leaves_history_intact(tmp_p
     output=tmp_path/'current.md'
     result=subprocess.run([sys.executable,str(SCRIPT),'--output',str(output)],capture_output=True,text=True)
     assert result.returncode==0 and output.is_file()
-    assert 'Révision du code' in output.read_text() and history.read_bytes()==before
+    assert 'Révision du code' in output.read_text(encoding='utf-8') and history.read_bytes()==before
 
 
 def test_cli_refuses_to_replace_the_historical_inventory():
