@@ -6,7 +6,7 @@ markdown==3.10.3
 python-multipart==0.0.31
 pyyaml==6.0.3
 google-auth==2.53.0
-pyasn1==0.6.4
+pyasn1==0.6.5
 requests==2.34.2
 # httpx2 2.12 (the release that fixes CVE-2026-84379/80/81/82) requires idna>=3.18.
 # requests 2.34.2 accepts idna<4, so 3.19 satisfies both.
