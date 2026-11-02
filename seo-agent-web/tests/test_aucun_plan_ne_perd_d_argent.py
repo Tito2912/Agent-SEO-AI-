@@ -38,7 +38,12 @@ MARGE_MINIMALE = 0.40
 # Pire cas par unité : (tokens d'entrée, tokens de sortie). Correction : gros fichier et
 # réécriture complète (plafond 8 000) ; article : version longue ; message : historique plein.
 PIRE = {"correction": (20_000, 6_000), "article": (10_000, 7_400), "reponse": (2_000, 1_000),
-        "message": (10_000, 1_000)}
+        "message": (10_000, 1_000),
+        # Les visuels d'un article (02/11/2026), INCLUS dans l'article : ses images importées,
+        # montrées au modèle (6 × ~1 600 jetons), et jusqu'à 4 illustrations. Une illustration
+        # en qualité moyenne 1536 × 1024 coûte ~2 700 jetons d'image ; 4 000 couvrent un
+        # réglage plus fin sans que ce test se taise.
+        "images_jointes": (6 * 1_600, 0), "illustration": (300, 4_000)}
 SERPAPI_USD = 0.025          # formule Starter, la plus chère par recherche
 CONCURRENT_USD = 0.08        # par concurrent et par mois : découverte + sujets
 STRIPE = (0.027, 0.25)       # carte UE + Billing + Tax, et fixe par paiement
@@ -57,8 +62,14 @@ def _pire_cas_eur(plan: str) -> float:
     modele = cat["correction"]["model"]
     defaut = m._correction_ai_model("anthropic")          # réponses de backlinks, ciblage
     assistant = m._assistant_model("claude")
+    # Pire cas : chaque article du quota est demandé seul, avec ses visuels au complet — un
+    # article en quatre langues compte quatre au quota mais ne paie ses images qu'une fois.
+    # Les illustrations sont reservees a Business (decision du 02/11/2026) : Pro passait sous 40 %.
+    article = (_usd(modele, "article") + _usd(modele, "images_jointes")
+               + billing.illustrations_par_article(plan)
+               * _usd(os.environ.get("NOYARU_IMAGE_MODEL") or "gpt-image-2", "illustration"))
     usd = (lim.get("ai_corrections_month", 0) * _usd(modele, "correction")
-           + lim.get("ai_articles_month", 0) * _usd(modele, "article")
+           + lim.get("ai_articles_month", 0) * article
            + lim.get("backlink_replies_month", 0) * _usd(defaut, "reponse")
            + lim.get("assistant_messages_month", 0) * _usd(assistant, "message")
            + lim.get("backlink_searches_month", 0) * SERPAPI_USD)

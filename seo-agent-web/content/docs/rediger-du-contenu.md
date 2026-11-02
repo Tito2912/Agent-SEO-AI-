@@ -5,7 +5,7 @@ description: "Rédiger un article à relire en HTML et Markdown ou préparer une
 kind: "Documentation"
 section: "Aller plus loin"
 order: 44
-updated_at: "2026-10-19"
+updated_at: "2026-11-02"
 audience: "Pro et Business"
 keywords: ["rédaction IA", "contenu SEO", "page neuve", "pull request", "mode automatique"]
 app_href: "/"
@@ -32,6 +32,26 @@ faq:
 Choisissez la destination, le **sujet**, sa **rubrique**, puis la longueur, le ton et les langues si nécessaire. Le récapitulatif indique le nombre de versions et leur coût.
 
 En mode **Contenu seul**, relisez l’aperçu isolé ou le texte en Markdown, puis copiez ou téléchargez la version choisie. Aucune copie ne publie l’article : insérez-le ensuite dans votre CMS et contrôlez la page en ligne.
+
+## Ajouter des visuels
+
+En mode **Contenu seul**, le bloc **Ajouter des visuels** enrichit l’article de deux façons, que vous pouvez combiner.
+
+**Vos images** : jusqu’à {{images_max}} images (JPEG, PNG ou WebP, 10 Mo au plus chacune), avec, si vous le souhaitez, une phrase sur ce que montre chacune. Le modèle les voit, les place là où elles servent le propos et écrit leur texte alternatif dans la langue de l’article. Elles sont réduites à 1 600 pixels de large, converties en WebP et débarrassées de leurs métadonnées — position GPS d’une photo de téléphone comprise.
+
+**Les visuels ajoutés par {{app_name}}** — {{visuels_max}} au plus par article, et seulement là où ils aident le lecteur :
+
+| visuel | ce qui le borne |
+|---|---|
+| Graphique | il ne montre que des chiffres **écrits dans l’article** ou dans les données que vous avez collées ; un chiffre absent du texte fait retirer le graphique. Sans source, il porte la mention « Exemple chiffré ». |
+| Capture d’écran | une page de **votre site**, vue par la dernière analyse, et seulement quand l’article parle de ce qu’elle montre. Chaque version linguistique montre la page de sa langue quand elle existe. |
+| Illustration IA | une image générée, sans texte ni logo ni personne réelle identifiable, marquée comme générée par IA dans ses métadonnées. Au plus {{illustrations_business}} par article, à partir du plan {{label_business}}. |
+
+Les visuels sont **inclus dans l’article** : ils ne décomptent aucun article de plus. Un visuel qui n’a pas pu être produit est retiré du texte, et une note le dit — jamais d’image cassée dans l’article livré.
+
+Le bouton **Télécharger l’article et ses images (.zip)** donne chaque version en `.md` et en `.html`, et le dossier `images/` qu’elles citent. Déposez ce dossier à côté de l’article, ou importez les images dans votre CMS et reprenez leurs adresses.
+
+En mode **Proposition GitHub**, les visuels ne sont pas encore disponibles : il faut d’abord savoir, dépôt par dépôt, où le site range ses images et comment ses pages les insèrent.
 
 En mode **Proposition GitHub**, renseignez aussi une **adresse**. L'adresse est suggérée à partir du sujet, et vous
 la corrigez — la section (`/blog`, `/guides`, `/ressources`) est une décision éditoriale que

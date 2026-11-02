@@ -109,6 +109,7 @@ try:
     from . import help_navigation
     from . import i18n
     from . import legal
+    from . import visuels
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -125,6 +126,7 @@ except ImportError:
     import help_navigation
     import i18n
     import legal
+    import visuels  # type: ignore
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -3435,6 +3437,9 @@ _PRIX_IA_USD_MTOK: dict[str, tuple[float, float]] = {
     "claude-sonnet-4-6": (3.0, 15.0),
     "claude-sonnet-4-5": (3.0, 15.0),
     "claude-haiku-4-5": (1.0, 5.0),
+    # Le modele d'image d'OpenAI (illustrations d'articles, 02/11/2026) : texte en entree, IMAGE
+    # en sortie — 30 $ le million de jetons d'image, developers.openai.com/api/docs/pricing.
+    "gpt-image-2": (5.0, 30.0),
 }
 
 
@@ -3452,6 +3457,23 @@ def _poser_contexte_ia(*, payeur: str = "", fonction: str = "", utilisateur: str
     (payeur resolu au moment de l'appel) ; une tache de fond, pour chaque projet qu'elle traite."""
     return _IA_CONTEXTE.set({"payeur": payeur, "fonction": fonction, "utilisateur": utilisateur,
                              "slug": slug, "scope": scope})
+
+
+def _dans_ce_contexte(fonction: "Callable[..., Any]") -> "Callable[..., Any]":
+    """`fonction`, executee dans le contexte de l'APPELANT — celui qui dit qui paie.
+
+    Un fil d'un `ThreadPoolExecutor` part d'un contexte VIDE : un appel d'IA qui y tourne ne sait
+    plus qui le paie, `_noter_consommation_ia` journalise et n'ecrit rien. Trouve le 02/11/2026 :
+    les corrections en lot et les traductions d'articles, tous lances en parallele, manquaient au
+    releve du cout reel par plan. Une copie PAR APPEL : un meme contexte ne s'ouvre pas dans deux
+    fils a la fois.
+    """
+    contexte = contextvars.copy_context()
+
+    def _appel(*args: Any, **kwargs: Any) -> Any:
+        return contexte.copy().run(fonction, *args, **kwargs)
+
+    return _appel
 
 
 def _noter_consommation_ia(*, fournisseur: str, modele: str, data: Any) -> None:
@@ -4224,7 +4246,8 @@ def _delai_pour(max_tokens: int) -> int:
 
 
 def _anthropic_messages_text(
-    *, system: str, user_msg: str, model: str, max_tokens: int
+    *, system: str, user_msg: str, model: str, max_tokens: int,
+    images: "list[bytes] | None" = None,
 ) -> str:
     api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
     if not api_key:
@@ -4234,6 +4257,13 @@ def _anthropic_messages_text(
     # this model"); we omit it and rely on the model default.
     # Dans une variable : bandit (B113) ne reconnait pas un delai passe par un appel.
     delai = _delai_pour(max_tokens)
+    # Les images (WebP) passent AVANT le texte qui les cite : « image 1 » est la premiere jointe.
+    contenu: Any = user_msg
+    if images:
+        import base64 as _b64
+        contenu = [{"type": "image", "source": {"type": "base64", "media_type": "image/webp",
+                                                "data": _b64.b64encode(i).decode("ascii")}}
+                   for i in images] + [{"type": "text", "text": user_msg}]
     resp = requests.post(
         f"{base}/messages",
         headers={
@@ -4245,7 +4275,7 @@ def _anthropic_messages_text(
             "model": model,
             "max_tokens": max_tokens,
             "system": system,
-            "messages": [{"role": "user", "content": user_msg}],
+            "messages": [{"role": "user", "content": contenu}],
         },
         timeout=delai,
     )
@@ -4270,12 +4300,19 @@ _OPENAI_SANS_TEMPERATURE: set[str] = set()
 
 
 def _openai_chat_text(
-    *, system: str, user_msg: str, model: str, max_tokens: int, temperature: float, json_mode: bool
+    *, system: str, user_msg: str, model: str, max_tokens: int, temperature: float, json_mode: bool,
+    images: "list[bytes] | None" = None,
 ) -> str:
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY manquante")
     base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
+    contenu: Any = user_msg
+    if images:
+        import base64 as _b64
+        contenu = [{"type": "image_url", "image_url": {
+            "url": "data:image/webp;base64," + _b64.b64encode(i).decode("ascii")}}
+            for i in images] + [{"type": "text", "text": user_msg}]
     payload: dict[str, Any] = {
         "model": model,
         # `max_tokens` EST REFUSE par toute la generation gpt-5, mesure le 21/09/2026 :
@@ -4286,7 +4323,7 @@ def _openai_chat_text(
         "max_completion_tokens": max_tokens,
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": user_msg},
+            {"role": "user", "content": contenu},
         ],
     }
     if model not in _OPENAI_SANS_TEMPERATURE:
@@ -4321,15 +4358,46 @@ def _openai_chat_text(
     return str(data["choices"][0]["message"]["content"] or "")
 
 
+def _openai_generer_une_image(*, prompt: str, taille: str = "1536x1024") -> bytes:
+    """Une illustration d'article, en octets (PNG), par le modele d'image d'OpenAI.
+
+    Le modele et la qualite se reglent sans deploiement (`NOYARU_IMAGE_MODEL`,
+    `NOYARU_IMAGE_QUALITE`). Qualite moyenne par defaut : ~0,05 a 0,08 $ l'image au tarif
+    releve le 02/11/2026 ; la haute coute quatre fois plus pour une difference qu'une
+    illustration d'article ne montre pas. Le cout reel est releve comme celui des textes : les
+    jetons de sortie d'une image sont dans `usage`.
+    """
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY manquante")
+    base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
+    model = (os.environ.get("NOYARU_IMAGE_MODEL") or "gpt-image-2").strip()
+    resp = requests.post(
+        f"{base}/images/generations",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json={"model": model, "prompt": prompt, "n": 1, "size": taille,
+              "quality": (os.environ.get("NOYARU_IMAGE_QUALITE") or "medium").strip()},
+        timeout=180,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"OpenAI images HTTP {resp.status_code}: {resp.text[:300]}")
+    data = resp.json()
+    _noter_consommation_ia(fournisseur="openai", modele=model, data=data)
+    import base64 as _b64
+    return _b64.b64decode(data["data"][0]["b64_json"])
+
+
 def _correction_ai_json(
     *, system: str, user_msg: str, max_tokens: int = 4000, temperature: float = 0.05,
     error_sink: list[str] | None = None, model_override: str = "",
+    images: "list[bytes] | None" = None,
 ) -> dict[str, Any]:
     """Generate a JSON object using the best available correction AI.
 
     Tries the preferred provider first (Claude by default), then falls back to the
     other configured provider if the primary call fails. Returns {} when none work.
     `model_override` forces the Anthropic model (per-plan: Sonnet vs Opus).
+    `images` (WebP) are shown to the model before the message, in order.
     Failures are logged and (optionally) appended to error_sink for surfacing.
     """
     primary = _correction_ai_provider()
@@ -4377,6 +4445,7 @@ def _correction_ai_json(
                     user_msg=user_msg,
                     model=model,
                     max_tokens=max_tokens,
+                    images=images,
                 )
             else:
                 text = _openai_chat_text(
@@ -4386,6 +4455,7 @@ def _correction_ai_json(
                     max_tokens=max_tokens,
                     temperature=temperature,
                     json_mode=True,
+                    images=images,
                 )
             parsed = _parse_ai_json(text)
             if parsed:
@@ -8308,16 +8378,17 @@ def _worker_concurrency() -> int:
     return max(1, min(4, v))
 
 
-def _claim_next_job_id(*, worker_id: str) -> str | None:
+def _claim_next_job_id(*, worker_id: str, types: "tuple[str, ...]" = ()) -> str | None:
     now = time.time()
     with DB.session() as db:
         q = (
             select(JobRecord.id)
             .where(JobRecord.status == "queued")
             .where((JobRecord.run_after == None) | (JobRecord.run_after <= now))  # noqa: E711
-            .order_by(JobRecord.created_at.asc())
-            .limit(1)
         )
+        if types:
+            q = q.where(JobRecord.kind.in_(list(types)))
+        q = q.order_by(JobRecord.created_at.asc()).limit(1)
         try:
             q = q.with_for_update(skip_locked=True)
         except Exception:
@@ -8371,6 +8442,10 @@ def _execute_queued_job(job_id: str) -> None:
             job.id, str(result.get("user_id") or "").strip(),
             str(result.get("competitor_id") or "").strip(),
         )
+        return
+
+    if jtype == "capture":
+        _run_capture_job(job)
         return
 
     if jtype == "autopilot":
@@ -8453,10 +8528,11 @@ def _executer_avec_battement(job_id: str) -> None:
         fil.join(timeout=5)
 
 
-def _job_worker_loop(worker_id: str) -> None:
+def _job_worker_loop(worker_id: str, types: "tuple[str, ...]" = ()) -> None:
     while not _WORKER_STOP.is_set():
         try:
-            jid = _claim_next_job_id(worker_id=worker_id)
+            jid = (_claim_next_job_id(worker_id=worker_id, types=types) if types
+                   else _claim_next_job_id(worker_id=worker_id))
         except Exception as e:
             logger.error("[WORKER] claim error: %s: %s", type(e).__name__, e)
             _sentry_capture_exception(e, where="worker.claim_next_job", meta={"worker_id": worker_id})
@@ -8524,7 +8600,14 @@ def _start_job_worker() -> None:
             t = threading.Thread(target=_job_worker_loop, args=(wid,), daemon=True)
             t.start()
             _WORKER_THREADS.append(t)
-        logger.info("[WORKER] %d fil(s) demarre(s), prefixe %s", n, base)
+        # UN FIL RESERVE AUX CAPTURES D'ECRAN d'articles (02/11/2026). Une capture prend quelques
+        # secondes, et la personne attend devant l'ecran Contenu : derriere deux crawls d'une
+        # heure, elle n'arriverait jamais. Un navigateur de plus au pire (~300 Mo) : le worker
+        # culmine a 40 % de ses 2 Go.
+        t = threading.Thread(target=_job_worker_loop, args=(f"{base}-captures", ("capture",)), daemon=True)
+        t.start()
+        _WORKER_THREADS.append(t)
+        logger.info("[WORKER] %d fil(s) demarre(s) + 1 fil de captures, prefixe %s", n, base)
 
 
 _RETENTION_STARTED_GUARD = threading.Lock()
@@ -9789,6 +9872,118 @@ def _competitor_pages_from_report(report: dict[str, Any]) -> list[dict[str, Any]
     return out
 
 
+# ── CAPTURES D'ECRAN D'ARTICLES (02/11/2026) ──────────────────────────────────────────────────
+#
+# Une page du site du client, capturee pour illustrer un article qui en parle. Le navigateur vit
+# dans le conteneur de crawl : le conteneur web n'a pas la memoire d'un Chromium. Le web met un
+# travail « capture » dans la file et attend sa fin ; le worker le prend sur un fil reserve.
+
+# Les bandeaux de consentement les plus repandus. Une capture d'article montre la page, pas sa
+# fenetre de cookies ; masquer n'accepte ni ne refuse rien.
+_BANDEAUX_COOKIES_CSS = (
+    "#onetrust-consent-sdk,#onetrust-banner-sdk,#didomi-host,#tarteaucitronRoot,"
+    "#tarteaucitronAlertBig,#CybotCookiebotDialog,#axeptio_overlay,#axeptio_main_button,"
+    ".cc-window,.cky-consent-container,#cookie-notice,#cookie-law-info-bar,"
+    "#cmplz-cookiebanner-container,.cmplz-cookiebanner,#usercentrics-root,#qc-cmp2-container,"
+    ".fc-consent-root,[id^='sp_message_container'],#iubenda-cs-banner,#cookiescript_injected,"
+    ".osano-cm-window,#hs-eu-cookie-confirmation,#gdpr-cookie-message,#cookie-banner,"
+    ".cookie-banner,#cookieConsent{display:none!important}"
+    "html,body{overflow:auto!important}"
+)
+
+
+def _capturer_une_page(url: str) -> bytes:
+    """Le haut de la page tel qu'un visiteur le voit en arrivant, en PNG (1280 × 800)."""
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as pw:
+        navigateur = pw.chromium.launch(
+            headless=True, args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
+        try:
+            page = navigateur.new_page(viewport={"width": 1280, "height": 800})
+            reponse = page.goto(url, wait_until="load", timeout=30000)
+            if reponse is not None and reponse.status >= 400:
+                raise RuntimeError("la page répond %d" % reponse.status)
+            try:
+                page.wait_for_load_state("networkidle", timeout=8000)
+            except Exception:
+                pass  # une page qui interroge sans fin : ce qui est charge suffit
+            page.add_style_tag(content=_BANDEAUX_COOKIES_CSS)
+            page.wait_for_timeout(400)
+            return page.screenshot(type="png", full_page=False)
+        finally:
+            navigateur.close()
+
+
+def _run_capture_job(job: Job) -> None:
+    """Executer un travail « capture » : l'image revient dans `result`, en WebP base64."""
+    import base64 as _b64
+    result = dict(job.result or {})
+    url = str(result.get("url") or "")
+    try:
+        if not re.match(r"^https?://[^/\s]+", url):
+            raise ValueError("adresse refusée")
+        webp, largeur, hauteur = visuels.preparer_image(_capturer_une_page(url))
+        result.update({"image_b64": _b64.b64encode(webp).decode("ascii"),
+                       "largeur": largeur, "hauteur": hauteur})
+        job.status, job.returncode = "done", 0
+    except Exception as e:
+        result["erreur"] = ("%s: %s" % (type(e).__name__, e))[:300]
+        job.status, job.returncode = "failed", 1
+    job.result = result
+    job.finished_at = time.time()
+    _save_job(job)
+
+
+def _capturer_des_pages(urls: "list[str]", *, proprietaire: str,
+                        attente_s: "float | None" = None) -> "dict[str, tuple[bytes, int, int] | None]":
+    """Capture chaque adresse par le worker. Rend {url: (webp, largeur, hauteur) ou None}.
+
+    L'ATTENTE EST BORNEE (`NOYARU_CAPTURE_ATTENTE_S`, 75 s) : sans worker, ou derriere une panne,
+    l'article part sans sa capture — et le dit — plutot que de laisser la personne devant un
+    ecran fige. Un travail encore en file a l'echeance est annule ; un travail rendu est vide de
+    son image, qui n'a rien a faire dans la table des travaux.
+
+    LE TRAVAIL PORTE LE PROPRIETAIRE DU PROJET, et pas le projet. Sans proprietaire, `_save_job`
+    ne l'ecrit pas en base (cle etrangere) : le worker ne le verrait jamais. Avec le projet, il
+    passerait pour une analyse en cours (`_analyse_en_cours` filtre par projet).
+    """
+    import base64 as _b64
+    if attente_s is None:
+        attente_s = float(os.environ.get("NOYARU_CAPTURE_ATTENTE_S") or 75)
+    attendus: dict[str, str] = {}
+    for url in dict.fromkeys(u for u in urls if u):
+        job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time())
+        job.result = {"type": "capture", "url": url, "user_id": str(proprietaire)}
+        _save_job(job)
+        attendus[url] = job.id
+    out: dict[str, "tuple[bytes, int, int] | None"] = {u: None for u in attendus}
+    fin = time.time() + max(0.0, attente_s)
+    while attendus:
+        for url, jid in list(attendus.items()):
+            job = _load_job(jid)
+            if job is None or job.status not in {"done", "failed", "canceled"}:
+                continue
+            res = dict(job.result or {})
+            if job.status == "done" and res.get("image_b64"):
+                out[url] = (_b64.b64decode(res.pop("image_b64")), int(res.get("largeur") or 0),
+                            int(res.get("hauteur") or 0))
+                job.result = res
+                _save_job(job)
+            elif res.get("erreur"):
+                logger.info("[contenu] capture de %s impossible : %s", url, res["erreur"])
+            attendus.pop(url)
+        if not attendus or time.time() >= fin:
+            break
+        time.sleep(1.0)
+    for url, jid in attendus.items():
+        job = _load_job(jid)
+        if job is not None and job.status == "queued":
+            job.status = "canceled"
+            _save_job(job)
+        logger.info("[contenu] capture de %s non reçue en %ds", url, int(attente_s))
+    return out
+
+
 def _run_competitor_crawl_job(job_id: str, user_id: str, competitor_id: str) -> None:
     """Crawl one rival domain and keep what it says about its own subjects.
 
@@ -10696,6 +10891,8 @@ def _content_tokens(lang: str = "fr") -> dict[str, str]:
         "competitors_max": str(_COMPETITOR_MAX_PER_PROJECT),
         "competitor_pages": str(_COMPETITOR_MAX_PAGES),
         "competitor_refresh_days": str(_COMPETITOR_REFRESH_DAYS),
+        "visuels_max": str(visuels.MAX_VISUELS_IA),
+        "images_max": str(visuels.MAX_IMPORTS),
     }
     try:
         catalog = billing.plan_catalog()
@@ -10714,6 +10911,8 @@ def _content_tokens(lang: str = "fr") -> dict[str, str]:
         # facon de les documenter aurait ete d'ecrire leurs plafonds en dur, et une doc qui
         # ecrit un chiffre en dur ment des le premier reglage de PLAN_CONFIG_JSON.
         tokens[f"articles_{key}"] = _plan_token_value(catalog, key, "limits", "ai_articles_month")
+        # Les illustrations IA d'un article (02/11/2026), reglables par plan comme le reste.
+        tokens[f"illustrations_{key}"] = _plan_token_value(catalog, key, "contenu", "illustrations_par_article")
         tokens[f"members_{key}"] = _plan_token_value(catalog, key, "limits", "members")
         tokens[f"assistant_{key}"] = _plan_token_value(catalog, key, "limits", "assistant_messages_month")
         tokens[f"maxpages_{key}"] = _plan_token_value(catalog, key, "crawl", "max_pages_per_crawl")
@@ -18359,6 +18558,10 @@ def jobs(request: Request, job: str | None = None) -> HTMLResponse:
             if not owner_id or owner_id not in visibles:
                 continue
         kind = str((result or {}).get("type") or _job_kind_from_command(j.command) or "unknown")
+        if kind == "capture":
+            # Une capture d'ecran d'article (02/11/2026) : un detail de la redaction, pas une
+            # analyse. Elle n'a rien a faire dans l'historique que lit le client.
+            continue
         slug = str(result.get("slug") or "").strip() if result else ""
         site = sites.get((str((result or {}).get("user_id") or ""), slug))
         run_ts = str(result.get("timestamp") or "").strip() if result else ""
@@ -30933,7 +31136,7 @@ def _deep_patch_issue_files(
         # Generate patches concurrently (the slow AI calls dominate); preserve target order.
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=min(5, len(targets))) as _ex:
-            prepared = list(_ex.map(_prepare, targets))
+            prepared = list(_ex.map(_dans_ce_contexte(_prepare), targets))
     else:
         prepared = []
 
@@ -33832,7 +34035,7 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
     if autres:
         suivi("Traduction en %d langue%s, en parallèle" % (len(autres), "s" if len(autres) > 1 else ""))
     with ThreadPoolExecutor(max_workers=max(1, min(len(autres), 4))) as pool:
-        traduits = list(pool.map(_traduire, autres))
+        traduits = list(pool.map(_dans_ce_contexte(_traduire), autres))
     for langue, plan in zip(autres, traduits):
         if not plan.get("ok"):
             return {**plan, "error": "version %s : %s" % (langue or "par défaut", plan.get("error"))}
@@ -34350,12 +34553,69 @@ _SYSTEME_ARTICLE = (
 )
 
 
+def _consigne_de_visuels(demande: "dict[str, Any]") -> str:
+    """Ce que le modele peut placer dans l'article, et sous quelle forme il le decrit.
+
+    LE MODELE NE PRODUIT AUCUNE IMAGE. Il dit OU un visuel sert le propos et le DECRIT : une
+    image du client (qu'il voit), une illustration (un prompt), un graphique (des donnees), une
+    capture (une page de la liste). Chaque description est verifiee avant d'etre produite.
+    """
+    imports = demande.get("imports") or []
+    lignes = [
+        "\n\nVISUELS. Place chacun DANS le corps, la ou il sert le propos, seul sur sa ligne, avec "
+        "la syntaxe ![texte alternatif](visuel:N) — N est son `id` dans la liste \"visuels\" que tu "
+        "AJOUTES a l'objet JSON. Le texte alternatif decrit ce que montre l'image, en une phrase, "
+        "dans la langue de l'article. Aucune autre image, aucune adresse d'image."]
+    if imports:
+        lignes.append(
+            "- IMAGES DU CLIENT : %d image(s) jointe(s) a ce message, dans l'ordre (image 1, "
+            "image 2…). Place CHACUNE une fois : {\"id\": N, \"type\": \"import\", \"image\": k}. "
+            "Ce que le client en dit :\n%s" % (len(imports), "\n".join(
+                "  image %d : %s" % (k, str(i.get("legende") or "").strip()[:300] or "(rien)")
+                for k, i in enumerate(imports, 1))))
+    types: list[str] = []
+    if demande.get("illustrations"):
+        types.append(
+            "- ILLUSTRATIONS (%d au plus) : {\"id\": N, \"type\": \"illustration\", \"prompt\": "
+            "\"...\"} — `prompt` EN ANGLAIS decrit une image editoriale qui aide a comprendre (une "
+            "scene, un objet, un geste), sans texte ni chiffre dans l'image, sans logo ni marque, "
+            "sans personne reelle identifiable." % int(demande["illustrations"]))
+    if demande.get("graphiques"):
+        types.append(
+            "- GRAPHIQUES : {\"id\": N, \"type\": \"graphique\", \"graphique\": {\"type\": "
+            "\"barres\" ou \"courbe\", \"titre\": \"...\", \"libelles\": [...], \"series\": "
+            "[{\"nom\": \"...\", \"valeurs\": [nombres]}], \"unite\": \"...\", \"source\": \"...\", "
+            "\"exemple\": true ou false}} — seulement si l'article compare ou suit des chiffres. "
+            "CHAQUE valeur est ecrite telle quelle dans le corps de l'article ou dans les donnees "
+            "du client ; \"exemple\": true quand ces chiffres sont illustratifs, sinon \"source\" "
+            "dit d'ou ils viennent.")
+    if demande.get("captures"):
+        types.append(
+            "- CAPTURES D'ECRAN d'une page du site : {\"id\": N, \"type\": \"capture\", \"page\": "
+            "\"/chemin\"} — seulement une page de cette liste, et seulement si l'article parle de "
+            "ce qu'elle montre au visiteur (un outil, une offre, un formulaire) :\n%s" % "\n".join(
+                "  %s — %s" % (p["chemin"], p["titre"]) for p in demande["captures"][:30]))
+    if types:
+        lignes.extend(types)
+        lignes.append(
+            "- au plus %d visuels de ces types ; aucun si rien n'aide le lecteur — un visuel "
+            "decoratif est pire que pas de visuel." % visuels.MAX_VISUELS_IA)
+    if str(demande.get("donnees") or "").strip():
+        lignes.append(
+            "\nDONNEES FOURNIES PAR LE CLIENT — reelles ; si tu t'en sers, recopie les chiffres "
+            "tels quels et dis d'ou ils viennent :\n-----\n%s\n-----"
+            % str(demande["donnees"]).strip()[:5000])
+    return "\n".join(lignes)
+
+
 def rediger_un_article(
     *, sujet: str, langue: str, site_name: str = "", section: str = "",
     modele: "dict[str, Any] | None" = None, liens: "list[dict[str, Any]] | None" = None,
     reference: str = "", langue_reference: str = "", model_override: str = "",
     style: "dict[str, str] | None" = None,
-) -> tuple[dict[str, str], str]:
+    demande_visuels: "dict[str, Any] | None" = None,
+    graphiques_a_traduire: "dict[int, dict[str, Any]] | None" = None,
+) -> tuple[dict[str, Any], str]:
     """Un article {titre, description, slug, markdown}, ou ({}, raison du refus).
 
     LE MODELE RECOIT UNE PAGE, PAS UN GABARIT — la meme doctrine que `rediger_une_page`, mais la
@@ -34364,6 +34624,10 @@ def rediger_un_article(
 
     LES LIENS INTERNES SONT UNE LISTE FERMEE, et elle est verifiee ensuite (`_reparer_les_liens`)
     : la consigne seule n'a pas tenu en production le 28/09/2026.
+
+    `demande_visuels` (version principale) : l'article rend aussi `visuels`, ce que le modele
+    propose de placer ; `graphiques_a_traduire` (traduction) : il rend `graphiques`, leurs
+    textes traduits. Les deux sont verifies par l'appelant.
     """
     bloc_modele = ""
     if modele:
@@ -34396,14 +34660,39 @@ def rediger_un_article(
             "chiffres. Les liens internes sont ceux de la liste ci-dessus, dans SA langue — "
             "jamais une adresse de la reference.\n-----\n%s\n-----"
             % (langue_reference or "?", reference[:14000]))
+        if visuels.marqueurs(reference):
+            demande += ("\n- garde chaque ![...](visuel:N) a la meme place, N inchange ; traduis "
+                        "seulement son texte alternatif.")
+        if graphiques_a_traduire:
+            demande += (
+                "\n\nAJOUTE a l'objet JSON la cle \"graphiques\" : pour chaque graphique ci-dessous, "
+                "ses textes traduits, sous la forme {\"N\": {\"titre\": \"...\", \"libelles\": [...], "
+                "\"series\": [noms des series], \"unite\": \"...\", \"source\": \"...\"}} — les "
+                "libelles dans le MEME ordre et en meme nombre ; jamais les valeurs.\n%s" % json.dumps(
+                    {str(n): {"titre": g["titre"], "libelles": g["libelles"],
+                              "series": [s["nom"] for s in g["series"]], "unite": g["unite"],
+                              "source": g["source"]}
+                     for n, g in graphiques_a_traduire.items()}, ensure_ascii=False))
+    images_jointes: list[bytes] = []
+    if demande_visuels and not reference:
+        demande += _consigne_de_visuels(demande_visuels)
+        images_jointes = [i["modele"] for i in (demande_visuels.get("imports") or []) if i.get("modele")]
     out = _correction_ai_json(system=_SYSTEME_ARTICLE, user_msg=demande,
                               max_tokens=_plafond_de_tokens(style, traduction=bool(reference)),
-                              model_override=model_override) or {}
-    article = {k: str(out.get(k) or "").strip() for k in ("titre", "description", "slug", "markdown")}
+                              model_override=model_override, images=images_jointes or None) or {}
+    article: dict[str, Any] = {k: str(out.get(k) or "").strip()
+                               for k in ("titre", "description", "slug", "markdown")}
     if not article["titre"] or not article["markdown"]:
         return {}, "le modele n'a rien rendu d'exploitable"
     # Un titre de niveau 1 en tete du corps doublerait celui que le client posera lui-meme.
     article["markdown"] = re.sub(r"\A#\s+[^\n]*\n+", "", article["markdown"])
+    # Une image a une adresse ecrite par le modele est inventee : il n'en a aucune a sa
+    # disposition. Seuls ses marqueurs `visuel:N` restent, et ils sont verifies ensuite.
+    article["markdown"], etrangeres = visuels.retirer_les_images_etrangeres(article["markdown"])
+    article["notes_visuels"] = (["%d image(s) à une adresse inventée retirée(s)" % etrangeres]
+                                if etrangeres else [])
+    article["visuels"] = out.get("visuels") if demande_visuels and not reference else None
+    article["graphiques"] = out.get("graphiques") if graphiques_a_traduire else None
     return article, ""
 
 
@@ -34422,11 +34711,211 @@ def _article_en_html(markdown_texte: str) -> str:
     return _cl._markdown_instance().convert(source)
 
 
+def _valider_les_visuels(brut: Any, *, markdown: str, demande: "dict[str, Any]",
+                         capturables: "dict[str, dict[str, Any]]",
+                         donnees: str = "") -> "tuple[dict[int, dict[str, Any]], list[str]]":
+    """Les visuels que le modele propose ET qu'on accepte de produire : {id: description}.
+
+    ON VERIFIE PLUTOT QUE DE CROIRE, visuel par visuel, dans l'ordre de lecture :
+      * un id place dans le texte sans description, ou decrit sans etre place, n'existe pas ;
+      * une image du client est placee une fois au plus ;
+      * un type que la personne n'a pas coche n'est pas produit ;
+      * au plus `MAX_VISUELS_IA` visuels produits par Noyaru ;
+      * un graphique ne porte que des chiffres ECRITS dans l'article ou les donnees du client
+        (le texte alternatif des marqueurs n'en fait pas partie : on ne prouve pas un chiffre
+        par la legende de son propre graphique) ;
+      * une capture vise une page de la liste fermee, pas une adresse ecrite par le modele.
+    Chaque refus laisse une note : le marqueur disparaitra, la personne saura pourquoi.
+    """
+    imports = demande.get("imports") or []
+    par_id: dict[int, dict[str, Any]] = {}
+    for v in brut if isinstance(brut, list) else []:
+        try:
+            par_id.setdefault(int(v.get("id")), v)
+        except (AttributeError, TypeError, ValueError):
+            continue
+    texte_seul = visuels._MARQUEUR_RE.sub("", markdown)
+    plan: dict[int, dict[str, Any]] = {}
+    notes: list[str] = []
+    places: set[int] = set()
+    produits = 0
+    for n in visuels.marqueurs(markdown):
+        v = par_id.get(n)
+        sorte = str((v or {}).get("type") or "")
+        if v is None:
+            notes.append("visuel %d placé sans description : retiré" % n)
+            continue
+        if sorte == "import":
+            try:
+                k = int(v.get("image"))
+            except (TypeError, ValueError):
+                k = 0
+            if not 1 <= k <= len(imports) or k in places:
+                notes.append("visuel %d : image du client %s — retiré" % (
+                    n, "déjà placée" if k in places else "inconnue"))
+                continue
+            places.add(k)
+            plan[n] = {"type": "import", "image": k}
+            continue
+        if sorte not in {"illustration", "graphique", "capture"} or not demande.get(
+                {"illustration": "illustrations", "graphique": "graphiques", "capture": "captures"}[sorte]):
+            notes.append("visuel %d : type « %s » non demandé — retiré" % (n, sorte or "?"))
+            continue
+        if produits >= visuels.MAX_VISUELS_IA:
+            notes.append("visuel %d : au-delà de %d visuels par article — retiré"
+                         % (n, visuels.MAX_VISUELS_IA))
+            continue
+        if sorte == "illustration":
+            prompt = re.sub(r"\s+", " ", str(v.get("prompt") or "")).strip()
+            if len(prompt) < 12:
+                notes.append("illustration %d sans description utilisable : retirée" % n)
+                continue
+            # Le plafond du PLAN (Business seulement, decision du 02/11/2026), sous le plafond
+            # general : `illustrations` porte le nombre permis, pas un simple oui.
+            if sum(1 for s in plan.values() if s["type"] == "illustration") >= int(demande["illustrations"]):
+                notes.append("illustration %d : au-delà de %d par article — retirée"
+                             % (n, int(demande["illustrations"])))
+                continue
+            plan[n] = {"type": "illustration", "prompt": prompt[:800]}
+        elif sorte == "graphique":
+            spec, refus = visuels.graphique_valide(v.get("graphique"), textes=[texte_seul, donnees])
+            if spec is None:
+                notes.append("graphique %d retiré : %s" % (n, refus))
+                continue
+            plan[n] = {"type": "graphique", "graphique": spec}
+        else:
+            page = capturables.get(repo_index.norm_route(str(v.get("page") or "")))
+            if page is None:
+                notes.append("capture %d retirée : « %s » n'est pas une page proposée"
+                             % (n, str(v.get("page") or "")[:80]))
+                continue
+            plan[n] = {"type": "capture", "page": page}
+        produits += 1
+    for k in range(1, len(imports) + 1):
+        if k not in places:
+            notes.append("votre image %d n'a pas été placée dans le texte : elle est quand même "
+                         "dans le dossier images du .zip" % k)
+    return plan, notes
+
+
+_CADRE_ILLUSTRATION = (
+    "Editorial illustration for a website article. No text, letters, numbers, logos or watermarks "
+    "anywhere in the image. No identifiable real person. ")
+
+
+def _illustrer(prompt: str) -> "tuple[bytes, int, int]":
+    """Une illustration produite, marquee comme generee par IA dans ses metadonnees."""
+    return visuels.preparer_image(_openai_generer_une_image(prompt=_CADRE_ILLUSTRATION + prompt),
+                                  xmp=visuels.XMP_IMAGE_IA)
+
+
+def _produire_les_visuels(plan: "dict[int, dict[str, Any]]", versions: "list[dict[str, Any]]",
+                          imports: "list[dict[str, Any]]", *, slug_article: str,
+                          chemins_connus: "set[str]", proprietaire: str = "",
+                          suivi: "Callable[[str], None]" = _sans_suivi,
+                          ) -> "tuple[dict[str, dict[str, Any]], list[dict[int, dict[str, Any]]]]":
+    """Produit les fichiers. Rend ({nom: fichier}, [{id: {"fichier": nom}} par version]).
+
+    APRES LE TEXTE, JAMAIS AVANT : un refus de redaction ne doit avoir paye aucune image.
+    Illustrations et captures partent ENSEMBLE (ce sont les attentes longues) ; les graphiques
+    se dessinent pendant ce temps.
+
+    UNE IMAGE SERT TOUTES LES LANGUES, sauf ce qui porte du texte : un graphique est redessine
+    avec ses libelles traduits, une capture prend la page de la meme langue quand le crawl la
+    connait (hreflang de la page capturee). Un visuel qui echoue est retire, avec une note dans
+    chaque version : jamais d'image cassee dans un article livre.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    principal = versions[0]
+    ordre = [n for n in visuels.marqueurs(str(principal["contenu"])) if n in plan]
+    rang = {n: i for i, n in enumerate(ordre, 1)}
+    fichiers: dict[str, dict[str, Any]] = {}
+    poses: list[dict[int, dict[str, Any]]] = [{} for _ in versions]
+
+    def _noter(texte: str) -> None:
+        for v in versions:
+            v["notes_redaction"].append(texte)
+
+    places = {s["image"]: n for n, s in plan.items() if s["type"] == "import"}
+    suivant = len(ordre)
+    for k, imp in enumerate(imports, 1):
+        if k in places:
+            nom = visuels.nom_de_visuel(slug_article, rang[places[k]])
+            for p in poses:
+                p[places[k]] = {"fichier": nom}
+        else:
+            suivant += 1
+            nom = visuels.nom_de_visuel(slug_article, suivant)
+        fichiers[nom] = {"octets": imp["octets"], "largeur": imp["largeur"],
+                         "hauteur": imp["hauteur"], "type": "import"}
+
+    illustrations = {n: s["prompt"] for n, s in plan.items() if s["type"] == "illustration"}
+    urls_capture: dict[int, list[str]] = {}
+    for n, s in plan.items():
+        if s["type"] != "capture":
+            continue
+        urls = []
+        for j, v in enumerate(versions):
+            traduite = s["page"].get("hreflang", {}).get(str(v.get("code") or ""), "") if j else ""
+            connue = traduite and repo_index.norm_route(urlsplit(traduite).path or "/") in chemins_connus
+            urls.append(traduite if connue else s["page"]["url"])
+        urls_capture[n] = urls
+    graphiques = [n for n, s in plan.items() if s["type"] == "graphique"]
+    total = len(illustrations) + len(urls_capture) + len(graphiques)
+    if total:
+        suivi("Création des visuels (%d)" % total)
+    with ThreadPoolExecutor(max_workers=len(illustrations) + 1) as pool:
+        en_cours = {n: pool.submit(_dans_ce_contexte(_illustrer), p) for n, p in illustrations.items()}
+        captures = (pool.submit(_dans_ce_contexte(_capturer_des_pages),
+                                sorted({u for us in urls_capture.values() for u in us}),
+                                proprietaire=proprietaire)
+                    if urls_capture else None)
+        for n in graphiques:
+            spec = plan[n]["graphique"]
+            for j, v in enumerate(versions):
+                textes = (plan[n].get("textes") or {}).get(str(v.get("code") or "")) if j else None
+                if j and textes is None:
+                    poses[j][n] = poses[0][n]
+                    continue
+                nom = visuels.nom_de_visuel(slug_article, rang[n], str(v.get("code") or "") if j else "")
+                fichiers[nom] = {"octets": visuels.dessiner_un_graphique(
+                    spec, langue=str(v.get("code") or ""), textes=textes),
+                    "largeur": 1600, "hauteur": 900, "type": "graphique"}
+                poses[j][n] = {"fichier": nom}
+        for n, futur in en_cours.items():
+            try:
+                octets, largeur, hauteur = futur.result()
+            except Exception as e:
+                logger.warning("[contenu] illustration %d impossible : %s: %s", n, type(e).__name__, e)
+                _noter("illustration %d : génération impossible — retirée" % rang[n])
+                continue
+            nom = visuels.nom_de_visuel(slug_article, rang[n])
+            fichiers[nom] = {"octets": octets, "largeur": largeur, "hauteur": hauteur,
+                             "type": "illustration"}
+            for p in poses:
+                p[n] = {"fichier": nom}
+        recues = captures.result() if captures is not None else {}
+    for n, urls in urls_capture.items():
+        for j, url in enumerate(urls):
+            capture = recues.get(url)
+            if capture is None:
+                versions[j]["notes_redaction"].append(
+                    "capture de %s : non reçue — retirée" % url)
+                continue
+            nom = visuels.nom_de_visuel(slug_article, rang[n], "" if url == urls[0]
+                                        else str(versions[j].get("code") or ""))
+            fichiers.setdefault(nom, {"octets": capture[0], "largeur": capture[1],
+                                      "hauteur": capture[2], "type": "capture"})
+            poses[j][n] = {"fichier": nom}
+    return fichiers, poses
+
+
 def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section: str,
                            langues: "list[str] | None" = None, site_name: str = "",
                            model_override: str = "",
                            suivi: "Callable[[str], None]" = _sans_suivi,
-                           style: "dict[str, str] | None" = None) -> dict[str, Any]:
+                           style: "dict[str, str] | None" = None,
+                           demande_visuels: "dict[str, Any] | None" = None) -> dict[str, Any]:
     """Toutes les versions d'un article, ou le refus de la premiere qui echoue. N'ecrit rien.
 
     `pages` sort de `_pages_du_crawl`. `section` est celle ou la version PRINCIPALE sera
@@ -34474,13 +34963,22 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
         loin = [p for p in de_la_langue if p not in proches]
         return (proches + loin)[:40]
 
+    # Les pages capturables sont celles que l'article peut deja lier : une liste FERMEE, venue du
+    # crawl, ou chaque page a son adresse reelle et ses traductions.
+    demande = dict(demande_visuels or {})
+    if demande.get("captures"):
+        demande["captures"] = _liens_de(langue_source, section)
+
     def _version(cle: str, section_cible: str, modele_cible: "dict[str, Any] | None",
-                 reference: str = "") -> dict[str, Any]:
+                 reference: str = "",
+                 graphiques: "dict[int, dict[str, Any]] | None" = None) -> dict[str, Any]:
         article, refus = rediger_un_article(
             sujet=sujet, langue=_code(cle), site_name=site_name, section=section_cible,
             modele=modele_cible, liens=_liens_de(cle, section_cible),
             reference=reference, langue_reference=_code(langue_source),
-            model_override=model_override, style=style)
+            model_override=model_override, style=style,
+            demande_visuels=None if reference or not demande_visuels else demande,
+            graphiques_a_traduire=graphiques)
         if refus:
             return {"ok": False, "status": 422,
                     "error": "version %s : %s" % (_code(cle) or "principale", refus)}
@@ -34502,29 +35000,57 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
         titre = h1 if ajoutee else article["titre"]
         return {"ok": True, "langue": cle, "code": _code(cle), "titre": titre, "h1": h1,
                 "description": article["description"], "slug": slug_propre,
-                "adresse": adresse, "contenu": article["markdown"], "notes_redaction": []}
+                "adresse": adresse, "contenu": article["markdown"],
+                "notes_redaction": list(article.get("notes_visuels") or []),
+                "visuels_bruts": article.get("visuels"),
+                "graphiques_bruts": article.get("graphiques")}
 
     suivi("Rédaction de la version principale")
     principal = _version(langue_source, section, modele)
     if not principal.get("ok"):
         return principal
+    plan_visuels: dict[int, dict[str, Any]] = {}
+    if demande_visuels:
+        plan_visuels, notes_v = _valider_les_visuels(
+            principal.get("visuels_bruts"), markdown=str(principal["contenu"]), demande=demande,
+            capturables={p["chemin"]: p for p in (demande.get("captures") or [])},
+            donnees=str(demande.get("donnees") or ""))
+        principal["notes_redaction"].extend(notes_v)
+    a_traduire = {n: s["graphique"] for n, s in plan_visuels.items() if s["type"] == "graphique"}
 
     def _traduire(cle: str) -> dict[str, Any]:
         cible_url = modele["hreflang"].get(_code(cle), "")
         modele_l = par_url.get(repo_index.norm_route(urlsplit(cible_url).path or "/"))
         section_l = _section_de(modele_l["chemin"]) if modele_l else ""
-        return _version(cle, section_l, modele_l, reference=principal["contenu"])
+        return _version(cle, section_l, modele_l, reference=principal["contenu"],
+                        graphiques=a_traduire or None)
 
     from concurrent.futures import ThreadPoolExecutor
     if autres:
         suivi("Traduction en %d langue%s, en parallèle" % (len(autres), "s" if len(autres) > 1 else ""))
     with ThreadPoolExecutor(max_workers=max(1, min(len(autres), 4))) as pool:
-        versions_traduites = list(pool.map(_traduire, autres))
+        versions_traduites = list(pool.map(_dans_ce_contexte(_traduire), autres))
     versions = [principal]
     for cle, version in zip(autres, versions_traduites):
         if not version.get("ok"):
             return version
         versions.append(version)
+    # LA TRADUCTION GARDE LES VISUELS DE SA REFERENCE. Un marqueur perdu ne se devine pas (ou
+    # le remettre ?) : on le dit. Les textes d'un graphique se verifient — memes libelles en
+    # meme nombre — sinon le graphique garde ceux de la version principale, et on le dit aussi.
+    for version in versions[1:]:
+        absents = sorted(set(plan_visuels) - set(visuels.marqueurs(str(version["contenu"]))))
+        if absents:
+            version["notes_redaction"].append(
+                "visuel(s) %s absent(s) de cette traduction" % ", ".join(str(n) for n in absents))
+        bruts = version.get("graphiques_bruts") if isinstance(version.get("graphiques_bruts"), dict) else {}
+        for n, spec in a_traduire.items():
+            textes = visuels.textes_traduits(spec, bruts.get(str(n)))
+            if textes is None:
+                version["notes_redaction"].append(
+                    "graphique %d : libellés non traduits, ceux de la version principale sont repris" % n)
+                continue
+            plan_visuels[n].setdefault("textes", {})[str(version["code"])] = textes
 
     def _traduire_lien(lien: str, cle: str) -> str:
         page = par_chemin.get(repo_index.norm_route(lien))
@@ -34533,7 +35059,7 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
 
     suivi("Vérification des liens internes")
     _reparer_les_liens(versions, routes={c: [c] for c in chemins}, traduire=_traduire_lien)
-    return {"ok": True, "versions": versions}
+    return {"ok": True, "versions": versions, "visuels": plan_visuels}
 
 
 _SEPARATEURS_DE_MARQUE = (" | ", " - ", " – ", " — ", " · ")
@@ -34592,11 +35118,13 @@ def _marque_ajoutee(titre: str, site_name: str) -> str:
     return titre[i:] if len(queue) >= 4 and queue in noms else ""
 
 
-def _versions_servies(versions: "list[dict[str, Any]]") -> list[dict[str, Any]]:
+def _versions_servies(versions: "list[dict[str, Any]]",
+                      dimensions: "dict[str, tuple[int, int]] | None" = None) -> list[dict[str, Any]]:
     """Les versions telles que l'ecran les montre : Markdown ET HTML, titre de niveau 1 compris.
 
     Le HTML est rendu a la LECTURE, jamais stocke : une correction du rendu vaut alors pour
-    tous les articles deja rediges, sans migration.
+    tous les articles deja rediges, sans migration. `dimensions` : celles des images de
+    l'article, posees sur chaque `<img>`.
     """
     out = []
     for v in versions:
@@ -34609,9 +35137,112 @@ def _versions_servies(versions: "list[dict[str, Any]]") -> list[dict[str, Any]]:
             "description": v.get("description", ""), "slug": v.get("slug", ""),
             "adresse": v.get("adresse", ""), "notes": list(v.get("notes") or v.get("notes_redaction") or []),
             "markdown": "# %s\n\n%s" % (h1, corps.strip()) + "\n",
-            "html": "<h1>%s</h1>\n%s" % (html.escape(h1), _article_en_html(corps)),
+            "html": "<h1>%s</h1>\n%s" % (html.escape(h1), visuels.enrichir_les_images(
+                _article_en_html(corps), dimensions or {})),
         })
     return out
+
+
+# ── LES IMAGES D'UN ARTICLE (02/11/2026) ──────────────────────────────────────────────────────
+#
+# Rangees chez le PROPRIETAIRE du projet, sous `<projet>/_contenu/` — le soulignement les tient
+# hors de la liste des crawls, qui ne lit que des dossiers horodates. Les images importees
+# attendent dans `imports/` que l'article soit redige (deux jours au plus) ; celles d'un article
+# vivent dans le dossier de leur lot, envoye au stockage objet comme un rapport.
+
+_ID_IMPORT_RE = re.compile(r"^[a-f0-9]{32}$")
+_NOM_VISUEL_RE = re.compile(r"^[a-z0-9-]{1,90}\.webp$")
+_IMPORTS_DUREE_S = 2 * 24 * 3600
+_DONNEES_MAX = 5000
+
+
+def _dossier_contenu(request: Request, slug: str) -> Path:
+    return _runs_dir_pour_slug(request, slug) / slug / "_contenu"
+
+
+def _lire_import(dossier: Path, ident: str) -> "dict[str, Any] | None":
+    if not _ID_IMPORT_RE.fullmatch(str(ident or "")):
+        return None
+    fichier = dossier / "imports" / (ident + ".webp")
+    if not fichier.is_file():
+        return None
+    try:
+        info = json.loads(fichier.with_suffix(".json").read_text(encoding="utf-8"))
+    except Exception:
+        info = {}
+    return {"octets": fichier.read_bytes(), "largeur": int(info.get("largeur") or 0),
+            "hauteur": int(info.get("hauteur") or 0)}
+
+
+def _illustrations_permises(user: Any, slug: str) -> int:
+    """Combien d'illustrations IA un article de ce projet peut porter — selon le plan du PAYEUR."""
+    if bool(getattr(user, "is_admin", False)):
+        return visuels.MAX_VISUELS_IA
+    payeur = _compte_payeur(str(getattr(user, "id", "") or ""), slug)
+    try:
+        with DB.session() as db:
+            return min(visuels.MAX_VISUELS_IA, billing.illustrations_par_article(
+                billing.effective_plan_key(db, user_id=payeur)))
+    except Exception:
+        return 0
+
+
+def _nettoyer_les_imports(dossier: Path) -> None:
+    """Retire les images importees pour un article jamais redige. Jamais bloquant."""
+    limite = time.time() - _IMPORTS_DUREE_S
+    for f in dossier.glob("*.*") if dossier.is_dir() else []:
+        try:
+            if f.stat().st_mtime < limite:
+                f.unlink()
+        except OSError:
+            continue
+
+
+@app.post("/api/projects/{slug}/content/images")
+def api_content_image_importer(request: Request, slug: str,
+                               fichier: UploadFile = File(...)) -> JSONResponse:
+    """Importer une image pour l'article a venir. Elle est convertie, reduite et nettoyee ici.
+
+    La meme porte de plan que la redaction : importer pour un article qu'on ne peut pas faire
+    ecrire n'a pas de sens. Rien n'est debite.
+    """
+    _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    gate_ok, gate_msg = _article_gate(user, slug=slug)
+    if not gate_ok:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
+    retry_after = _rate_limit_retry_after(bucket="content_image_user", subject=str(user.id), limit=60, window_s=60 * 60)
+    if isinstance(retry_after, int):
+        return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    try:
+        webp, largeur, hauteur = visuels.preparer_image(fichier.file.read(visuels.IMPORT_MAX_OCTETS + 1))
+    except visuels.ImageRefusee as e:
+        return JSONResponse({"ok": False, "error": i18n.tr_current(
+            "Image refusée : {raison}.", raison=i18n.tr_current(str(e)))}, status_code=400)
+    dossier = _dossier_contenu(request, slug) / "imports"
+    dossier.mkdir(parents=True, exist_ok=True)
+    _nettoyer_les_imports(dossier)
+    ident = uuid.uuid4().hex
+    (dossier / (ident + ".webp")).write_bytes(webp)
+    (dossier / (ident + ".json")).write_text(json.dumps({
+        "largeur": largeur, "hauteur": hauteur, "nom": str(fichier.filename or "")[:120],
+        "user_id": str(user.id), "ts": time.time()}), encoding="utf-8")
+    return JSONResponse({"ok": True, "id": ident, "largeur": largeur, "hauteur": hauteur,
+                         "url": f"/api/projects/{slug}/content/images/{ident}"})
+
+
+@app.get("/api/projects/{slug}/content/images/{ident}")
+def api_content_image_lire(request: Request, slug: str, ident: str) -> Response:
+    _db_project_or_404(request, slug)
+    if not getattr(request.state, "user", None):
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    image = _lire_import(_dossier_contenu(request, slug), ident)
+    if image is None:
+        return JSONResponse({"ok": False, "error": "Image introuvable."}, status_code=404)
+    return Response(image["octets"], media_type="image/webp",
+                    headers={"Cache-Control": "private, max-age=3600"})
 
 
 class _ContentArticleBody(BaseModel):
@@ -34621,6 +35252,14 @@ class _ContentArticleBody(BaseModel):
     suivi: str = ""
     taille: str = ""
     ton: str = ""
+    # Les visuels (02/11/2026) : les images importees, dans l'ordre, avec ce que la personne en
+    # dit ; les types que Noyaru peut ajouter ; des donnees collees, pour l'article et ses
+    # graphiques.
+    images: list[dict[str, str]] = []
+    illustrations: bool = False
+    graphiques: bool = False
+    captures: bool = False
+    donnees: str = ""
 
 
 @app.post("/api/projects/{slug}/content/article")
@@ -34646,6 +35285,30 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
     style, refus_style = _style_valide(body.taille, body.ton)
     if refus_style:
         return JSONResponse({"ok": False, "error": refus_style}, status_code=400)
+    if len(body.images) > visuels.MAX_IMPORTS:
+        return JSONResponse({"ok": False, "error": i18n.tr_current(
+            "{n} images au plus par article.", n=visuels.MAX_IMPORTS)}, status_code=400)
+    if len(body.donnees or "") > _DONNEES_MAX:
+        return JSONResponse({"ok": False, "error": i18n.tr_current(
+            "Données trop longues ({n} caractères au plus).", n=_DONNEES_MAX)}, status_code=400)
+    illustrations = _illustrations_permises(user, slug) if body.illustrations else 0
+    if body.illustrations and not illustrations:
+        return JSONResponse({"ok": False, "billing_url": "/billing", "error": (
+            "Les illustrations IA sont incluses à partir du plan Business.")}, status_code=402)
+    imports: list[dict[str, Any]] = []
+    for demandee in body.images:
+        image = _lire_import(_dossier_contenu(request, slug), str(demandee.get("id") or ""))
+        if image is None:
+            return JSONResponse({"ok": False, "error": (
+                "Une image importée a expiré ou est introuvable : importez-la à nouveau.")}, status_code=400)
+        image["legende"] = str(demandee.get("legende") or "")[:300]
+        image["modele"] = visuels.image_pour_le_modele(image["octets"])
+        imports.append(image)
+    demande_visuels: "dict[str, Any] | None" = None
+    if imports or body.illustrations or body.graphiques or body.captures or body.donnees.strip():
+        demande_visuels = {"imports": imports, "illustrations": illustrations,
+                           "graphiques": body.graphiques, "captures": body.captures,
+                           "donnees": body.donnees.strip()}
     gate_ok, gate_msg = _article_gate(user, slug=slug,
                                       n=_versions_demandees(section.rstrip("/") + "/x", body.langues))
     if not gate_ok:
@@ -34656,15 +35319,37 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
         return JSONResponse({"ok": False, "error": (
             "Aucun crawl de ton site pour l'instant : c'est lui qui dit quelles pages existent "
             "et à quoi elles ressemblent. Lance un crawl, puis reviens ici.")}, status_code=400)
-    out = _preparer_des_articles(pages=_pages_du_crawl(pages_brutes), sujet=sujet,
+    pages = _pages_du_crawl(pages_brutes)
+    suivi = _ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id))
+    out = _preparer_des_articles(pages=pages, sujet=sujet,
                                  section=section, langues=list(body.langues),
                                  site_name=str(proj.site_name or slug),
-                                 suivi=_ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id)),
-                                 style=style)
+                                 suivi=suivi, style=style, demande_visuels=demande_visuels)
     if not out.get("ok"):
         return JSONResponse({"ok": False, "error": out.get("error")},
                             status_code=int(out.get("status") or 422))
     versions = out["versions"]
+    fichiers: dict[str, dict[str, Any]] = {}
+    poses: list[dict[int, dict[str, Any]]] = [{} for _ in versions]
+    if demande_visuels:
+        fichiers, poses = _produire_les_visuels(
+            out.get("visuels") or {}, versions, imports, slug_article=str(versions[0]["slug"]),
+            chemins_connus={p["chemin"] for p in pages},
+            proprietaire=str(proj.owner_user_id), suivi=suivi)
+    # Sans visuel demande, aucun marqueur ne devrait exister ; s'il en reste un, il part aussi.
+    for version, posees in zip(versions, poses):
+        version["contenu"], _ = visuels.poser_les_visuels(str(version["contenu"]), posees)
+    images_note: "dict[str, Any] | None" = None
+    if fichiers:
+        lot = uuid.uuid4().hex
+        dossier_lot = _dossier_contenu(request, slug) / lot
+        dossier_lot.mkdir(parents=True, exist_ok=True)
+        for nom, f in fichiers.items():
+            (dossier_lot / nom).write_bytes(f["octets"])
+        _sync_runs_path_to_object_store(dossier_lot)
+        images_note = {"lot": lot, "fichiers": [
+            {"nom": nom, "largeur": f["largeur"], "hauteur": f["hauteur"], "type": f["type"]}
+            for nom, f in fichiers.items()]}
     stockees = [{"langue": v["langue"], "code": v["code"], "titre": v["titre"],
                  "h1": v.get("h1") or v["titre"], "description": v["description"], "slug": v["slug"], "adresse": v["adresse"],
                  "markdown": v["contenu"], "notes": v["notes_redaction"]} for v in versions]
@@ -34675,7 +35360,7 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
             IssueTask.project_id == str(proj.id), IssueTask.issue_key == _CONTENT_ARTICLE_KEY,
             IssueTask.url == adresse))
         note = json.dumps({"sujet": sujet, "crawl_ts": crawl_ts, "article": True,
-                           "versions": stockees}, ensure_ascii=False)
+                           "versions": stockees, "images": images_note}, ensure_ascii=False)
         if tache is None:
             tache = IssueTask(
                 project_id=str(proj.id), user_id=_compte_payeur(str(user.id), slug),
@@ -34688,7 +35373,27 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
         db.commit()
         task_id = str(tache.id)
     _article_charge(user, len(versions), slug=slug, motif="content_article")
-    return JSONResponse({"ok": True, "id": task_id, "versions": _versions_servies(stockees)})
+    return JSONResponse({"ok": True, "id": task_id,
+                         **_images_servies(slug, task_id, images_note),
+                         "versions": _versions_servies(stockees, _dimensions(images_note))})
+
+
+def _dimensions(images_note: Any) -> "dict[str, tuple[int, int]]":
+    fichiers = (images_note or {}).get("fichiers") if isinstance(images_note, dict) else None
+    return {str(f["nom"]): (int(f["largeur"]), int(f["hauteur"]))
+            for f in (fichiers or []) if isinstance(f, dict) and f.get("nom")}
+
+
+def _images_servies(slug: str, task_id: str, images_note: Any) -> "dict[str, Any]":
+    """Les images d'un article telles que l'ecran les lit, et l'adresse du .zip."""
+    dims = _dimensions(images_note)
+    if not dims:
+        return {"images": []}
+    base = "/api/projects/%s/content/article/%s" % (slug, task_id)
+    types = {str(f.get("nom")): str(f.get("type") or "") for f in images_note.get("fichiers") or []}
+    return {"zip": base + "/zip", "images": [
+        {"nom": nom, "largeur": l, "hauteur": h, "type": types.get(nom, ""),
+         "url": "%s/images/%s" % (base, nom)} for nom, (l, h) in dims.items()]}
 
 
 _SYSTEME_SUJET = (
@@ -34795,26 +35500,85 @@ def api_content_sujet(request: Request, slug: str, body: _ContentSujetBody) -> J
     return JSONResponse({"ok": True, **proposition})
 
 
-@app.get("/api/projects/{slug}/content/article/{task_id}")
-def api_content_article_lire(request: Request, slug: str, task_id: str) -> JSONResponse:
-    """Relire un article deja redige, depuis le journal. Aucun appel au modele, aucun debit."""
+def _note_d_article(request: Request, slug: str, task_id: str) -> "dict[str, Any] | None":
+    """La note d'un article du journal de CE projet, ou None."""
     proj = _db_project_or_404(request, slug)
-    if not getattr(request.state, "user", None):
-        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
     with DB.session() as db:
         tache = db.get(IssueTask, str(task_id or ""))
         # Rattachee au projet de l'URL, que la propriete a deja verifie : un identifiant seul
         # ne doit jamais suffire a lire l'article d'un autre compte.
         if (tache is None or str(tache.project_id) != str(proj.id)
                 or tache.issue_key != _CONTENT_ARTICLE_KEY):
-            return JSONResponse({"ok": False, "error": "Article introuvable."}, status_code=404)
+            return None
         try:
             note = json.loads(tache.note or "{}")
         except Exception:
             note = {}
-    versions = note.get("versions") if isinstance(note, dict) else None
+    return note if isinstance(note, dict) else {}
+
+
+@app.get("/api/projects/{slug}/content/article/{task_id}")
+def api_content_article_lire(request: Request, slug: str, task_id: str) -> JSONResponse:
+    """Relire un article deja redige, depuis le journal. Aucun appel au modele, aucun debit."""
+    _db_project_or_404(request, slug)
+    if not getattr(request.state, "user", None):
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    note = _note_d_article(request, slug, task_id)
+    if note is None:
+        return JSONResponse({"ok": False, "error": "Article introuvable."}, status_code=404)
+    versions = note.get("versions")
     return JSONResponse({"ok": True, "id": str(task_id), "sujet": note.get("sujet", ""),
-                         "versions": _versions_servies(versions if isinstance(versions, list) else [])})
+                         **_images_servies(slug, str(task_id), note.get("images")),
+                         "versions": _versions_servies(versions if isinstance(versions, list) else [],
+                                                       _dimensions(note.get("images")))})
+
+
+def _image_d_article(request: Request, slug: str, note: "dict[str, Any]", nom: str) -> "bytes | None":
+    """Les octets d'une image de l'article, seulement si sa note la cite."""
+    images = note.get("images") if isinstance(note.get("images"), dict) else {}
+    if not _NOM_VISUEL_RE.fullmatch(nom) or nom not in _dimensions(images):
+        return None
+    lot = str(images.get("lot") or "")
+    if not _ID_IMPORT_RE.fullmatch(lot):
+        return None
+    chemin = _dossier_contenu(request, slug) / lot / nom
+    if not _ensure_runs_artifact_local(chemin) or not chemin.is_file():
+        return None
+    return chemin.read_bytes()
+
+
+@app.get("/api/projects/{slug}/content/article/{task_id}/images/{nom}")
+def api_content_article_image(request: Request, slug: str, task_id: str, nom: str) -> Response:
+    _db_project_or_404(request, slug)
+    if not getattr(request.state, "user", None):
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    note = _note_d_article(request, slug, task_id)
+    octets = _image_d_article(request, slug, note, nom) if note is not None else None
+    if octets is None:
+        return JSONResponse({"ok": False, "error": "Image introuvable."}, status_code=404)
+    return Response(octets, media_type="image/webp", headers={"Cache-Control": "private, max-age=86400"})
+
+
+@app.get("/api/projects/{slug}/content/article/{task_id}/zip")
+def api_content_article_zip(request: Request, slug: str, task_id: str) -> Response:
+    """L'article et ses images en un fichier : chaque version en .md et .html, et `images/`."""
+    _db_project_or_404(request, slug)
+    if not getattr(request.state, "user", None):
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    note = _note_d_article(request, slug, task_id)
+    if note is None:
+        return JSONResponse({"ok": False, "error": "Article introuvable."}, status_code=404)
+    versions = _versions_servies(note.get("versions") if isinstance(note.get("versions"), list) else [],
+                                 _dimensions(note.get("images")))
+    images: dict[str, bytes] = {}
+    for nom in _dimensions(note.get("images")):
+        octets = _image_d_article(request, slug, note, nom)
+        if octets is None:
+            return JSONResponse({"ok": False, "error": "Une image de cet article est introuvable."}, status_code=404)
+        images[nom] = octets
+    nom_zip = visuels.nom_de_l_article(versions[0] if versions else {}).split(".")[0] + ".zip"
+    return Response(visuels.archive_de_l_article(versions, images), media_type="application/zip",
+                    headers={"Content-Disposition": 'attachment; filename="%s"' % nom_zip})
 
 
 
@@ -35069,6 +35833,8 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "tons_article": [(k, v[0]) for k, v in _TONS_ARTICLE.items()],
             "langues_crawl": langues_crawl,
             "articles": articles,
+            "illustrations_permises": (visuels.MAX_VISUELS_IA if est_admin
+                                       else billing.illustrations_par_article(plan_key)),
             "slash_final": slash_final,
             "nom_racine": next((l["nom"] for l in langues_crawl if not l["code"]), ""),
             "iso_racine": next((l["iso"] for l in langues_crawl if not l["code"]), ""),
@@ -35331,7 +36097,7 @@ def api_competitors_suggest(request: Request, slug: str) -> JSONResponse:
 
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=max(1, len(requetes))) as pool:
-        trouves = list(pool.map(_une, requetes))
+        trouves = list(pool.map(_dans_ce_contexte(_une), requetes))
     resultats: dict[str, list[dict[str, Any]]] = {
         q: r for q, r in zip(requetes, trouves) if r is not None}
     if not resultats:

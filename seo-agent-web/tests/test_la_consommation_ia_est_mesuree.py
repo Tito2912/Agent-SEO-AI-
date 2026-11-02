@@ -158,20 +158,82 @@ def test_un_releve_en_ECHEC_ne_fait_pas_echouer_l_appel(claude, monkeypatch) -> 
         m._IA_CONTEXTE.reset(jeton)
 
 
-def test_les_CINQ_points_d_appel_notent_leur_consommation() -> None:
+_POINTS_D_APPEL = ("_assistant_openai_chat", "_assistant_gemini_chat", "_assistant_claude_chat",
+                   "_anthropic_messages_text", "_openai_chat_text",
+                   # 02/11/2026 : les illustrations d'articles, par le modèle d'image d'OpenAI.
+                   "_openai_generer_une_image")
+
+
+def test_les_SIX_points_d_appel_notent_leur_consommation() -> None:
     """Un nouveau client d'IA qui oublierait le relevé serait une dépense invisible."""
     import inspect
-    for f in (m._assistant_openai_chat, m._assistant_gemini_chat, m._assistant_claude_chat,
-              m._anthropic_messages_text, m._openai_chat_text):
+    fonctions = [getattr(m, nom) for nom in _POINTS_D_APPEL]
+    for f in fonctions:
         assert "_noter_consommation_ia(" in inspect.getsource(f), f.__name__
     # Et aucun AUTRE endroit du code n'appelle une IA : chaque point de sortie vers un fournisseur
-    # est dans l'une des cinq fonctions ci-dessus.
+    # est dans l'une des six fonctions ci-dessus.
     reste = Path(m.__file__).read_text(encoding="utf-8")
-    for f in (m._assistant_openai_chat, m._assistant_gemini_chat, m._assistant_claude_chat,
-              m._anthropic_messages_text, m._openai_chat_text):
+    for f in fonctions:
         reste = reste.replace(inspect.getsource(f), "")
-    for sortie in ("/chat/completions", ":generateContent", "/messages\"", "v1/messages"):
-        assert sortie not in reste, "appel d'IA hors des cinq fonctions relevées : %s" % sortie
+    for sortie in ("/chat/completions", ":generateContent", "/messages\"", "v1/messages",
+                   "/images/generations", "/images/edits"):
+        assert sortie not in reste, "appel d'IA hors des six fonctions relevées : %s" % sortie
+
+
+def test_une_IMAGE_generee_est_relevee_a_son_prix(monkeypatch) -> None:
+    """Le modèle d'image facture ses jetons de sortie à 30 $ le million (relevé du 02/11/2026)."""
+    import base64
+
+    class _Image(_Reponse):
+        def json(self) -> dict:
+            return {"data": [{"b64_json": base64.b64encode(b"png").decode()}], "usage": self.usage}
+
+    monkeypatch.setenv("OPENAI_API_KEY", "cle-test")
+    monkeypatch.delenv("NOYARU_IMAGE_MODEL", raising=False)
+    monkeypatch.setattr(m.requests, "post",
+                        lambda *a, **k: _Image({"input_tokens": 100, "output_tokens": 2_000}))
+    uid = _utilisateur()
+    jeton = m._poser_contexte_ia(payeur=uid, fonction="essai")
+    try:
+        assert m._openai_generer_une_image(prompt="un vélo") == b"png"
+    finally:
+        m._IA_CONTEXTE.reset(jeton)
+    (r,) = _releves(uid)
+    assert r.meta["modele"] == "gpt-image-2"
+    assert r.amount == 60_500, "100 × 5 $ + 2 000 × 30 $ par million = 0,0605 $"
+
+
+def test_un_appel_lance_en_PARALLELE_est_rattache_a_son_payeur(claude) -> None:
+    """Un fil de `ThreadPoolExecutor` part d'un contexte vide : sans `_dans_ce_contexte`, le
+    relevé ne sait pas qui paie et n'écrit rien. Les corrections en lot et les traductions
+    d'articles manquaient ainsi au coût réel par plan (trouvé le 02/11/2026)."""
+    from concurrent.futures import ThreadPoolExecutor
+    uid = _utilisateur()
+
+    def _appeler(_i: int) -> str:
+        return m._anthropic_messages_text(system="s", user_msg="u", model="claude-sonnet-4-6", max_tokens=100)
+
+    jeton = m._poser_contexte_ia(payeur=uid, fonction="essai")
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            assert list(pool.map(m._dans_ce_contexte(_appeler), range(2))) == ["ok", "ok"]
+    finally:
+        m._IA_CONTEXTE.reset(jeton)
+    assert len(_releves(uid)) == 2
+
+
+def test_chaque_POOL_de_fils_transmet_le_payeur() -> None:
+    """Toute tâche confiée à un pool de fils passe par `_dans_ce_contexte`, qu'elle appelle une
+    IA aujourd'hui ou pas : celle qui ne le fait pas encore le fera un jour sans qu'on y pense."""
+    import re
+    source = Path(m.__file__).read_text(encoding="utf-8")
+    # `.*` sur la ligne : les arguments du pool portent eux-memes des parentheses.
+    noms = set(re.findall(r"ThreadPoolExecutor\(.*\)\s+as\s+(\w+)\s*:", source))
+    assert noms, "aucun pool trouvé : le motif ne lit plus le code"
+    appels = re.findall(r"\b(%s)\.(?:map|submit)\(([^,)]*)" % "|".join(sorted(noms)), source)
+    assert appels
+    sans = [a for a in appels if not a[1].startswith("_dans_ce_contexte(")]
+    assert sans == [], sans
 
 
 # ── À travers une vraie requête : le payeur est le PROPRIÉTAIRE du projet ───────────────────

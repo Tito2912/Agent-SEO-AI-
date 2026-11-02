@@ -5,7 +5,7 @@ description: "Write an article to review in HTML and Markdown or prepare a GitHu
 kind: "Documentation"
 section: "Going further"
 order: 44
-updated_at: "2026-10-19"
+updated_at: "2026-11-02"
 audience: "Pro and Business"
 keywords: ["AI writing", "SEO content", "new page", "pull request", "automatic mode"]
 app_href: "/"
@@ -32,6 +32,26 @@ faq:
 Choose the destination, the **topic**, its **section**, then the length, tone and languages if needed. The summary shows the number of versions and what they cost.
 
 In **Content only** mode, review the isolated preview or the Markdown text, then copy or download the version you want. Copying does not publish the article: paste it into your CMS afterward and check the live page.
+
+## Add visuals
+
+In **Content only** mode, the **Add visuals** block enriches the article in two ways, which you can combine.
+
+**Your images**: up to {{images_max}} images (JPEG, PNG or WebP, 10 MB at most each), with, if you like, a sentence about what each one shows. The model sees them, places them where they support the text and writes their alternative text in the article's language. They are resized to 1,600 pixels wide, converted to WebP and stripped of their metadata — including the GPS location of a phone photo.
+
+**Visuals added by {{app_name}}** — {{visuels_max}} at most per article, and only where they help the reader:
+
+| visual | what bounds it |
+|---|---|
+| Chart | it only shows figures **written in the article** or in the data you pasted; a figure missing from the text gets the chart removed. Without a source, it is labeled "Illustrative figures". |
+| Screenshot | a page of **your site**, seen by the latest analysis, and only when the article talks about what it shows. Each language version shows the page in its own language when it exists. |
+| AI illustration | a generated image, with no text, logo or identifiable real person, marked as AI-generated in its metadata. At most {{illustrations_business}} per article, from the {{label_business}} plan up. |
+
+Visuals are **included in the article**: they do not count as additional articles. A visual that could not be produced is removed from the text, and a note says so — never a broken image in the delivered article.
+
+The **Download the article and its images (.zip)** button gives each version as `.md` and `.html`, along with the `images/` folder they refer to. Put that folder next to the article, or upload the images to your CMS and update their addresses.
+
+In **GitHub proposal** mode, visuals are not available yet: we first need to know, repository by repository, where the site stores its images and how its pages insert them.
 
 In **GitHub proposal** mode, also fill in an **address**. The address is suggested from the topic, and you
 adjust it — the section (`/blog`, `/guides`, `/ressources`) is an editorial decision that

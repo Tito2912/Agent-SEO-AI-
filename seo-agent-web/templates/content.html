@@ -2,7 +2,7 @@
 {% from '_correction_progress.html' import steps %}
 {% block title %}{{ tr("Contenu") }} - {{ project.site_name if project else slug }}{% endblock %}
 
-{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/content-journey.css?v=2" /><link rel="stylesheet" href="/static/automation-consent.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/content-journey.css?v=3" /><link rel="stylesheet" href="/static/automation-consent.css?v=1" />{% endblock %}
 {% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Contenu") }}</span>{% endblock %}
 {% block content %}
 <div class="content-journey-page">
@@ -130,6 +130,33 @@
                 </span>
               </fieldset>
             {% endif %}
+            {# LES VISUELS (02/11/2026) : les images du client, et ce que Noyaru peut ajouter.
+               Inclus dans l'article, au plus 4 visuels ajoutes par Noyaru. Mode contenu seul
+               pour l'instant : en mode GitHub, il faut encore savoir ou un depot range ses
+               images et comment ses pages les inserent. #}
+            <details class="screen-options content-visuels" id="c-visuels" open>
+              <summary>{{ tr("Ajouter des visuels") }}</summary>
+              <p class="muted small">{{ tr("Vos images, et jusqu’à {n} visuels ajoutés par Noyaru. Ils sont inclus dans l’article : rien de plus n’est décompté.", n=4) }}</p>
+              <fieldset>
+                <legend>{{ tr("Visuels ajoutés par Noyaru") }}</legend>
+                {# Business seulement (decision du 02/11/2026) : visible mais inactif en dessous,
+                   pour que le client sache qu'elle existe. #}
+                <label class="checkbox"><input type="checkbox" id="c-v-illustrations" {% if not illustrations_permises %}disabled{% endif %} /> <span>{{ tr("Illustrations générées par IA") }}{% if not illustrations_permises %} <span class="muted small">— {{ tr_html('incluses à partir du plan Business. <a href="{url}">Voir les forfaits</a>', url=billing_url or '/billing') }}</span>{% endif %}</span></label>
+                <label class="checkbox"><input type="checkbox" id="c-v-graphiques" checked /> <span>{{ tr("Graphiques tirés des chiffres de l’article") }}</span></label>
+                <label class="checkbox"><input type="checkbox" id="c-v-captures" checked /> <span>{{ tr("Captures d’écran de pages de votre site, quand elles servent l’article") }}</span></label>
+                <span class="muted small">{{ tr("Noyaru n’ajoute un visuel que là où il aide le lecteur. Un graphique ne reprend que des chiffres écrits dans l’article ou dans vos données ; les illustrations sont marquées comme générées par IA dans leurs métadonnées.") }}</span>
+              </fieldset>
+              <label>
+                {{ tr("Vos images") }}
+                <input type="file" id="c-v-fichiers" accept="image/jpeg,image/png,image/webp" multiple />
+                <span class="muted small">{{ tr("JPEG, PNG ou WebP, 10 Mo au plus, {n} images au maximum. Elles sont réduites et converties en WebP, sans leurs métadonnées (position GPS comprise).", n=6) }}</span>
+              </label>
+              <ul id="c-v-imports" class="c-v-imports" aria-live="polite"></ul>
+              <label>
+                {{ tr("Vos données (facultatif)") }}
+                <textarea id="c-v-donnees" rows="4" maxlength="5000" placeholder="{{ tr("Collez un tableau depuis un tableur : l’article s’appuiera sur ces chiffres, et un graphique pourra en être tiré.") }}"></textarea>
+              </label>
+            </details>
           {% else %}
             <p class="muted small" id="c-sans-crawl">
               {{ tr_html('Aucune analyse de votre site pour l\'instant. L’analyse identifie les rubriques existantes et à quoi ressemblent leurs pages : <a href="{url}">lancez une analyse</a>, puis revenez ici.', url='/projects/' ~ slug) }}
@@ -193,7 +220,9 @@
           <label>{{ tr("Adresse suggérée") }} <input id="c-a-adresse" class="mono" readonly /></label>
         </div>
         <ul id="c-a-notes" class="muted small"></ul>
+        <p id="c-a-images-note" class="muted small" hidden>{{ tr("Les textes citent leurs images sous « images/… » : l’archive .zip contient ce dossier. Déposez-le à côté de l’article, ou importez les images dans votre plateforme et reprenez leurs adresses.") }}</p>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">
+          <a class="btn primary" id="c-a-zip" hidden>{{ tr("Télécharger l’article et ses images (.zip)") }}</a>
           <button class="btn" type="button" data-copier="markdown">{{ tr("Copier le Markdown") }}</button>
           <button class="btn" type="button" data-copier="html">{{ tr("Copier le HTML") }}</button>
           <button class="btn" type="button" data-telecharger="md">{{ tr("Télécharger .md") }}</button>
@@ -666,7 +695,7 @@
       }
       function choiceStamp() {
         return JSON.stringify([mode(), sujet.value, route.value, sectionSel && sectionSel.value,
-          cochees(), languesArticle(), choixStyle('c-taille'), choixStyle('c-ton')]);
+          cochees(), languesArticle(), choixStyle('c-taille'), choixStyle('c-ton'), choixVisuels()]);
       }
       function prepared(link) {
         preparedFor = choiceStamp(); uncertainFor = '';
@@ -680,8 +709,11 @@
         var unavailableRepo = mode() === 'github' && depotState !== 'ready';
         var isPrepared = preparedFor && choiceStamp() === preparedFor;
         var isUncertain = uncertainFor && choiceStamp() === uncertainFor;
-        btn.disabled = drafting || missingCrawl || quota || unavailableRepo || Boolean(isPrepared) || Boolean(isUncertain);
-        var message = isUncertain ? {{ tr("Le traitement peut continuer. Actualisez le suivi avant de relancer cette demande.")|tojson }} : isPrepared ? {{ tr("Votre brouillon est prêt à relire. Modifiez vos choix pour en préparer un autre.")|tojson }} : drafting ? {{ tr("Rédaction en cours : les choix sont conservés jusqu’à la réponse.")|tojson }} : quota ? {{ tr("Le solde affiché ne permet pas de rédiger toutes ces versions.")|tojson }} : missingCrawl ? {{ tr("Une analyse du site est nécessaire pour identifier ses rubriques.")|tojson }} : unavailableRepo ? (depotState === 'loading' ? {{ tr("Lecture des rubriques GitHub en cours…")|tojson }} : {{ tr("Le dépôt est indisponible. Vérifiez sa connexion ou choisissez « Contenu seul ».")|tojson }}) : {{ tr("Prêt à rédiger un brouillon, à relire avant publication.")|tojson }};
+        /* Une image encore en route ne partirait pas avec l'article : on attend qu'elle arrive. */
+        var envois = document.getElementById('c-v-imports');
+        var uploading = mode() === 'contenu' && Boolean(envois && envois.querySelector('.c-v-etat.muted'));
+        btn.disabled = drafting || missingCrawl || quota || unavailableRepo || uploading || Boolean(isPrepared) || Boolean(isUncertain);
+        var message = uploading ? {{ tr("Envoi des images en cours…")|tojson }} : isUncertain ? {{ tr("Le traitement peut continuer. Actualisez le suivi avant de relancer cette demande.")|tojson }} : isPrepared ? {{ tr("Votre brouillon est prêt à relire. Modifiez vos choix pour en préparer un autre.")|tojson }} : drafting ? {{ tr("Rédaction en cours : les choix sont conservés jusqu’à la réponse.")|tojson }} : quota ? {{ tr("Le solde affiché ne permet pas de rédiger toutes ces versions.")|tojson }} : missingCrawl ? {{ tr("Une analyse du site est nécessaire pour identifier ses rubriques.")|tojson }} : unavailableRepo ? (depotState === 'loading' ? {{ tr("Lecture des rubriques GitHub en cours…")|tojson }} : {{ tr("Le dépôt est indisponible. Vérifiez sa connexion ou choisissez « Contenu seul ».")|tojson }}) : {{ tr("Prêt à rédiger un brouillon, à relire avant publication.")|tojson }};
         document.getElementById('c-readiness').textContent = message;
         var action = document.getElementById('c-prerequisite-action');
         action.hidden = drafting || !(isPrepared || isUncertain || missingCrawl || quota || (unavailableRepo && depotState !== 'loading'));
@@ -751,13 +783,50 @@
         document.getElementById('c-a-notes').innerHTML = (courante.notes || []).map(function (n) {
           return '<li>' + esc(n) + '</li>';
         }).join('');
+        /* Les images n'entrent dans l'apercu qu'en `data:` : l'iframe sans origine n'envoie pas
+           le cookie de session, une adresse de l'API y serait refusee. */
         document.getElementById('c-a-apercu').srcdoc =
-          '<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; style-src &#39;unsafe-inline&#39;"><body style="font:16px/1.6 system-ui,sans-serif;' +
-          'max-width:720px;margin:24px auto;padding:0 16px;color:#111">' + courante.html + '</body>';
+          '<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; style-src &#39;unsafe-inline&#39;; img-src data:"><style>img{max-width:100%;height:auto}</style><body style="font:16px/1.6 system-ui,sans-serif;' +
+          'max-width:720px;margin:24px auto;padding:0 16px;color:#111">' + apercuHtml(courante.html) + '</body>';
       }
-      function afficherArticle(liste) {
+      var donneesImages = {};
+      function apercuHtml(texte) {
+        return String(texte).replace(/src="images\/([a-z0-9-]+\.webp)"/g, function (m, nom) {
+          return donneesImages[nom] ? 'src="' + donneesImages[nom] + '"' : m;
+        });
+      }
+      function chargerImages(liste) {
+        donneesImages = {};
+        var restantes = (liste || []).length;
+        (liste || []).forEach(function (im) {
+          fetch(im.url)
+            .then(function (r) { return r.ok ? r.blob() : null; })
+            .then(function (b) {
+              if (!b) return null;
+              return new Promise(function (fini) {
+                var lecteur = new FileReader();
+                lecteur.onload = function () { donneesImages[im.nom] = lecteur.result; fini(); };
+                lecteur.onerror = function () { fini(); };
+                lecteur.readAsDataURL(b);
+              });
+            })
+            .catch(function () { /* une image manquante reste absente de l'apercu, pas plus */ })
+            .then(function () {
+              restantes -= 1;
+              if (restantes === 0 && courante) montrer(versions.indexOf(courante));
+            });
+        });
+      }
+      function afficherArticle(liste, d) {
         versions = liste || [];
         if (!versions.length) return;
+        d = d || {};
+        var avecImages = Boolean(d.zip && d.images && d.images.length);
+        var zip = document.getElementById('c-a-zip');
+        zip.hidden = !avecImages;
+        if (avecImages) zip.href = d.zip; else zip.removeAttribute('href');
+        document.getElementById('c-a-images-note').hidden = !avecImages;
+        chargerImages(avecImages ? d.images : []);
         versionsBox.innerHTML = versions.map(function (v, i) {
           return '<button class="btn" type="button" data-version="' + i + '">' +
             esc((v.code || v.langue || '?').toUpperCase()) + '</button>';
@@ -806,11 +875,75 @@
             .then(function (d) {
               if (!d.ok) { say(esc(d.error || {{ tr("Article illisible.")|tojson }}), 'error'); return; }
               if (d.sujet) sujet.value = d.sujet;
-              afficherArticle(d.versions);
+              afficherArticle(d.versions, d);
               articleBox.scrollIntoView({ behavior: 'smooth' });
             })
             .catch(function () { say({{ tr("Erreur réseau.")|tojson }}, 'error'); });
         });
+      });
+
+      /* LES VISUELS. Chaque image part au serveur des qu'elle est choisie : il la convertit, la
+         reduit et la nettoie, et rend un identifiant. La redaction ne recoit que ces
+         identifiants, dans l'ordre, avec ce que la personne dit de chaque image. */
+      var MAX_IMPORTS = 6;
+      function coche(id) { var el = document.getElementById(id); return Boolean(el && el.checked); }
+      function importsPrets() {
+        var boite = document.getElementById('c-v-imports');
+        if (!boite) return [];
+        return Array.prototype.filter.call(boite.querySelectorAll('li'), function (li) { return li.dataset.id; })
+          .map(function (li) { var c = li.querySelector('input'); return { id: li.dataset.id, legende: c ? c.value : '' }; });
+      }
+      function donneesClient() { var t = document.getElementById('c-v-donnees'); return t ? t.value : ''; }
+      function choixVisuels() {
+        return [coche('c-v-illustrations'), coche('c-v-graphiques'), coche('c-v-captures'), donneesClient(), importsPrets()];
+      }
+      function visuelsDemandes() {
+        return coche('c-v-illustrations') || coche('c-v-graphiques') || coche('c-v-captures') || importsPrets().length > 0;
+      }
+      var importsBox = document.getElementById('c-v-imports');
+      var fichiersInput = document.getElementById('c-v-fichiers');
+      function importer(fichier) {
+        var li = document.createElement('li');
+        li.innerHTML = '<img alt="" width="72" height="54" /><span class="c-v-etat muted small"></span>' +
+          '<button type="button" class="btn small">' + {{ tr("Retirer")|tojson }} + '</button>';
+        var etat = li.querySelector('.c-v-etat');
+        etat.textContent = fill({{ tr("Envoi de {name}…")|tojson }}, {name: fichier.name});
+        li.querySelector('button').addEventListener('click', function () { li.remove(); availability(); });
+        importsBox.appendChild(li);
+        availability();
+        var envoi = new FormData();
+        envoi.append('fichier', fichier);
+        var refus = function (texte) {
+          etat.className = 'c-v-etat error small';
+          etat.textContent = fichier.name + ' — ' + texte;
+          availability();
+        };
+        fetch('/api/projects/' + encodeURIComponent(slug) + '/content/images', { method: 'POST', body: envoi })
+          .then(readResponse)
+          .then(function (d) {
+            if (!d.ok) { refus(d.error || {{ tr("Image refusée.")|tojson }}); return; }
+            li.dataset.id = d.id;
+            li.querySelector('img').src = d.url;
+            var champ = document.createElement('input');
+            champ.maxLength = 300;
+            champ.placeholder = {{ tr("Ce que montre l’image (facultatif)")|tojson }};
+            champ.setAttribute('aria-label', fill({{ tr("Légende de {name}")|tojson }}, {name: fichier.name}));
+            champ.addEventListener('input', availability);
+            etat.replaceWith(champ);
+            availability();
+          })
+          .catch(function () { refus({{ tr("Erreur réseau.")|tojson }}); });
+      }
+      if (fichiersInput) fichiersInput.addEventListener('change', function () {
+        var place = MAX_IMPORTS - importsBox.querySelectorAll('li').length;
+        var liste = Array.prototype.slice.call(fichiersInput.files || []);
+        if (liste.length > place) say(fill({{ tr("{n} images au maximum : les suivantes sont ignorées.")|tojson }}, {n: MAX_IMPORTS}), 'error');
+        liste.slice(0, Math.max(0, place)).forEach(importer);
+        fichiersInput.value = '';
+      });
+      ['c-v-illustrations', 'c-v-graphiques', 'c-v-captures', 'c-v-donnees'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener(el.tagName === 'TEXTAREA' ? 'input' : 'change', availability);
       });
 
       function redigerArticle() {
@@ -818,18 +951,23 @@
         if (!sectionSel) { say({{ tr("Lancez d’abord une analyse : l’analyse identifie les rubriques existantes.")|tojson }}, 'error'); return; }
         if (!s) { say({{ tr("Renseignez un sujet pour rédiger l’article.")|tojson }}, 'error'); sujet.focus(); return; }
         var langues = languesArticle();
+        var avecVisuels = visuelsDemandes();
         writing(true);
         btn.textContent = {{ tr("Rédaction…")|tojson }};
         articleBox.hidden = true;
-        say(langues.length > 1
+        say((langues.length > 1
           ? fill({{ tr("Le modèle écrit la version principale, puis {n} traduction(s). Cela prend environ une minute : gardez cet onglet ouvert.")|tojson }}, {n: langues.length - 1})
-          : {{ tr("Le modèle écrit l'article en imitant une page de la section. Une trentaine de secondes.")|tojson }});
+          : {{ tr("Le modèle écrit l'article en imitant une page de la section. Une trentaine de secondes.")|tojson }}) +
+          (avecVisuels ? ' ' + {{ tr("Les visuels ajoutent jusqu’à une minute.")|tojson }} : ''));
         var jeton = nouveauJeton();
         suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/article', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sujet: s, section: sectionSel.value, langues: langues, suivi: jeton,
-                                 taille: choixStyle('c-taille'), ton: choixStyle('c-ton') })
+                                 taille: choixStyle('c-taille'), ton: choixStyle('c-ton'),
+                                 images: importsPrets(), illustrations: coche('c-v-illustrations'),
+                                 graphiques: coche('c-v-graphiques'), captures: coche('c-v-captures'),
+                                 donnees: donneesClient() })
         })
           .then(readResponse)
           .then(function (d) {
@@ -839,7 +977,7 @@
             if (!d.ok) { failure(d, {{ tr("Erreur pendant la rédaction.")|tojson }}); return; }
             say((d.versions.length > 1 ? fill({{ tr("{n} versions rédigées.")|tojson }}, {n: d.versions.length}) : {{ tr("Article rédigé.")|tojson }}) + ' ' +
                 {{ tr("Le texte vient d'un modèle : relisez-le avant de le publier. Il reste dans « Articles rédigés ».")|tojson }}, 'ok');
-            afficherArticle(d.versions);
+            afficherArticle(d.versions, d);
             prepared();
           })
           .catch(function () {

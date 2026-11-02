@@ -28,3 +28,20 @@
 }
 
 .content-article-heading { scroll-margin-top:90px; }
+
+/* Les visuels de l'article (02/11/2026) : une ligne par image importee — vignette, legende,
+   retrait. La vignette garde ses proportions dans une case fixe, pour que les lignes s'alignent. */
+.content-visuels { margin:12px 0; }
+.content-visuels fieldset { border:0; padding:0; margin:0 0 12px; min-width:0; }
+.content-visuels .checkbox { align-items:flex-start; }
+.content-visuels .checkbox input { flex-shrink:0; margin-top:4px; }
+.c-v-imports { list-style:none; margin:8px 0 12px; padding:0; display:grid; gap:8px; }
+.c-v-imports li { display:flex; align-items:center; gap:10px; min-width:0; padding:8px; border:1px solid var(--border); border-radius:8px; background:var(--surface-inset); }
+.c-v-imports img { width:72px; height:54px; object-fit:cover; border-radius:6px; flex-shrink:0; background:var(--border); }
+.c-v-imports input { flex:1 1 auto; min-width:0; }
+.c-v-imports .c-v-etat { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
+.c-v-imports .btn { flex-shrink:0; }
+@media(max-width:600px) {
+  .c-v-imports li { flex-wrap:wrap; }
+  .c-v-imports input { flex-basis:100%; order:3; }
+}

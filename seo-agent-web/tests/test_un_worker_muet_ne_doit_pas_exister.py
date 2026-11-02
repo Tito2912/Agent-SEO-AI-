@@ -88,8 +88,10 @@ def test_un_worker_actif_annonce_COMBIEN_de_fils(monkeypatch, caplog) -> None:
     """Le nombre compte autant que le fait : un worker a un seul fil se bloque derriere un
     gros crawl, et la file stagne alors sans que rien soit en panne."""
     texte = _demarrer(monkeypatch, caplog, desactive="false", concurrence="2")
-    assert "2 fil(s) demarre(s)" in texte, texte
-    assert len(_FilFactice.demarres) == 2
+    assert "2 fil(s) demarre(s) + 1 fil de captures" in texte, texte
+    # Le fil des captures d'articles (02/11/2026) s'ajoute aux fils de la file, sans en prendre un.
+    assert len(_FilFactice.demarres) == 3
+    assert _FilFactice.demarres[-1].endswith("-captures")
 
 
 def test_la_ligne_sort_APRES_le_demarrage_reel_des_fils(monkeypatch, caplog) -> None:
@@ -122,7 +124,7 @@ def test_la_ligne_sort_APRES_le_demarrage_reel_des_fils(monkeypatch, caplog) -> 
         m.logger.removeHandler(h)
         m.logger.setLevel(niveau)
 
-    assert ordre == ["fil", "fil", "journal"], ordre
+    assert ordre == ["fil", "fil", "fil", "journal"], ordre
 
 
 def test_un_second_appel_ne_redemarre_rien(monkeypatch, caplog) -> None:

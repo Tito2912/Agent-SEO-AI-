@@ -208,6 +208,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             "correction": {"model": "claude-sonnet-4-6", "model_openai": "gpt-5.5",
                            "max_files": 2},
             "crawl": {"max_pages_per_crawl": 1_500, "max_pagespeed_urls": 5, "job_timeout_s": 3_600},
+            "contenu": {"illustrations_par_article": 0},
             "features": ["Audit complet", "Suggestions IA (limitées)", "Exports",
                          "Corrections du code en pull request GitHub (2/mois, pour essayer)"],
         },
@@ -227,6 +228,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             "correction": {"model": "claude-sonnet-4-6", "model_openai": "gpt-5.5",
                            "max_files": 12},
             "crawl": {"max_pages_per_crawl": 3_000, "max_pagespeed_urls": 15, "job_timeout_s": 7_200},
+            "contenu": {"illustrations_par_article": 0},
             "features": ["Corrections du code en pull request GitHub (100/mois)", "Audit complet", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
         },
         "pro": {
@@ -246,6 +248,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             "correction": {"model": "claude-sonnet-4-6", "model_openai": "gpt-5.5",
                            "max_files": 20},
             "crawl": {"max_pages_per_crawl": 6_000, "max_pagespeed_urls": 30, "job_timeout_s": 14_400},
+            "contenu": {"illustrations_par_article": 0},
             "features": ["Corrections du code en pull request GitHub (250/mois)", "Comptes d'équipe (2 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
         "business": {
@@ -272,6 +275,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             "correction": {"model": "claude-sonnet-4-6", "model_openai": "gpt-5.5",
                            "max_files": 40},
             "crawl": {"max_pages_per_crawl": 13_000, "max_pagespeed_urls": 50, "job_timeout_s": 28_800},
+            "contenu": {"illustrations_par_article": 4},
             "features": ["Corrections du code en pull request GitHub (400/mois)", "Comptes d'équipe (5 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }
@@ -307,6 +311,11 @@ def _apply_plan_config_override(defaults: dict[str, dict[str, Any]]) -> None:
                 v = crawl.get(k)
                 if isinstance(v, (int, float)) and not isinstance(v, bool) and int(v) > 0:
                     defaults[plan_key].setdefault("crawl", {})[k] = int(v)
+        contenu = pv.get("contenu")
+        if isinstance(contenu, dict):
+            v = contenu.get("illustrations_par_article")
+            if isinstance(v, (int, float)) and not isinstance(v, bool) and int(v) >= 0:
+                defaults[plan_key].setdefault("contenu", {})["illustrations_par_article"] = int(v)
         corr = pv.get("correction")
         if isinstance(corr, dict):
             for cle in ("model", "model_openai"):
@@ -314,6 +323,20 @@ def _apply_plan_config_override(defaults: dict[str, dict[str, Any]]) -> None:
                     defaults[plan_key].setdefault("correction", {})[cle] = str(corr[cle])
             if isinstance(corr.get("max_files"), (int, float)) and not isinstance(corr.get("max_files"), bool):
                 defaults[plan_key].setdefault("correction", {})["max_files"] = int(corr["max_files"])
+
+
+def illustrations_par_article(plan_key: str) -> int:
+    """Combien d'illustrations IA un article de ce plan peut porter (0 : aucune).
+
+    Decision du proprietaire, 02/11/2026 : Business seulement. Pro etait deja a 41 % de marge
+    dans le pire cas ; quatre illustrations par article le faisaient tomber a 38,8 %, sous la
+    regle des 40 %. Images importees, graphiques et captures ne coutent presque rien et restent
+    ouverts a tous les plans qui redigent.
+    """
+    cat = plan_catalog()
+    plan = cat.get(str(plan_key or "").strip().lower()) or cat.get("free", {})
+    contenu = plan.get("contenu") if isinstance(plan, dict) else None
+    return max(0, int((contenu or {}).get("illustrations_par_article") or 0))
 
 
 def correction_config_for_plan(plan_key: str) -> dict[str, Any]:
