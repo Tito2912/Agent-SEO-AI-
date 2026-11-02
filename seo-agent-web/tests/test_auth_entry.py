@@ -8,6 +8,7 @@ from sqlalchemy import select
 from backend import app as m
 from backend.models import User
 from test_customer_activation import client, lab as lab
+from _inscription_humaine import jeton_humain  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -97,7 +98,7 @@ def test_team_signup_fallback_does_not_grant_registration_from_a_next_parameter(
     response = c.post('/auth/signup', data={
         '_csrf': c.cookies.get(m._CSRF_COOKIE_NAME), 'next': '/team/accept?token=untrusted',
         'email': 'not-invited@example.invalid', 'password': 'local-safe-password',
-        'country': 'FR', 'country_requested': 'yes',
+        'country': 'FR', 'country_requested': 'yes', 'formulaire_ouvert': jeton_humain(),
     }, follow_redirects=False)
     assert response.status_code == 303 and 'err' in parse_qs(urlsplit(response.headers['location']).query)
     with lab['db'].session() as db:
@@ -115,7 +116,7 @@ def test_closed_signup_keeps_recovery_and_server_restrictions(lab, monkeypatch):
     assert soup.select_one('.auth-entry-help')
     response = c.post('/auth/signup', data={
         '_csrf': c.cookies.get(m._CSRF_COOKIE_NAME), 'email': 'closed@example.invalid',
-        'password': 'local-safe-password',
+        'password': 'local-safe-password', 'formulaire_ouvert': jeton_humain(),
     }, follow_redirects=False)
     assert response.status_code == 303 and 'err' in parse_qs(urlsplit(response.headers['location']).query)
     with lab['db'].session() as db:

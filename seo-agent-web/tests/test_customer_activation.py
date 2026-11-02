@@ -16,6 +16,7 @@ from backend import app as m, auth, customer_activation as activation
 from backend.db import Database
 from backend.models import AccountActivation, AccountInvite, Project, User
 from test_first_verified_correction import _choose, _ready, _verify, journey as journey
+from _inscription_humaine import jeton_humain  # noqa: E402
 
 NOW = datetime(2026, 10, 18, 12, tzinfo=timezone.utc)
 
@@ -56,7 +57,8 @@ def client(value=None):
 def post_signup(client, email, password='test-password-for-activation'):
     client.get('/auth/signup')
     return client.post('/auth/signup', data={'email': email, 'password': password,
-                       '_csrf': client.cookies.get(m._CSRF_COOKIE_NAME)}, follow_redirects=False)
+                       '_csrf': client.cookies.get(m._CSRF_COOKIE_NAME),
+                       'formulaire_ouvert': jeton_humain()}, follow_redirects=False)
 
 
 def account(database, uid):

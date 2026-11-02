@@ -14,6 +14,7 @@ from sqlalchemy import select
 from backend import app as m, customer_accounts, customer_country
 from backend.models import OAuthIdentity, User
 from test_customer_activation import client, lab as lab, user
+from _inscription_humaine import jeton_humain  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -25,6 +26,8 @@ def local_only(monkeypatch):
 
 def post(c, path, **data):
     c.get('/auth/signup' if path.startswith('/auth/') else '/settings/accounts')
+    if path == '/auth/signup':
+        data = {'formulaire_ouvert': jeton_humain(), **data}
     return c.post(path, data={'_csrf': c.cookies.get(m._CSRF_COOKIE_NAME), **data}, follow_redirects=False)
 
 
@@ -79,7 +82,7 @@ def test_old_forms_and_countryless_accounts_are_not_assigned_a_guessed_country(l
     c.get('/auth/signup', headers={'CF-IPCountry': 'FR', 'Accept-Language': 'fr-FR'})
     address = f'country-legacy-{uuid.uuid4().hex}@example.invalid'
     response = c.post('/auth/signup', data={'email': address, 'password': 'safe-test-password',
-                      '_csrf': c.cookies.get(m._CSRF_COOKIE_NAME)}, headers={'CF-IPCountry': 'FR', 'Accept-Language': 'fr-FR'}, follow_redirects=False)
+                      '_csrf': c.cookies.get(m._CSRF_COOKIE_NAME), 'formulaire_ouvert': jeton_humain()}, headers={'CF-IPCountry': 'FR', 'Accept-Language': 'fr-FR'}, follow_redirects=False)
     assert response.status_code == 303
     with lab['db'].session() as db:
         registered = db.scalar(select(User).where(User.email == address))

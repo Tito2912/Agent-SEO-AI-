@@ -111,6 +111,7 @@ try:
     from . import legal
     from . import visuels
     from . import naturel
+    from . import anti_robots
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -129,6 +130,7 @@ except ImportError:
     import legal
     import visuels  # type: ignore
     import naturel  # type: ignore
+    import anti_robots  # type: ignore
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -13910,6 +13912,8 @@ def auth_signup(
                 bool(_safe_env("SIGNUP_INVITE_CODE")) and not invite_required
             ),
             "acquisition_campaign": signup_attribution.find(DB, query=request.query_params),
+            # L'heure d'ouverture signee : un envoi plus rapide qu'une personne est un robot.
+            "formulaire_ouvert": anti_robots.jeton_d_ouverture(_safe_env("SEO_AGENT_SECRET_KEY")),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -13927,6 +13931,8 @@ def auth_signup_submit(
     acquisition_consent: str = Form(default=""),
     country: str = Form(default=""),
     country_requested: str = Form(default=""),
+    site_web: str = Form(default=""),
+    formulaire_ouvert: str = Form(default=""),
 ) -> Response:
     secret = _safe_env("SEO_AGENT_SECRET_KEY")
     if not secret:
@@ -13967,16 +13973,26 @@ def auth_signup_submit(
             status_code=303,
         )
 
-    def _signup_error(msg: str, status_code: int = 400) -> Response:
+    def _signup_error(msg: str, status_code: int = 400, *, statut: str = "rejected",
+                      raison: str = "") -> Response:
         _audit_log(
             request,
             action="auth.signup",
-            status="rejected",
+            status=statut,
             actor_email=e,
-            meta={"reason": msg, "status_code": status_code},
+            meta={"reason": raison or msg, "status_code": status_code},
         )
         target = customer_country.with_country(signup_attribution.append_tags(f"/auth/signup?next={quote(n)}&email={quote(e)}", signup_attribution.campaign_tags(campaign)), country_code)
         return RedirectResponse(url=_path_with_flash(target, err=msg), status_code=303)
+
+    # LES ROBOTS, AVANT TOUT LE RESTE (02/11/2026, voir backend/anti_robots.py) : aucun compte
+    # cree, aucun email envoye a une adresse qu'un robot a ecrite. Le journal garde la vraie
+    # raison (statut « robot ») ; la personne lit seulement qu'il faut reessayer.
+    raison_robot = anti_robots.raison_de_refus(secret, piege=site_web, jeton=formulaire_ouvert)
+    if raison_robot:
+        return _signup_error(
+            "Votre inscription n’a pas pu être validée. Patientez quelques secondes, puis réessayez.",
+            400, statut="robot", raison=raison_robot)
 
     if (country_requested == "yes" and not country_code) or (country.strip() and not country_code):
         return _signup_error("Choisissez votre pays de résidence dans la liste.", 400)

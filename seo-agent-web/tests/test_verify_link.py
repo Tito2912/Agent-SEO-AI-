@@ -43,6 +43,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from backend import app as app_module  # noqa: E402
 from backend.app import app  # noqa: E402
+from _inscription_humaine import jeton_humain  # noqa: E402
 
 PASSWORD = "un-mot-de-passe-assez-long"
 
@@ -88,7 +89,8 @@ def _signup(client: TestClient, email: str):
     assert token, "the signup form no longer carries a CSRF field"
     return client.post(
         "/auth/signup",
-        data={"email": email, "password": PASSWORD, "next": "/", "_csrf": token.group(1)},
+        data={"email": email, "password": PASSWORD, "next": "/", "_csrf": token.group(1),
+              "formulaire_ouvert": jeton_humain()},
         follow_redirects=False,
     )
 
@@ -161,6 +163,7 @@ def test_a_new_account_is_not_dropped_on_someone_elses_page(captured_link) -> No
                 "password": PASSWORD,
                 "next": "/jobs/ae025623-7a2c-470d-910c-74c8f6da9df3",
                 "_csrf": token.group(1),
+                "formulaire_ouvert": jeton_humain(),
             },
             follow_redirects=False,
         )

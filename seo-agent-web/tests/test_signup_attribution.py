@@ -18,6 +18,7 @@ from backend import app as m, customer_activation, signup_attribution as attribu
 from backend.models import AcquisitionCampaign, User
 from test_customer_activation import account, client, lab as lab, project, user
 from test_first_verified_correction import _ready, _verify
+from _inscription_humaine import jeton_humain  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +41,7 @@ def signup(lab, campaign=None, consent='', *, email=None, password='test-passwor
     assert page.status_code == 200
     address = email or f'campaign-{uuid.uuid4().hex}@example.invalid'
     payload = {'email': address, 'password': password, '_csrf': c.cookies.get(m._CSRF_COOKIE_NAME),
-               'acquisition_consent': consent}
+               'acquisition_consent': consent, 'formulaire_ouvert': jeton_humain()}
     if campaign:
         payload['acquisition_campaign'] = campaign.id
     response = c.post('/auth/signup', data=payload, follow_redirects=False)

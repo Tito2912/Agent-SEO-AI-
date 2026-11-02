@@ -59,6 +59,7 @@ from backend import app as m  # noqa: E402
 from backend import auth, billing  # noqa: E402
 from backend.app import app  # noqa: E402
 from backend.models import AccountInvite, AccountMember, BillingSubscription, User  # noqa: E402
+from _inscription_humaine import jeton_humain  # noqa: E402
 
 
 def _utilisateur(prefixe: str, plan: str = "") -> tuple[str, str]:
@@ -458,7 +459,8 @@ def test_un_INVITE_SANS_COMPTE_peut_s_inscrire_malgre_la_beta_fermee(monkeypatch
     csrf = re.search(r'name="_csrf"\s+value="([^"]*)"', page.text)
     rep = client.post("/auth/signup",
                       data={"email": adresse, "password": "motdepasse-long-1",
-                            "_csrf": csrf.group(1) if csrf else ""},
+                            "_csrf": csrf.group(1) if csrf else "",
+                            "formulaire_ouvert": jeton_humain()},
                       follow_redirects=False)
     assert rep.status_code in (302, 303), (rep.status_code, rep.text[:400])
     with m.DB.session() as db:
@@ -477,7 +479,8 @@ def test_une_adresse_NON_invitee_reste_dehors(monkeypatch) -> None:
     csrf = re.search(r'name="_csrf"\s+value="([^"]*)"', page.text)
     rep = client.post("/auth/signup",
                       data={"email": adresse, "password": "motdepasse-long-1",
-                            "_csrf": csrf.group(1) if csrf else ""},
+                            "_csrf": csrf.group(1) if csrf else "",
+                            "formulaire_ouvert": jeton_humain()},
                       follow_redirects=False)
     with m.DB.session() as db:
         cree = db.scalar(select(User).where(User.email == adresse))
@@ -528,7 +531,8 @@ def test_une_invitation_PERIMEE_ne_rouvre_pas_l_inscription(monkeypatch) -> None
     csrf = re.search(r'name="_csrf"\s+value="([^"]*)"', page.text)
     client.post("/auth/signup",
                 data={"email": adresse, "password": "motdepasse-long-1",
-                      "_csrf": csrf.group(1) if csrf else ""},
+                      "_csrf": csrf.group(1) if csrf else "",
+                      "formulaire_ouvert": jeton_humain()},
                 follow_redirects=False)
     with m.DB.session() as db:
         assert db.scalar(select(User).where(User.email == adresse)) is None, (

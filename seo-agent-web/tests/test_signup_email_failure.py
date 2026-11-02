@@ -37,6 +37,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from backend import app as app_module  # noqa: E402
 from backend.app import app  # noqa: E402
+from _inscription_humaine import jeton_humain  # noqa: E402
 
 EMAIL = "prospect@exemple.fr"
 PASSWORD = "un-mot-de-passe-assez-long"
@@ -61,7 +62,8 @@ def _signup(client: TestClient, email: str = EMAIL):
     assert match, "the signup form no longer carries a CSRF field"
     return client.post(
         "/auth/signup",
-        data={"email": email, "password": PASSWORD, "next": "/", "_csrf": match.group(1)},
+        data={"email": email, "password": PASSWORD, "next": "/", "_csrf": match.group(1),
+              "formulaire_ouvert": jeton_humain()},
         follow_redirects=False,
     )
 

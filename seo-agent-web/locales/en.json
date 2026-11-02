@@ -3253,5 +3253,7 @@
   "{n} images au plus par article.": "{n} images at most per article.",
   "Données trop longues ({n} caractères au plus).": "Data too long ({n} characters at most).",
   "incluses à partir du plan Business. <a href=\"{url}\">Voir les forfaits</a>": "included from the Business plan. <a href=\"{url}\">See plans</a>",
-  "Les illustrations IA sont incluses à partir du plan Business.": "AI illustrations are included from the Business plan."
+  "Les illustrations IA sont incluses à partir du plan Business.": "AI illustrations are included from the Business plan.",
+  "Site web": "Website",
+  "Votre inscription n’a pas pu être validée. Patientez quelques secondes, puis réessayez.": "Your sign-up could not be validated. Wait a few seconds, then try again."
 }

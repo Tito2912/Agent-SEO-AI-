@@ -26,6 +26,14 @@
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="next" value="{{ next }}" />
           <input type="hidden" name="country_requested" value="yes" />
+          {# CONTRE LES ROBOTS (02/11/2026, backend/anti_robots.py) : l'heure d'ouverture signee,
+             et un champ piege hors de l'ecran, hors de la tabulation, ignore des lecteurs
+             d'ecran. Une personne ne le voit jamais ; un robot le remplit comme les autres. #}
+          <input type="hidden" name="formulaire_ouvert" value="{{ formulaire_ouvert }}" />
+          <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+            <label for="signup-site-web">{{ tr("Site web") }}</label>
+            <input id="signup-site-web" name="site_web" type="text" tabindex="-1" autocomplete="off" value="" />
+          </div>
           <div class="signup-country">
             {{ country_field('signup-country', signup_country, required=true) }}
             <p class="muted small">{{ tr("Pays déclaré par vous, modifiable dans vos préférences.") }}</p>
