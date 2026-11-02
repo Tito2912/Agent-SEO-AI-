@@ -99,6 +99,7 @@ try:
     from . import correction_guard
     from . import correction_journal
     from . import correction_memory
+    from . import seo_watch
     from . import first_correction
     from . import customer_activation
     from . import signup_attribution
@@ -120,6 +121,7 @@ except ImportError:
     import correction_guard
     import correction_journal
     import correction_memory
+    import seo_watch
     import first_correction
     import customer_activation
     import signup_attribution
@@ -246,7 +248,7 @@ _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 # blanche du middleware de session est redirige vers la connexion, et un chemin ouvert sans
 # exemption CSRF repond 403. Dans les deux cas l'ordonnanceur echoue en silence. Un test
 # compare les deux listes pour chaque route /cron.
-_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot",
+_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/seo-watch",
                       "/cron/auto-search-backlinks", "/cron/auto-post-backlinks",
                       "/cron/refresh-competitors", "/cron/verify-pull-requests",
                       "/cron/auto-content"}
@@ -12152,6 +12154,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/stripe/webhook",
         "/cron/check-backlinks",
         "/cron/autopilot",
+        "/cron/seo-watch",
         "/cron/verify-pull-requests",
         "/cron/refresh-competitors",
         "/cron/auto-search-backlinks",
@@ -17194,6 +17197,13 @@ async def assistant_chat(request: Request) -> JSONResponse:
         context = {**context, "project": {"slug": authorized_project.slug,
                    "site_name": authorized_project.site_name, "base_url": authorized_project.base_url}}
     system = _assistant_system_prompt(context if isinstance(context, dict) else None)
+    try:
+        with DB.session() as db:
+            knowledge = seo_watch.catalog(db, lang=i18n.current_lang())
+        system += seo_watch.assistant_context(knowledge)
+    except Exception:
+        logger.exception("[ASSISTANT] SEO knowledge unavailable")
+        return _assistant_json({"ok": False, "error": "Assistant temporairement indisponible."}, status_code=503)
     if authorized_project is not None:
         try:
             with DB.session() as db:
@@ -39758,3 +39768,9 @@ except ImportError:
     from legal_notice_routes import router as legal_notice_router
 app.include_router(legal_notice_router)
 app.include_router(first_audit.router)
+
+try:
+    from .seo_watch_routes import router as seo_watch_router
+except ImportError:
+    from seo_watch_routes import router as seo_watch_router
+app.include_router(seo_watch_router)

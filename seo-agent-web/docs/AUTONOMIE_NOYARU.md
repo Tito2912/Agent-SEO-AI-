@@ -81,34 +81,64 @@ de cet historique sera définie avant l'exploitation du futur SAV.
 
 ## Lot 2 : veille et base de connaissances datée
 
-Sources initiales examinées le 2 novembre 2026 :
+Implémenté dans la branche de veille :
 
-- [Google Search Essentials](https://developers.google.com/search/docs/essentials) :
-  exigences techniques, politiques antispam et contenu utile.
-- [Google : optimisation pour les fonctions d'IA de Search](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide) :
-  les fondamentaux SEO restent pertinents pour la recherche générative ; ne pas
-  proposer un balisage prétendument obligatoire ou une garantie de citation.
-- [Bing Webmaster Guidelines](https://www.bing.com/webmasters/help/bing-webmaster-guidelines-30fba23a) :
-  accessibilité, indexation, contenu exact, pertinence pour la recherche et ses
-  réponses génératives.
-- [Bing AI Performance](https://blogs.bing.com/webmaster/2026/2/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview/) :
-  suivre les citations/indicateurs disponibles dans leur périmètre, sans les
-  confondre avec les positions classiques ou toutes les surfaces IA.
+- Écran propriétaire **Système → Veille SEO/GEO**, à
+  `/settings/system/seo-knowledge`, en français et en anglais.
+- Trois documents officiels suivis :
+  [Google Search Essentials](https://developers.google.com/search/docs/essentials),
+  [Google et la recherche générative](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide),
+  [Bing AI Performance](https://blogs.bing.com/webmaster/2026/2/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview/).
+- Consultation planifiée une fois par jour via le workflow existant, à 03:00 UTC ;
+  chaque source décide si une lecture est due. Une lecture réussie diffère la suivante
+  de 24 heures. Après une erreur, une nouvelle tentative devient éligible après une
+  heure ; elle aura lieu au prochain appel du cron ou à une demande du propriétaire.
+- Collecteur HTTPS sans identifiants ni proxy d'environnement, limité aux adresses
+  compilées. Résolution publique et connexion à l'IP validée avec certificat vérifié
+  pour le domaine d'origine. Aucune redirection suivie. Réponses, taille et lecture
+  bornées ; une coquille JavaScript, une réponse vide ou une erreur ne valent pas lecture.
+- Empreinte du contenu principal et de ses liens, pas seulement du début du texte.
+  Historique de métadonnées et d'un court extrait : dix versions récentes plus la
+  version approuvée, sans miroir intégral des articles.
+- Tables additives `seo_knowledge_sources` et `seo_knowledge_revisions`, migration
+  `20261102_0020` depuis `0019`. Elles ne contiennent pas de données des projets clients.
+- Bail de cinq minutes par source, écriture conditionnée à son jeton, reprise bornée
+  après interruption. Une ancienne lecture ne peut pas remplacer une plus récente.
+- Trois repères FR/EN d'amorçage, relus pour cette livraison : ils ne sont activés
+  qu'après une lecture dont l'empreinte correspond **exactement** à la version relue.
+  Une inscription d'audit identifie cette validation livrée.
+- Un nouveau contenu met le repère concerné en attente de relecture. Le propriétaire
+  consulte la source, vérifie les deux résumés puis confirme la version. Le serveur
+  refuse les versions dépassées, les lectures anciennes ou interrompues et celles
+  encore en cours. La validation et ses résumés sont conservés dans le journal.
+- Une source non consultée avec succès depuis plus de sept jours est ancienne. Une
+  erreur de lecture est signalée, même si une ancienne version était exploitable.
+  Ces états ne sont pas présentés comme une connaissance actuelle de l'assistant.
+- Le propriétaire peut suspendre une source ou retirer son repère immédiatement.
+  Une actualisation ne réinstalle pas un repère retiré. Une suspension invalide la
+  lecture en cours ; les reprises répétées ne l'annulent pas lorsqu'elle est déjà active.
+- L'assistant reçoit seulement les résumés validés, actuels et leurs références/date
+  de consultation, dans la langue de l'interface. Il ne reçoit ni les extraits bruts,
+  ni une instruction d'exécution provenant d'un document externe. Un article externe
+  ne prouve pas qu'une fonction décrite existe déjà dans Noyaru.
 
-Ce sont des sources d'amorçage, pas une veille déjà opérationnelle.
+Le collecteur ne fait aucun appel IA, aucun envoi d'email ni modification de site.
+Les questions adressées à l'assistant gardent leur quota habituel. Un incident sur
+une source reste visible dans l'écran et dans la réponse du cron, y compris pendant
+le délai avant la prochaine tentative. Aucun autre traitement quotidien n'est
+supprimé ou déclenché manuellement par cette livraison.
 
-À construire : registre de sources officielles autorisées, collecte quotidienne
-bornée en lecture, version et empreinte du contenu retenu, date de consultation,
-date d'effet éventuelle, synthèse avec liens et échéance de révision. Le contenu
-externe reste une donnée non fiable en tant qu'instruction d'exécution. Les
-redirections et destinations réseau doivent être contrôlées ; une URL fournie
-par un client ou un email ne doit pas devenir une source privilégiée.
+Les [consignes Bing](https://www.bing.com/webmasters/help/bing-webmaster-guidelines-30fba23a)
+restent une référence de consultation : leur adresse redirige vers une application
+JavaScript, dont une réponse HTTP seule ne permet pas la lecture fiable. Elles ne
+figurent pas parmi les trois sources automatisées. Ce périmètre initial ne couvre
+pas tous les sujets SEO/GEO ; il rend les sources utilisées et leurs limites visibles.
 
-Un changement crée une proposition de règle. Il passe un jeu d'évaluation avant
-promotion : cas SEO existants, refus légitimes, fraîcheur des sources, fidélité des
-citations et absence de régression. Versionner puis permettre le retour à la règle
-précédente. Une source indisponible conserve sa dernière version en la signalant
-comme ancienne ; elle ne devient jamais une preuve fraîche.
+Les nouveaux repères doivent encore être relus par le propriétaire. Leur promotion
+automatique après évaluation s'inscrit dans le moteur de décisions du lot 3 ; le
+collecteur ne transforme pas de lui-même une nouvelle page en règle d'action.
+Les précédents résumés restent consultables dans l'historique des validations :
+revenir à un repère antérieur exige une nouvelle vérification contre la version actuelle.
 
 ## Lot 3 : moteur de décisions et autocorrection bornée
 

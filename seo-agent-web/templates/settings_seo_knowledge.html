@@ -1,0 +1,37 @@
+{% extends 'layout.html' %}
+{% block title %}{{ copy.title }} - Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/seo-watch.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/settings/system">{{ copy.system }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
+{% block content %}
+<div class="seo-watch">
+  <header class="page-header"><h1>{{ copy.title }}</h1><p class="muted">{{ copy.intro }}</p></header>
+  {% if err %}<p class="notice" role="alert">{{ err }}</p>{% elif msg %}<p class="notice" role="status">{{ msg }}</p>{% endif %}
+  <section class="card"><p>{{ copy.limits }}</p><form method="post" action="/settings/system/seo-knowledge/refresh"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn primary" type="submit">{{ copy.refresh }}</button></form><p class="muted small">{{ copy.cadence }}</p></section>
+  {% for item in catalog.sources %}
+  {% set row = item.row %}
+  <section class="card watch-source" aria-labelledby="title-{{ item.key }}" data-source="{{ item.key }}">
+    <div class="card-title-row"><h2 id="title-{{ item.key }}">{{ item.title }}</h2><span class="watch-status" data-state="{{ item.status }}">{{ copy['status_' + item.status] }}</span></div>
+    {% if row and row.error_code %}<p role="status" class="muted small">{{ copy.get('error_' + row.error_code, copy.error_unavailable) }}</p>{% endif %}
+    <p><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ copy.source }} ↗</a></p>
+    <dl class="watch-dates"><div><dt>{{ copy.attempted }}</dt><dd>{{ item.last_attempt_at or copy.none }}</dd></div><div><dt>{{ copy.next }}</dt><dd>{{ item.next_check_at or copy.none }}</dd></div><div><dt>{{ copy.checked }}</dt><dd>{{ item.checked_at or copy.none }}</dd></div><div><dt>{{ copy.reviewed }}</dt><dd>{{ item.reviewed_at or copy.none }}</dd></div></dl>
+    {% if item.fingerprint %}<p class="small">{{ copy.version }} : <code class="watch-hash">{{ item.fingerprint }}</code></p>{% endif %}
+    {% if row and row.latest_hash and item.status in ['current', 'changed', 'review_required'] %}
+    <form method="post" action="/settings/system/seo-knowledge/{{ item.key }}/review" class="watch-review">
+      <h3>{{ copy.review }}</h3><p class="muted small">{{ copy.review_help }}</p>
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="fingerprint" value="{{ item.fingerprint }}" />
+      <label for="fr-{{ item.key }}">{{ copy.fr }}</label><textarea id="fr-{{ item.key }}" name="guidance_fr" lang="fr" required minlength="20" maxlength="1200">{{ row.guidance_fr }}</textarea>
+      <label for="en-{{ item.key }}">{{ copy.en }}</label><textarea id="en-{{ item.key }}" name="guidance_en" lang="en" required minlength="20" maxlength="1200">{{ row.guidance_en }}</textarea>
+      <label class="watch-confirm"><input type="checkbox" name="confirm" value="1" required />{{ copy.confirm }}</label><button class="btn primary" type="submit">{{ copy.review }}</button>
+    </form>
+    {% endif %}
+    <div class="watch-actions">
+      {% if row and row.approved_hash %}<form method="post" action="/settings/system/seo-knowledge/{{ item.key }}/withdraw"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn" type="submit">{{ copy.withdraw }}</button></form>{% endif %}
+      <form method="post" action="/settings/system/seo-knowledge/{{ item.key }}/pause"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="paused" value="{{ '0' if row and row.paused else '1' }}" /><button class="btn" type="submit">{{ copy.resume if row and row.paused else copy.pause }}</button></form>
+    </div>
+    {% if item.history %}<details><summary>{{ copy.history }} ({{ item.history|length }})</summary><ul class="watch-history">{% for revision in item.history %}<li><time>{{ revision.first_seen_at }}</time><code class="watch-hash">{{ revision.fingerprint }}</code><p class="muted small">{{ copy.excerpt }} : {{ revision.excerpt }}</p></li>{% endfor %}</ul></details>{% endif %}
+    {% if item.reviews %}<details><summary>{{ copy.review_history }}</summary><ul class="watch-history">{% for review in item.reviews %}<li><time>{{ review.created_at }}</time><code class="watch-hash">{{ review.meta.get('fingerprint', '') }}</code><p lang="fr">{{ review.meta.get('guidance_fr', '') }}</p><p lang="en">{{ review.meta.get('guidance_en', '') }}</p></li>{% endfor %}</ul></details>{% endif %}
+  </section>
+  {% endfor %}
+  <p><a href="/settings/system">{{ copy.system }} ←</a></p>
+</div>
+{% endblock %}
