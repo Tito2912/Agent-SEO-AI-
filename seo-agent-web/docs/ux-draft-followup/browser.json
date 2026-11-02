@@ -1,0 +1,79 @@
+{
+  "scope": "Comptes et rapports fictifs ; vrai parcours applicatif et Chromium ; GitHub et IA simulés.",
+  "checks": [
+    {
+      "width": 1440,
+      "lang": "fr",
+      "guided_target_preserved": true,
+      "draft_only": true,
+      "credits": 1,
+      "models": 1,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "guided_target_preserved": true,
+      "draft_only": true,
+      "credits": 1,
+      "models": 1,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "lang": "fr",
+      "guided_target_preserved": true,
+      "draft_only": true,
+      "credits": 1,
+      "models": 1,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "lang": "en",
+      "guided_target_preserved": true,
+      "draft_only": true,
+      "credits": 1,
+      "models": 1,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "lang": "fr",
+      "guided_target_preserved": true,
+      "draft_only": true,
+      "credits": 1,
+      "models": 1,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "guided_target_preserved": true,
+      "draft_only": true,
+      "credits": 1,
+      "models": 1,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "lang": "fr",
+      "guided_target_preserved": true,
+      "draft_only": true,
+      "credits": 1,
+      "models": 1,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "lang": "en",
+      "guided_target_preserved": true,
+      "draft_only": true,
+      "credits": 1,
+      "models": 1,
+      "overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": []
+}
