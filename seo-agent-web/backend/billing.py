@@ -18,8 +18,10 @@ except Exception:  # pragma: no cover
     stripe = None  # type: ignore
 
 try:
+    from . import i18n
     from .models import BillingCustomer, BillingSubscription, UsageEvent  # type: ignore
 except ImportError:  # pragma: no cover
+    import i18n
     from models import BillingCustomer, BillingSubscription, UsageEvent  # type: ignore
 
 
@@ -982,7 +984,7 @@ def create_checkout_session_url(db: Session, *, user_id: str, email: str, plan_k
         client_reference_id=uid,
         metadata={"user_id": uid, "plan_key": pk},
         subscription_data={"metadata": {"user_id": uid, "plan_key": pk}},
-        locale="fr",
+        locale=i18n.current_lang(),
         **fiscal,
     )
     url = str(getattr(session, "url", "") or "").strip()
@@ -1018,7 +1020,7 @@ def create_billing_portal_url(db: Session, *, user_id: str, email: str, resilier
             session = stripe.billing_portal.Session.create(  # type: ignore[attr-defined]
                 customer=customer_id,
                 return_url=f"{base}/billing",
-                locale="fr",
+                locale=i18n.current_lang(),
                 flow_data={
                     "type": "subscription_cancel",
                     "subscription_cancel": {"subscription": sid},
@@ -1037,7 +1039,7 @@ def create_billing_portal_url(db: Session, *, user_id: str, email: str, resilier
         session = stripe.billing_portal.Session.create(  # type: ignore[attr-defined]
             customer=customer_id,
             return_url=f"{base}/billing",
-            locale="fr",
+            locale=i18n.current_lang(),
         )
     url = str(getattr(session, "url", "") or "").strip()
     if not url:
