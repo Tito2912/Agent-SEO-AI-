@@ -33,6 +33,7 @@ Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeu
 | Rembourser une rétractation sous 14 jours | CGU article 5 (FR/EN) | Le remboursement est une opération manuelle dans Stripe (`RUNBOOK.md`, « Rétractation »). La case « Je demande que mon abonnement commence immédiatement » existe bien avant le paiement. |
 | Fournir un accord de traitement des données (DPA) sur demande | Confidentialité § 1, CGU article 11 | Les pages annoncent qu'il « peut être demandé ». Le DPA (`DPA-fr.md`, `DPA-en.md`) est un brouillon non opérationnel, corrigé le 21/10/2026 : il ne peut être proposé aux clients qu'une fois réglés les points de la section 5. Mode d'acceptation choisi le 21/10/2026 : une case à cocher dans le service. |
 | Décrire les garanties de transfert sur demande | Confidentialité § 5 | Suppose d'avoir les justificatifs du point 2. |
+| Faire figurer l'édition de logiciels en mode SaaS au Kbis | Mentions légales, assurance responsabilité civile professionnelle | Les statuts du 30/10/2024 (article 2) ne prévoient que la vente en ligne, et l'assureur l'a relevé. Extension de l'objet social (logiciels SaaS, intelligence artificielle, services numériques, affiliation ; vente en ligne conservée) préparée le 24/10/2026 : décision à signer, annonce légale à publier, déclaration sur formalites.entreprises.gouv.fr, puis nouveau Kbis à envoyer à l'assureur. |
 
 ## 4. Décisions juridiques à faire valider
 
