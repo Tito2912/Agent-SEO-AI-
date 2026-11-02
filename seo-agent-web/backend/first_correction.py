@@ -40,6 +40,20 @@ def edited_note(value, previous=None):
     return value or None
 
 
+def proposal_note(receipt, previous=None):
+    """Keep the customer's choice and text, without carrying an old application receipt."""
+    stored = note_data(previous)
+    note = dict(receipt)
+    journey = stored.get("first_correction")
+    if isinstance(journey, dict) and journey.get("selected_at"):
+        note["first_correction"] = {"selected_at": journey["selected_at"]}
+    if "user_note" in stored:
+        note["user_note"] = stored["user_note"]
+    elif previous and not stored:
+        note["user_note"] = previous
+    return json.dumps(note, ensure_ascii=False)
+
+
 def web_url(value):
     value = str(value or "").strip()
     try:

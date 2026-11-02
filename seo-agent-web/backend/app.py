@@ -3991,7 +3991,7 @@ def _restore_correction_tasks(op, result):
                 row.issue_label = task.get("issue_label", "")
                 row.crawl_ts = task.get("crawl_ts", "")
                 row.status = "in_progress"
-                row.note = json.dumps(note, ensure_ascii=False)
+                row.note = first_correction.proposal_note(note, row.note)
             db.commit()
     except Exception as exc:
         raise correction_guard.CorrectionStoreUnavailable() from exc
@@ -19779,7 +19779,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
                 ))
                 if _existing:
                     _existing.status = "in_progress"
-                    _existing.note = _pr_note
+                    _existing.note = first_correction.proposal_note(json.loads(_pr_note), _existing.note)
                     _existing.issue_label = issue_label
                 else:
                     _db2.add(IssueTask(

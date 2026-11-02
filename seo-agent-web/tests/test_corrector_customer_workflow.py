@@ -565,6 +565,53 @@ def test_a_pr_accepted_before_connection_loss_is_recovered_without_new_github_wr
     assert send(**body).status_code == 409
 
 
+@pytest.mark.parametrize("recovered", [False, True])
+def test_a_draft_keeps_the_guided_page_and_notes_without_reusing_old_verification(customer, monkeypatch, recovered):
+    state, send, used, payer, slug = customer
+    selected_at = "2026-11-02T10:00:00+00:00"
+    with m.DB.session() as db:
+        project = db.scalar(select(Project).where(Project.slug == slug))
+        older = IssueTask(project_id=project.id, user_id=payer, issue_key="missing_title",
+                          url=URL + "older", status="todo", crawl_ts="20261002-090000",
+                          note=json.dumps({"first_correction": {"selected_at": "2026-10-01T10:00:00+00:00"}}))
+        target = IssueTask(project_id=project.id, user_id=payer, issue_key="missing_title", url=URL,
+                           status="todo", crawl_ts="20261002-090000", note=json.dumps({
+                               "first_correction": {"selected_at": selected_at, "declared_at": selected_at},
+                               "user_note": "Conserver le vocabulaire de mon activité.",
+                               "verify": {"result": "resolved", "crawl_ts": "20261003-090000",
+                                          "verified_at": selected_at}, "cms_change_id": "old-change"}))
+        db.add_all([older, target])
+        db.commit()
+        task_id = str(target.id)
+    if recovered:
+        body, pr = _interrupted_pr(customer, monkeypatch)
+        before = len(state["posts"]), len(state["writes"])
+        monkeypatch.setattr(m, "_github_api_get", lambda *a, **kw: [pr])
+    else:
+        preview = send().json()
+        body = {"confirm": True, "file_path": preview["file"], "patched_content": preview["patched_content"]}
+    result = send(**body)
+    assert result.status_code == 200, result.text
+    if recovered:
+        assert result.json()["recovered"] is True
+        assert (len(state["posts"]), len(state["writes"])) == before
+    assert used() == 1 and state["models"] == 1
+    assert state["posts"][-1][1]["draft"] is True
+    with m.DB.session() as db:
+        target = db.get(IssueTask, task_id)
+        note = json.loads(target.note)
+        assert note["first_correction"] == {"selected_at": selected_at}
+        assert note["user_note"] == "Conserver le vocabulaire de mon activité."
+        assert not {"verify", "cms_change_id"}.intersection(note)
+        assert note["pr_number"] == 42 and target.status == "in_progress"
+    page = state["client"].get(f"/projects/{slug}/first-correction")
+    assert page.status_code == 200
+    journey = page.context["state"]
+    assert journey["task_id"] == task_id and journey["url"] == URL
+    assert journey["pr_url"] == result.json()["pr_url"]
+    assert not journey["declared"] and not journey["verified"]
+
+
 @pytest.mark.parametrize("bad", ["transport", "empty", "multiple", "wrong_head", "wrong_repo", "invalid_head", "invalid_number"])
 def test_an_uncertain_pr_recovery_never_repeats_external_work(customer, monkeypatch, bad):
     state, send, used, _, _ = customer
