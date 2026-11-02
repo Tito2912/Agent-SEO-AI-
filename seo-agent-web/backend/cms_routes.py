@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 try:
-    from . import cms_guidance, correction_guard, first_correction, wordpress_cms as wp
+    from . import cms_guidance, correction_guard, first_correction, ghost_cms, wordpress_cms as wp
     from .cms_commun import CmsError, fingerprint, same_connection
     from .i18n import JSONResponse
     from .models import AuditLog, CmsChange, IssueTask, JobRecord, Project
@@ -26,6 +26,7 @@ except ImportError:
     import cms_guidance
     import correction_guard
     import first_correction
+    import ghost_cms
     import wordpress_cms as wp
     from cms_commun import CmsError, fingerprint, same_connection
     from i18n import JSONResponse
@@ -34,7 +35,7 @@ except ImportError:
 router = APIRouter()
 
 # Les connecteurs, par nom d'adresse. Un CMS absent d'ici n'a que des instructions (cms_guidance).
-CONNECTEURS = {wp.CONNECTEUR.nom: wp.CONNECTEUR}
+CONNECTEURS = {cx.nom: cx for cx in (wp.CONNECTEUR, ghost_cms.CONNECTEUR)}
 
 
 def app_module():
@@ -611,8 +612,10 @@ def write_change(change, action, client, live, c, key, *, approved_at=None, cx=N
         result = client.update(live, {field: destination[field]})
         if cx.values(result) != destination:
             raise CmsError("%s a renvoyé des valeurs différentes de celles attendues." % cx.libelle, uncertain=True)
-    except CmsError:
-        save_state(change.id, "unknown")
+    except CmsError as error:
+        # Un refus CERTAIN (le CMS n'a rien enregistre : collision, limite d'un champ) rend
+        # l'operation a son etat ; le moindre doute la laisse « a confirmer ».
+        save_state(change.id, "unknown" if error.uncertain else change.state)
         raise
     confirmed(change, "applied" if action == "apply" else "restored")
     return True

@@ -1,0 +1,11 @@
+{#- La connexion Ghost (02/11/2026) : la clé Admin API d'une intégration personnalisée. Ghost(Pro)
+    sert parfois l'administration en <site>.ghost.io : cette adresse est acceptée aussi. -#}
+<p class="muted small">{{ tr("Ghost 5 minimum. Noyaru modifie le titre SEO et la méta-description des articles et pages publiés, après votre validation de chaque aperçu. La disponibilité est vérifiée à la connexion.") }}</p>
+<details class="cms-help"><summary>{{ tr("Où trouver la clé Admin API ?") }}</summary><p>{{ tr("Dans Ghost, ouvrez Settings → Integrations → Add custom integration. Nommez-la « Noyaru », puis copiez la clé Admin API affichée. Supprimer cette intégration retire l’accès de Noyaru.") }}</p><a href="https://ghost.org/integrations/custom-integrations/" target="_blank" rel="noreferrer">{{ tr("Aide Ghost") }}</a></details>
+<form method="post" action="/projects/{{ slug }}/cms/ghost/connect" class="cms-form">
+  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+  <label>{{ tr("Adresse HTTPS de Ghost") }}<input type="url" name="site_url" placeholder="{{ tr('https://monsite.fr') }}" required autocomplete="url" /><span class="muted small">{{ tr("L’adresse de votre site ({url}) ou celle de votre administration en .ghost.io.", url=project.base_url) }}</span></label>
+  <label>{{ tr("Clé Admin API") }}<input type="password" name="cle" required maxlength="100" autocomplete="off" /></label>
+  <button class="btn primary" type="submit">{{ tr("Vérifier et connecter Ghost") }}</button>
+  <p class="muted small">{{ tr("La connexion vérifie l’accès. Chaque correction demande ensuite votre validation.") }}</p>
+</form>

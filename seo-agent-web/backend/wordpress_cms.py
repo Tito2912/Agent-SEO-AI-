@@ -2,20 +2,16 @@
 from __future__ import annotations
 
 import base64
-import http.client
-import ipaddress
 import json
-import socket
-import ssl
 from urllib.parse import unquote, urlencode, urlsplit, urlunsplit
 
 try:
     # Le socle commun des connecteurs (02/11/2026) : ces noms restent ceux de ce module.
-    from .cms_commun import FIELDS, CmsError, Connecteur, fingerprint, same_connection
+    from .cms_commun import FIELDS, CmsError, Connecteur, HTTPSEpingle, adresse_publique, fingerprint, same_connection, same_page
 except ImportError:
-    from cms_commun import FIELDS, CmsError, Connecteur, fingerprint, same_connection
+    from cms_commun import FIELDS, CmsError, Connecteur, HTTPSEpingle, adresse_publique, fingerprint, same_connection, same_page
 
-__all__ = ["FIELDS", "CmsError", "fingerprint", "same_connection", "WordPressClient", "CONNECTEUR"]
+__all__ = ["FIELDS", "CmsError", "fingerprint", "same_connection", "same_page", "WordPressClient", "CONNECTEUR"]
 
 READ = "yoast-seo/get-post-seo-data"
 WRITE = "yoast-seo/update-post-seo-data"
@@ -52,39 +48,12 @@ def site_url(value, project_url):
         raise CmsError("Utilisez l’adresse HTTPS de WordPress, sur le même domaine que ce projet.", code="adresse") from None
 
 
-def same_page(left, right):
-    def key(value):
-        p = urlsplit(value)
-        return p.scheme, (p.hostname or "").lower(), p.port or 443, p.path or "/", p.query
-    try:
-        return key(left) == key(right)
-    except (ValueError, TypeError):
-        return False
-
-
 def public_address(host):
-    try:
-        infos = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
-        addresses = sorted({entry[4][0] for entry in infos})
-        if not addresses or any(not ipaddress.ip_address(ip).is_global or ipaddress.ip_address(ip).is_multicast for ip in addresses):
-            raise ValueError()
-        return addresses[0]
-    except (OSError, ValueError):
-        raise CmsError("L’adresse WordPress doit être accessible sur Internet et résoudre vers une adresse publique.", code="adresse_privee") from None
+    return adresse_publique(host, "WordPress")
 
 
-class _PinnedHTTPS(http.client.HTTPSConnection):
-    def __init__(self, host, address):
-        super().__init__(host, timeout=12, context=ssl.create_default_context())
-        self.address = address
-
-    def connect(self):
-        self.sock = socket.create_connection((self.address, 443), self.timeout)
-        try:
-            self.sock = self._context.wrap_socket(self.sock, server_hostname=self.host)
-        except BaseException:
-            self.sock.close()
-            raise
+# Module-level names, so a test can replace the connection without touching other connectors.
+_PinnedHTTPS = HTTPSEpingle
 
 
 def exchange(base_url, username, password, method, path, payload=None):

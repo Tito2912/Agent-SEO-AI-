@@ -20,9 +20,14 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import http.client
+import ipaddress
 import json
+import socket
+import ssl
 from dataclasses import dataclass, field
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 FIELDS = {"seo_title", "meta_description"}
 
@@ -46,6 +51,45 @@ def same_connection(credentials, stored, key):
         return hmac.compare_digest(stored, fingerprint(credentials, key))
     # Changes recorded before the keyed fingerprint can still be restored.
     return hmac.compare_digest(stored, hashlib.sha256(json.dumps(credentials, sort_keys=True).encode()).hexdigest())
+
+
+def same_page(left, right):
+    def key(value):
+        p = urlsplit(value)
+        return p.scheme, (p.hostname or "").lower(), p.port or 443, p.path or "/", p.query
+    try:
+        return key(left) == key(right)
+    except (ValueError, TypeError):
+        return False
+
+
+def adresse_publique(host, cms):
+    """L'adresse IP publique ou l'on enverra les identifiants ; `cms` nomme le CMS dans l'erreur."""
+    try:
+        infos = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+        addresses = sorted({entry[4][0] for entry in infos})
+        if not addresses or any(not ipaddress.ip_address(ip).is_global or ipaddress.ip_address(ip).is_multicast for ip in addresses):
+            raise ValueError()
+        return addresses[0]
+    except (OSError, ValueError):
+        raise CmsError("L’adresse %s doit être accessible sur Internet et résoudre vers une adresse publique." % cms,
+                       code="adresse_privee") from None
+
+
+class HTTPSEpingle(http.client.HTTPSConnection):
+    """HTTPS vers l'adresse IP deja validee : un DNS qui change entre-temps n'y change rien."""
+
+    def __init__(self, host, address):
+        super().__init__(host, timeout=12, context=ssl.create_default_context())
+        self.address = address
+
+    def connect(self):
+        self.sock = socket.create_connection((self.address, 443), self.timeout)
+        try:
+            self.sock = self._context.wrap_socket(self.sock, server_hostname=self.host)
+        except BaseException:
+            self.sock.close()
+            raise
 
 
 def values_of(page, cms):

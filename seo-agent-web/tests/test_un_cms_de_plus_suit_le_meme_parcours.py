@@ -221,6 +221,14 @@ def test_une_plateforme_sans_connecteur_n_a_pas_d_adresse(essai):
     assert post(essai, "/inconnu/connect", jeton="bon-jeton").status_code == 404
 
 
+def test_la_confidentialite_nomme_l_acces_de_chaque_cms():
+    """Un connecteur stocke un acces chiffre : la politique (FR et EN) le declare (accord du 02/11/2026)."""
+    for gabarit, ligne in (("privacy_public.html", '<th scope="row">Connexions</th>'),
+                           ("privacy_public_en.html", '<th scope="row">Connections</th>')):
+        connexions = next(texte for texte in (TEMPLATES / gabarit).read_text(encoding="utf-8").splitlines() if ligne in texte)
+        assert [cx.libelle for cx in cms_routes.CONNECTEURS.values() if cx.libelle not in connexions] == [], gabarit
+
+
 def test_chaque_connecteur_a_son_formulaire_de_connexion():
     """Le gabarit cms_connexion_<nom>.html envoie a la bonne adresse les champs que le connecteur lit."""
     for nom, cx in cms_routes.CONNECTEURS.items():

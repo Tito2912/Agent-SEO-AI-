@@ -4,7 +4,8 @@ from __future__ import annotations
 import re
 
 PLATFORMS = {"": "Je ne sais pas encore", "wordpress": "WordPress", "shopify": "Shopify",
-             "webflow": "Webflow", "wix": "Wix", "code": "Site développé sur mesure", "other": "Autre CMS"}
+             "webflow": "Webflow", "wix": "Wix", "ghost": "Ghost", "code": "Site développé sur mesure",
+             "other": "Autre CMS"}
 SEO_PLUGINS = {"": "Je ne sais pas", "yoast": "Yoast SEO", "rank_math": "Rank Math", "other": "Autre extension"}
 SOURCES = {
     "wordpress": "https://wordpress.org/documentation/article/pages/",
@@ -13,6 +14,7 @@ SOURCES = {
     "shopify": "https://help.shopify.com/fr/manual/promoting-marketing/seo/adding-keywords",
     "webflow": "https://help.webflow.com/hc/en-us/articles/33961237278611-Add-SEO-title-and-meta-description",
     "wix": "https://support.wix.com/en/article/customizing-your-pages-seo-settings-in-the-seo-panel",
+    "ghost": "https://ghost.org/help/post-settings/",
 }
 
 
@@ -61,10 +63,14 @@ def for_issue(project_settings, key):
             steps = ["Dans Wix, ouvrez les réglages SEO de la page concernée.",
                      f"Dans les réglages de base du référencement, modifiez le {'titre pour les moteurs de recherche' if field == 'seo_title' else 'champ de description'}.",
                      "Enregistrez puis publiez la modification sur votre site."]
+        elif platform == "ghost":
+            steps = ["Ouvrez l’article ou la page concerné dans l’éditeur Ghost.",
+                     f"Ouvrez les réglages de la publication (Post settings, icône en haut à droite), puis Meta data, et renseignez le champ {'Meta title' if field == 'seo_title' else 'Meta description'}.",
+                     "Cliquez sur Update pour mettre la publication à jour."]
         elif platform == "code":
             steps = [f"Modifiez le {label} dans les métadonnées de la page ou du modèle concerné.",
                      "Relisez la modification dans votre dépôt, puis publiez-la sur le site analysé."]
-    elif platform in {"wordpress", "shopify", "webflow", "wix"}:
+    elif platform in {"wordpress", "shopify", "webflow", "wix", "ghost"}:
         steps = [f"Ouvrez la page concernée dans {site['label']} et suivez les instructions du problème ci-dessous.",
                  "Selon le problème, le réglage peut dépendre du thème, d’une extension ou de votre hébergeur. Transmettez les instructions au prestataire si nécessaire.",
                  "Enregistrez et publiez la modification avant de lancer le contrôle."]
