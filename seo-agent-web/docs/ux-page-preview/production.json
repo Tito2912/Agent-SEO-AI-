@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-24",
+  "scope": "Sanitized observations of the dedicated production session and operator output; no source, identity, repository name, cookie or credential exported.",
+  "observations": [
+    {
+      "step": "old-operation-inspect",
+      "source": "operator-json",
+      "decision": "can_abandon",
+      "reason": "unchanged_branch",
+      "charged": false
+    },
+    {
+      "step": "old-operation-abandon",
+      "source": "operator-json",
+      "state": "abandoned",
+      "released": true,
+      "charged": false
+    },
+    {
+      "step": "preview-preflight",
+      "source": "production-browser",
+      "target_matches_authorized_page": true,
+      "repository_context_unchanged": true,
+      "dialog_script_v4": true,
+      "consent_checked": false
+    },
+    {
+      "step": "follow-up-read",
+      "source": "production-browser",
+      "status": 200,
+      "target_status": "todo",
+      "target_has_pr": false,
+      "old_receipt_kept": true,
+      "note": "A previous read timed out before preparation was clicked; no generation from that read."
+    },
+    {
+      "step": "authorized-preview",
+      "source": "production-browser",
+      "requests_actually_started": 1,
+      "confirmation_clicked": false,
+      "message": "Contenu patché manquant.",
+      "preview_visible": false,
+      "confirmation_visible": false
+    },
+    {
+      "step": "quota-after-refusal",
+      "source": "production-browser",
+      "ai_corrections_used": 0,
+      "ai_corrections_limit": 2
+    },
+    {
+      "step": "source-inspection",
+      "source": "github-read-and-code",
+      "page_content_source_present": true,
+      "page_description_length": 172,
+      "dynamic_route_reads_page_description": true,
+      "raw_provider_result_observed": false
+    }
+  ],
+  "limits": [
+    "No successful real preview or client PR created.",
+    "No application, publication or verification crawl attested.",
+    "Full deployed server SHA not exposed.",
+    "No manual production deployment."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-02",
+  "main": "bffc17093b5c3f0099a0512be56a526d552c9901",
+  "checks": [
+    {
+      "asset": "seo-agent-web/static/issue-context.css",
+      "http_status": 200,
+      "matches_main": true,
+      "sha256": "c9ece9c14d0415eee52c7b4ab336b7bacaf8992f7037a51b41442b06c0d43127"
+    },
+    {
+      "asset": "seo-agent-web/static/correction-review.js",
+      "http_status": 200,
+      "matches_main": true,
+      "sha256": "2f33bb402db82e4f59df8d2d01e778456093e67656b964143d9682233d0cf02c"
+    }
+  ],
+  "full_server_sha_attested": false
+}

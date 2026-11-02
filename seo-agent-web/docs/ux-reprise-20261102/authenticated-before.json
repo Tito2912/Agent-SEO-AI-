@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-02",
+  "expected_account": true,
+  "expected_page_selected": true,
+  "result_verified": false,
+  "has_proposal_link": false,
+  "crawl": "20261021-175401",
+  "overflow": false,
+  "github_status": 200,
+  "github_repo_present": true,
+  "github_repo_matches_previous": true,
+  "github_mode": "review",
+  "target_tasks": [
+    {
+      "status": "todo",
+      "issue": "meta_description_too_long_indexable",
+      "has_pr": false,
+      "verification": null
+    }
+  ],
+  "billing": {
+    "ai_amount": "0 / 2",
+    "ai_state": "finite",
+    "plan": "Free"
+  },
+  "preparation_sent": false,
+  "analysis_started": false
+}
