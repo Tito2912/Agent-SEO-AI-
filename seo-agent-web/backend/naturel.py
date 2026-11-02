@@ -69,12 +69,24 @@ _TICS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# Les connecteurs dont les modeles ouvrent paragraphe apres paragraphe. PAS les mots courants :
+# le premier essai en production (02/11/2026) signalait « Avec 2 %… Avec 5 %… Avec 8 % », « La… »,
+# « Pour… » — un parallelisme voulu, que toute personne ecrit — et faisait reecrire sept
+# paragraphes pour rien.
+_CONNECTEURS: dict[str, tuple[str, ...]] = {
+    "fr": ("de plus", "en outre", "par ailleurs", "ainsi", "en effet", "enfin", "ensuite",
+           "toutefois", "cependant", "neanmoins", "néanmoins", "en somme", "d'autre part",
+           "d’autre part", "par consequent", "par conséquent"),
+    "en": ("moreover", "furthermore", "additionally", "in addition", "however", "ultimately",
+           "overall", "consequently", "therefore", "notably"),
+}
+
 # Les reperes. Chacun dit ce qu'il mesure dans son nom.
 SEUIL_TICS = 0                 # une formule de la liste suffit a faire reecrire son paragraphe
 SEUIL_TIRETS_POUR_MILLE = 6    # tirets longs pour 1 000 mots
 SEUIL_PART_DE_LISTES = 0.45    # part des lignes du corps qui sont des puces
 SEUIL_VARIATION_PHRASES = 0.30 # coefficient de variation de la longueur des phrases
-SEUIL_DEBUTS_REPETES = 3       # paragraphes qui commencent par le meme mot
+SEUIL_CONNECTEURS = 3          # paragraphes ouverts par un connecteur de la liste
 
 
 def _sans_balisage(texte: str) -> str:
@@ -135,22 +147,25 @@ def examiner(markdown: str, langue: str) -> dict[str, Any]:
     lignes = [li for li in corps.splitlines() if li.strip() and not li.lstrip().startswith(("#", "!", "|"))]
     puces = sum(1 for li in lignes if re.match(r"^\s*(?:[-*+]|\d+[.)])\s", li))
     part_listes = puces / len(lignes) if lignes else 0.0
-    debuts: dict[str, list[int]] = {}
-    for i, p in enumerate(paras):
-        premier = re.sub(r"[^\w’']", "", (p.split() or [""])[0].lower())
-        if premier:
-            debuts.setdefault(premier, []).append(i)
+    connecteurs = _CONNECTEURS.get(str(langue or "")[:2].lower(), ())
+    ouverts = [i for i, p in enumerate(paras)
+               if any(re.match(r"%s\b" % re.escape(c), _sans_balisage(p).strip().lower()) for c in connecteurs)]
     globales: list[str] = []
     if variation < SEUIL_VARIATION_PHRASES:
         globales.append("phrases de longueur trop régulière (variation %.2f)" % variation)
     if tirets > SEUIL_TIRETS_POUR_MILLE:
+        # Les tirets se corrigent la ou ils sont : chaque paragraphe qui en porte part en
+        # reecriture (sous le plafond de paragraphes de l'appelant).
+        for i, p in enumerate(paras):
+            if "—" in p:
+                a_reecrire.setdefault(i, []).append(
+                    "tirets longs (—) : remplace-les par une virgule, un deux-points ou des parenthèses")
         globales.append("%.0f tirets longs pour 1 000 mots" % tirets)
     if part_listes > SEUIL_PART_DE_LISTES:
         globales.append("%.0f %% des lignes sont des puces" % (part_listes * 100))
-    for mot, indices in debuts.items():
-        if len(indices) >= SEUIL_DEBUTS_REPETES:
-            for i in indices[1:]:
-                a_reecrire.setdefault(i, []).append("paragraphe qui commence comme d'autres (« %s »)" % mot)
+    if len(ouverts) >= SEUIL_CONNECTEURS:
+        for i in ouverts[1:]:
+            a_reecrire.setdefault(i, []).append("paragraphe ouvert par un connecteur, comme d'autres")
     return {"a_reecrire": a_reecrire, "global": globales,
             "mesures": {"mots": mots, "variation_phrases": round(variation, 2),
                         "tirets_pour_mille": round(tirets, 1), "part_listes": round(part_listes, 2),

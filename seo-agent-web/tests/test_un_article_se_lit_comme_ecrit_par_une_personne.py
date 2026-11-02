@@ -84,10 +84,28 @@ def test_trop_de_PUCES_et_de_TIRETS_longs_se_signalent() -> None:
     assert any("tirets longs" in r for r in globales) and any("puces" in r for r in globales)
 
 
-def test_des_paragraphes_qui_commencent_TOUS_pareil_se_signalent() -> None:
-    texte = "\n\n".join("Ensuite, étape %d du réglage, avec ses propres détails." % i for i in range(4))
+def test_des_paragraphes_ouverts_par_des_CONNECTEURS_en_serie_se_signalent() -> None:
+    texte = ("De plus, le réglage compte beaucoup ici.\n\nEn outre, la fréquence joue un rôle.\n\n"
+             "Le budget, lui, reste fixe chaque mois.\n\nPar ailleurs, les frais pèsent lourd.\n")
     examen = naturel.examiner(texte, "fr")
-    assert sorted(examen["a_reecrire"]) == [1, 2, 3], "le premier garde sa place"
+    assert sorted(examen["a_reecrire"]) == [1, 3], "le premier connecteur garde sa place"
+
+
+def test_un_PARALLELISME_voulu_n_est_pas_un_tic() -> None:
+    """Premier essai en production (02/11/2026) : « Avec 2 %… Avec 5 %… Avec 8 % », « Pour… »
+    étaient signalés et sept paragraphes réécrits pour rien — une personne écrit ainsi."""
+    texte = "\n\n".join("Avec **%d %%** de rendement, le capital atteint une autre valeur finale." % t
+                        for t in (2, 5, 8, 10)) + "\n\nPour comparer, voir le guide.\n\nPour finir, un mot.\n"
+    assert naturel.examiner(texte, "fr")["a_reecrire"] == {}
+
+
+def test_des_TIRETS_longs_trop_denses_font_reecrire_leurs_paragraphes() -> None:
+    texte = ("La question n'est pas là — c'est de savoir quoi en attendre.\n\n"
+             "Les frais comptent, sans tiret ici.\n\nUn scénario — rare — reste possible.\n")
+    examen = naturel.examiner(texte, "fr")
+    assert sorted(examen["a_reecrire"]) == [0, 2]
+    assert all("tirets longs" in r[0] for r in examen["a_reecrire"].values())
+    assert naturel.examiner("Un seul — tiret dans un long texte. " + "Mot " * 400, "fr")["a_reecrire"] == {}
 
 
 def test_une_reecriture_qui_perd_un_LIEN_ou_un_CHIFFRE_n_est_pas_posee() -> None:
@@ -167,6 +185,19 @@ def test_une_relecture_EN_PANNE_ne_fait_pas_tomber_l_article(monkeypatch) -> Non
     monkeypatch.setattr(m, "_correction_ai_json", _ai)
     out = m._preparer_des_articles(pages=PAGES, sujet="Le levier", section="/fr/guides")
     assert out["ok"] and "Dans un monde" in out["versions"][0]["contenu"]
+
+
+def test_sous_le_plafond_les_FORMULES_passent_avant_les_tirets(monkeypatch) -> None:
+    """Dix paragraphes à tirets et une formule en dernier : la formule part quand même."""
+    from backend import app as m
+    vus: list[str] = []
+    monkeypatch.setattr(m, "_correction_ai_json", lambda **kw: vus.append(kw["user_msg"]) or {})
+    texte = "\n\n".join("Paragraphe %d — avec un tiret — et du texte." % i for i in range(10))
+    texte += "\n\nDans un monde en constante évolution, la fin arrive.\n"
+    m._rendre_naturel({"contenu": texte, "notes_redaction": []}, langue="fr")
+    (demande,) = vus
+    assert "Dans un monde en constante évolution" in demande
+    assert demande.count("PARAGRAPHE ") == m._NATUREL_MAX_PARAGRAPHES
 
 
 def test_une_page_du_depot_hors_Markdown_n_est_pas_relue(monkeypatch) -> None:

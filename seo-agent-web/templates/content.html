@@ -109,7 +109,8 @@
               {{ tr("Section du site") }}
               <select id="c-section">
                 {% for s in sections_crawl %}
-                  <option value="{{ s.section }}">{{ s.section }}/ · {{ tr("{n} pages déjà publiées", n=s.pages) }}</option>
+                  {# La racine s'ecrivait « // » (vu sur make-avis, 02/11/2026). #}
+                  <option value="{{ s.section }}">{{ s.section.rstrip('/') }}/ · {{ tr("{n} pages déjà publiées", n=s.pages) }}</option>
                 {% endfor %}
               </select>
               <span class="muted small">
@@ -790,9 +791,13 @@
           'max-width:720px;margin:24px auto;padding:0 16px;color:#111">' + apercuHtml(courante.html) + '</body>';
       }
       var donneesImages = {};
+      /* Une image pas encore arrivee attend sous une image VIDE : son adresse relative serait
+         refusee par la politique de l'iframe, et afficherait une icone cassee (essai en
+         production du 02/11/2026). Les dimensions posees par le serveur gardent sa place. */
+      var IMAGE_VIDE = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
       function apercuHtml(texte) {
         return String(texte).replace(/src="images\/([a-z0-9-]+\.webp)"/g, function (m, nom) {
-          return donneesImages[nom] ? 'src="' + donneesImages[nom] + '"' : m;
+          return 'src="' + (donneesImages[nom] || IMAGE_VIDE) + '"';
         });
       }
       function chargerImages(liste) {

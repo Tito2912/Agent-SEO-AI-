@@ -138,6 +138,16 @@ def test_l_ecran_propose_les_SECTIONS_du_crawl_et_NOMME_la_langue_racine(
     assert "EN (racine)" in page and 'data-iso="en"' in page
 
 
+def test_la_section_RACINE_s_ecrit_une_seule_barre(customer, plan, crawl) -> None:
+    """Vu sur make-avis le 02/11/2026 : « // · 15 pages déjà publiées »."""
+    from test_un_article_sans_depot import _p
+    client, slug, _pid, _uid = customer
+    crawl["pages"] += [_p("/a-propos/", "en", "About"), _p("/contact/", "en", "Contact")]
+    page = client.get(f"/projects/{slug}/content").text
+    assert '<option value="/">/ · 2 pages déjà publiées</option>' in page
+    assert "<option value=\"/\">//" not in page
+
+
 def test_la_note_stockee_garde_le_MARKDOWN_pas_le_html(customer, plan, crawl, modele) -> None:
     """Le HTML est rendu a la lecture : une correction du rendu vaut pour les articles deja
     ecrits, sans migration."""

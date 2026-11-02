@@ -34935,7 +34935,9 @@ def _rendre_naturel(version: "dict[str, Any]", *, langue: str, model_override: s
     """
     texte = str(version["contenu"])
     examen = naturel.examiner(texte, langue)
-    cibles = sorted(examen["a_reecrire"])[:_NATUREL_MAX_PARAGRAPHES]
+    # Les formules de modele d'abord : sous le plafond, elles passent avant les simples tirets.
+    cibles = sorted(examen["a_reecrire"], key=lambda i: (
+        not any(r.startswith("formule") for r in examen["a_reecrire"][i]), i))[:_NATUREL_MAX_PARAGRAPHES]
     poses = 0
     if cibles:
         paras = naturel.paragraphes(texte)
