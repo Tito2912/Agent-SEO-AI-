@@ -98,6 +98,7 @@ try:
     from . import billing as billing  # type: ignore
     from . import correction_guard
     from . import correction_journal
+    from . import correction_memory
     from . import first_correction
     from . import customer_activation
     from . import signup_attribution
@@ -118,6 +119,7 @@ except ImportError:
     import billing  # type: ignore
     import correction_guard
     import correction_journal
+    import correction_memory
     import first_correction
     import customer_activation
     import signup_attribution
@@ -5639,6 +5641,13 @@ def _verify_corrections_after_crawl(
                 elif meta.get("stopped_on_time_budget") or (meta.get("blocked_by_host") or {}).get("count"):
                     reason = "Le crawl est partiel ou certaines pages ont bloqué le robot."
                 result = "unverified" if reason else ("still_present" if still_present else "resolved")
+                # The journal receives only this server-computed control, in the same
+                # transaction as task verification. Repeated controls are not new attempts.
+                changed |= correction_memory.record_control(
+                    db, t, crawl_ts=crawl_ts, result=result,
+                    baseline_confirmed=customer_activation.has_baseline_defect(
+                        baseline, family, scope, _verification_url),
+                )
                 if t.status == "in_progress" and result == "still_present" and not note_obj.get("first_correction"):
                     continue
                 # Activation requires a real defect on a target in the retained baseline.
@@ -17098,6 +17107,18 @@ def _assistant_history_scope(request: Request, slug: str = "") -> str:
     return hmac.new(secret.encode("utf-8"), b"noyaru-assistant-history-v2:" + payload, hashlib.sha256).hexdigest()
 
 
+@app.get("/api/projects/{slug}/correction-memory")
+def api_correction_memory(request: Request, slug: str) -> JSONResponse:
+    project = _db_project_or_404(request, slug)
+    try:
+        with DB.session() as db:
+            memory = correction_memory.project_summary(db, str(project.id))
+    except Exception:
+        logger.exception("[MEMORY] correction memory unavailable")
+        return _assistant_json({"ok": False, "error": "Assistant temporairement indisponible."}, status_code=503)
+    return _assistant_json({"ok": True, "memory": memory})
+
+
 @app.get("/api/assistant/meta")
 def assistant_meta(request: Request, slug: str = "") -> JSONResponse:
     if not getattr(request.state, "user", None):
@@ -17121,6 +17142,10 @@ async def assistant_chat(request: Request) -> JSONResponse:
         return _assistant_json({"ok": False, "error": "auth_required"}, status_code=401)
 
     context = payload.get("context") if isinstance(payload, dict) else None
+    project_context = context.get("project") if isinstance(context, dict) else None
+    project_slug = str(project_context.get("slug") or "").strip() if isinstance(project_context, dict) else ""
+    # Authorize even legacy clients without history_scope. Client-supplied memory is ignored.
+    authorized_project = _db_project_or_404(request, project_slug) if project_slug else None
     # New widgets bind the transmitted history to the identity verified just before sending.
     # Existing API clients without this field retain their request format.
     if isinstance(payload, dict) and "history_scope" in payload:
@@ -17165,7 +17190,18 @@ async def assistant_chat(request: Request) -> JSONResponse:
                 )
 
     history = _assistant_clean_history(payload.get("history") if isinstance(payload, dict) else None)
+    if authorized_project is not None:
+        context = {**context, "project": {"slug": authorized_project.slug,
+                   "site_name": authorized_project.site_name, "base_url": authorized_project.base_url}}
     system = _assistant_system_prompt(context if isinstance(context, dict) else None)
+    if authorized_project is not None:
+        try:
+            with DB.session() as db:
+                memory = correction_memory.project_summary(db, str(authorized_project.id))
+            system += correction_memory.assistant_context(memory)
+        except Exception:
+            logger.exception("[ASSISTANT] correction memory unavailable")
+            return _assistant_json({"ok": False, "error": "Assistant temporairement indisponible."}, status_code=503)
 
     provider = _assistant_effective_provider()
     if provider == "none":
