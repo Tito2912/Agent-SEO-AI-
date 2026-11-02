@@ -2,7 +2,7 @@
 {% block title %}Comptes clients - Noyaru{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/customer-accounts.css?v=4" /><link rel="stylesheet" href="/static/customer-follow-up.css?v=1" />{% endblock %}
 {% block crumbs %}<a href="/settings/activation">Parcours clients</a><span class="crumb-sep">/</span><span class="crumb-current">Comptes clients</span>{% endblock %}
-{% block actions %}<a class="btn" href="{{ inventory.export_url }}">Exporter les résultats (CSV)</a>{% endblock %}
+{% block actions %}<a class="btn" href="/settings/activation/comptes-inutilises">Comptes jamais utilisés</a><a class="btn" href="{{ inventory.export_url }}">Exporter les résultats (CSV)</a>{% endblock %}
 {% block content %}
 <div class="customer-accounts">
   <div class="page-header"><h1>Comptes clients</h1><p class="muted">Identifiez les comptes derrière chaque formule et consultez les signes d’utilisation disponibles.</p></div>

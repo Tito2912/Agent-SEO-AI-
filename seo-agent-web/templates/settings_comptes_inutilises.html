@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block title %}Comptes jamais utilisés - Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/customer-accounts.css?v=4" />{% endblock %}
+{% block crumbs %}<a href="/settings/activation">Parcours clients</a><span class="crumb-sep">/</span><a href="/settings/activation/accounts">Comptes clients</a><span class="crumb-sep">/</span><span class="crumb-current">Comptes jamais utilisés</span>{% endblock %}
+{% block content %}
+<div class="customer-accounts">
+  <div class="page-header">
+    <h1>Comptes jamais utilisés</h1>
+    <p class="muted">Ce que laissent les inscriptions de robots : des comptes créés avec l’adresse de quelqu’un, sans aucune trace d’usage.</p>
+  </div>
+  {% if msg %}<div class="alert ok"><p>{{ msg }}</p></div>{% endif %}
+  {% if err %}<div class="alert error" role="alert"><p>{{ err }}</p></div>{% endif %}
+  <section class="card">
+    <h2>{{ lignes|length }} compte{% if lignes|length != 1 %}s{% endif %} sans aucune trace d’usage</h2>
+    <p class="small">Un compte n’apparaît ici que si rien ne montre qu’il ait servi : pas de site, pas d’analyse, pas de consommation, pas de client ni d’abonnement Stripe, pas d’équipe ni d’invitation, pas de compte Google ni de service connecté, pas d’accès de démonstration, aucune connexion réussie, aucun email confirmé, pas administrateur, et inscrit depuis plus de 7 jours.</p>
+    <p class="muted small">Rien n’est coché d’office : un compte à vous peut répondre à ces critères. Au moment de supprimer, chaque compte est vérifié de nouveau ; s’il a servi entre-temps, il est gardé et la raison est dite. Son adresse est aussi retirée du journal d’audit, dont les événements restent. La suppression est définitive.</p>
+    {% if lignes %}
+    <form method="post" action="/settings/activation/comptes-inutilises/supprimer">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <div class="account-table-wrap" tabindex="0" role="region" aria-label="Comptes jamais utilisés">
+        <table class="table compact">
+          <thead><tr><th scope="col">Supprimer</th><th scope="col">Compte</th><th scope="col">Inscription (UTC)</th></tr></thead>
+          <tbody>
+            {% for l in lignes %}
+            <tr>
+              <td><input type="checkbox" name="compte" value="{{ l.id }}" id="compte-{{ l.id }}" /></td>
+              <td><label for="compte-{{ l.id }}">{{ l.email }}</label></td>
+              <td>{{ l.inscription }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <label style="margin-top:12px;">Tapez SUPPRIMER pour confirmer
+        <input name="confirmation" autocomplete="off" required />
+      </label>
+      <button class="btn danger" type="submit" style="margin-top:8px;">Supprimer les comptes cochés</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

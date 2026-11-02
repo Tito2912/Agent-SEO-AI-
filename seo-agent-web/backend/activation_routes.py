@@ -10,9 +10,10 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlalchemy import update
 
 try:
-    from . import customer_account_profile, customer_accounts, customer_activation, customer_country, customer_follow_up, plan_counts, signup_attribution
+    from . import comptes_robots, customer_account_profile, customer_accounts, customer_activation, customer_country, customer_follow_up, plan_counts, signup_attribution
     from .models import User
 except ImportError:
+    import comptes_robots
     import customer_account_profile
     import customer_accounts
     import customer_activation
@@ -215,6 +216,43 @@ def acquisition_csv(request: Request, date_from: str = '', date_to: str = ''):
         'Cache-Control': 'no-store',
         'Content-Disposition': f'attachment; filename="campagnes-{data["date_from"]}-{data["date_to"]}.csv"',
     })
+
+
+@router.get('/settings/activation/comptes-inutilises')
+def unused_accounts_page(request: Request, msg: str = '', err: str = ''):
+    """Les comptes sans aucune trace d'usage (inscriptions de robots), a supprimer au choix."""
+    m = module()
+    m._require_system_owner(request)
+    with m.DB.session() as db:
+        lignes = [{'id': str(u.id), 'email': str(u.email or ''),
+                   'inscription': u.created_at.strftime('%d/%m/%Y %H:%M') if u.created_at else ''}
+                  for u in comptes_robots.candidats(db)]
+    return m.templates.TemplateResponse('settings_comptes_inutilises.html', {
+        'request': request, 'project': None, 'lignes': lignes, 'msg': msg, 'err': err,
+    }, headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
+
+
+@router.post('/settings/activation/comptes-inutilises/supprimer')
+async def unused_accounts_delete(request: Request):
+    """Supprime les comptes coches qui n'ont TOUJOURS aucune trace d'usage (preuve refaite ici)."""
+    m = module()
+    m._require_system_owner(request)
+    formulaire = await request.form()
+    page = '/settings/activation/comptes-inutilises'
+    if str(formulaire.get('confirmation') or '').strip().upper() != 'SUPPRIMER':
+        return RedirectResponse(m._path_with_flash(page, err='Tapez SUPPRIMER pour confirmer.'), status_code=303)
+    ids = [str(v) for v in formulaire.getlist('compte')]
+    if not ids:
+        return RedirectResponse(m._path_with_flash(page, err='Aucun compte coché.'), status_code=303)
+    with m.DB.session() as db:
+        supprimes, gardes = comptes_robots.supprimer(db, ids)
+    m._audit_log(request, action='account.purge_unused', status='ok', target_type='user',
+                 meta={'supprimes': len(supprimes), 'gardes': [[e, r] for e, r in gardes][:50]})
+    message = '%d compte%s supprimé%s.' % (len(supprimes), 's' if len(supprimes) > 1 else '', 's' if len(supprimes) > 1 else '')
+    if gardes:
+        message += ' %d gardé%s : une trace d’usage est apparue (%s).' % (
+            len(gardes), 's' if len(gardes) > 1 else '', ' ; '.join('%s : %s' % (e, ', '.join(r)) for e, r in gardes[:5]))
+    return RedirectResponse(m._path_with_flash(page, msg=message), status_code=303)
 
 
 @router.post('/settings/activation/campaigns')
