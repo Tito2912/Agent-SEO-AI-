@@ -3216,5 +3216,8 @@
   "La préparation s’est arrêtée. Choisissez une action ci-dessous pour continuer.": "Preparation stopped. Choose an action below to continue.",
   "Vérifier le dépôt du projet": "Check the project's repository",
   "Noyaru ne peut pas identifier avec certitude le fichier de cette page dans le dépôt. Vérifiez le dépôt du projet avant de poursuivre. Aucune correction IA n’a été décomptée.": "Noyaru cannot identify this page's source file with certainty in the repository. Check the project's repository before continuing. No AI correction has been deducted.",
-  "Aucune modification n’a été proposée pour le fichier de cette page. Le problème reste à vérifier. Aucune correction IA n’a été décomptée.": "No change was proposed for this page's source file. The issue still needs checking. No AI correction has been deducted."
+  "Aucune modification n’a été proposée pour le fichier de cette page. Le problème reste à vérifier. Aucune correction IA n’a été décomptée.": "No change was proposed for this page's source file. The issue still needs checking. No AI correction has been deducted.",
+  "bon": "good",
+  "GSC a généralement 48–72h de décalage.": "Search Console data usually lags by 48–72 hours.",
+  "Bing Webmaster Tools peut avoir un léger décalage.": "Bing Webmaster Tools data may lag slightly."
 }

@@ -6956,7 +6956,7 @@ def _fetch_gsc_live_series(*, user_id: str, slug: str, base_url: str, gsc_cfg: d
                 "end_date": end_date.isoformat(),
                 "daily": daily,
                 "totals": _timeseries_totals(daily),
-                "data_delay_hint": "GSC a généralement 48–72h de décalage.",
+                "data_delay_hint": i18n.tr_current("GSC a généralement 48–72h de décalage."),
             }
 
         return {
@@ -7249,7 +7249,7 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
         "end_date": daily[-1]["date"],
         "daily": daily,
         "totals": _timeseries_totals(daily),
-        "data_delay_hint": "Bing Webmaster Tools peut avoir un léger décalage.",
+        "data_delay_hint": i18n.tr_current("Bing Webmaster Tools peut avoir un léger décalage."),
         "source_label": str(auth.get("source_label") or "bing"),
     }
 
@@ -7427,7 +7427,7 @@ def _fetch_gsc_live_items(
                 "min_impressions": min_impressions,
                 "items": items,
                 "totals": _timeseries_totals(items),
-                "data_delay_hint": "GSC a généralement 48–72h de décalage.",
+                "data_delay_hint": i18n.tr_current("GSC a généralement 48–72h de décalage."),
             }
             if items:
                 return result
@@ -7540,7 +7540,7 @@ def _fetch_bing_live_items(
         "min_impressions": min_impressions,
         "items": items,
         "totals": _timeseries_totals(items),
-        "data_delay_hint": "Bing Webmaster Tools peut avoir un léger décalage.",
+        "data_delay_hint": i18n.tr_current("Bing Webmaster Tools peut avoir un léger décalage."),
         "source_label": str(auth.get("source_label") or "bing"),
     }
 

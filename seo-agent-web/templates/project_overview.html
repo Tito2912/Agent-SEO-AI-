@@ -471,7 +471,7 @@
                 {% set m = cwv.metrics[key] %}
                 {% set affected = (m.ni or 0) + (m.poor or 0) %}
                 {% set st = 'error' if (m.poor or 0) > 0 else ('warning' if (m.ni or 0) > 0 else ('ok' if (m.good or 0) > 0 else 'notice')) %}
-                {% set st_label = 'à corriger' if st == 'error' else ('moyen' if st == 'warning' else ('bon' if st == 'ok' else 'n/a')) %}
+                {% set st_label = tr('à corriger') if st == 'error' else (tr('moyen') if st == 'warning' else (tr('bon') if st == 'ok' else 'n/a')) %}
                 <tr>
                   <td><a href="/projects/{{ project.slug }}/issues/{{ issue_key }}?crawl={{ cur.timestamp }}">{{ label }}</a></td>
                   <td><span class="badge {{ st }}">{{ st_label }}</span></td>
@@ -511,7 +511,7 @@
                 <label for="gsc-chart-days">{{ tr("Période") }}</label>
                 <select id="gsc-chart-days" class="js-ts-days" data-widget-id="gsc-live-widget">
                   {% for d in ([7, 28, 90] + ([gsc_days] if gsc_days not in [7, 28, 90] else []))|sort %}
-                    <option value="{{ d }}" {% if d == gsc_days %}selected{% endif %}>{{ d }}j</option>
+                    <option value="{{ d }}" {% if d == gsc_days %}selected{% endif %}>{{ tr("{n}j", n=d) }}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -607,7 +607,7 @@
                 <label for="bing-chart-days">{{ tr("Période") }}</label>
                 <select id="bing-chart-days" class="js-ts-days" data-widget-id="bing-live-widget">
                   {% for d in ([7, 28, 90] + ([bing_days] if bing_days not in [7, 28, 90] else []))|sort %}
-                    <option value="{{ d }}" {% if d == bing_days %}selected{% endif %}>{{ d }}j</option>
+                    <option value="{{ d }}" {% if d == bing_days %}selected{% endif %}>{{ tr("{n}j", n=d) }}</option>
                   {% endfor %}
                 </select>
               </div>

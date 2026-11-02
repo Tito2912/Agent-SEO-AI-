@@ -27,6 +27,9 @@ def test_the_analysis_history_reads_in_english(lab) -> None:
     'Une PR est déjà ouverte pour cette anomalie.',
     'Email non vérifié. Réessaie dans 30s.',
     'Reconnecte Google pour activer le suivi.',
+    # Renvoyées avec les données Search Console et Bing, affichées sous leurs graphiques (02/11/2026).
+    'GSC a généralement 48–72h de décalage.',
+    'Bing Webmaster Tools peut avoir un léger décalage.',
 ])
 def test_messages_sent_back_to_customers_have_an_english_version(message: str) -> None:
     assert i18n.translate(message, 'en') != message
