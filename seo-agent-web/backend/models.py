@@ -182,6 +182,21 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class ProjectRecipeAccess(Base):
+    """One expiring, origin-scoped permission to add a demonstration project."""
+    __tablename__ = "project_recipe_access"
+
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    grant_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
+    base_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    reason: Mapped[str] = mapped_column(String(320), nullable=False)
+    granted_by_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class BillingCustomer(Base):
     __tablename__ = "billing_customers"
 

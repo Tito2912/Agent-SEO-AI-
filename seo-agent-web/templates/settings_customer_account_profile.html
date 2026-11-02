@@ -3,7 +3,7 @@
 {% block title %}Fiche client - Noyaru{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/customer-profile.css?v=1" />{% endblock %}
 {% block crumbs %}<a href="/settings/activation">Parcours clients</a><span class="crumb-sep">/</span><a href="{{ return_url or '/settings/activation/accounts' }}">Comptes clients</a><span class="crumb-sep">/</span><span class="crumb-current">Fiche client</span>{% endblock %}
-{% block actions %}<a class="btn" href="{{ account.profile_url }}/export.csv">Exporter la fiche (CSV)</a>{% endblock %}
+{% block actions %}<a class="btn" href="{{ account.profile_url }}/recipe-access">Accès de recette</a><a class="btn" href="{{ account.profile_url }}/export.csv">Exporter la fiche (CSV)</a>{% endblock %}
 {% macro stored(connection) %}<span class="badge {% if connection.saved %}ok{% endif %}">{{ 'Enregistrée' if connection.saved else 'Non retrouvée en base' }}</span>{% if connection.date %}<span class="profile-date muted small">{{ connection.date }}</span>{% endif %}{% endmacro %}
 {% block content %}
 <div class="customer-profile">

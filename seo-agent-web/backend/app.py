@@ -15282,12 +15282,14 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
     owned_count = sum(str(p.owner_user_id) == str(user.id) for p in db_projects)
     with DB.session() as db:
         site_limit = billing.plan_limits(db, user_id=str(user.id)).get("projects") if not is_admin else None
+        recipe_offer = recipe_access.offer(db, str(user.id)) if isinstance(site_limit, int) and site_limit > 0 and owned_count >= site_limit else None
     site_limit = int(site_limit) if isinstance(site_limit, int) and site_limit > 0 else None
     add_form = getattr(request.state, "site_add_form", {}) or {}
     site_add = {
         "count": owned_count, "limit": site_limit, "admin": is_admin,
-        "can_add": site_limit is None or owned_count < site_limit,
-        "address": str(add_form.get("address") or "")[:2048],
+        "can_add": site_limit is None or owned_count < site_limit or bool(recipe_offer),
+        "recipe": recipe_offer,
+        "address": str(add_form.get("address") or (recipe_offer or {}).get("base_url") or "")[:2048],
         "name": str(add_form.get("name") or "")[:200],
         "error": str(add_form.get("error") or ""),
         "open": bool(add_form) or request.query_params.get("add_site") == "1",
@@ -16643,6 +16645,10 @@ def add_project(
             if isinstance(limit, int) and limit > 0:
                 remaining_new = max(0, int(limit) - len(owned_slugs))
 
+    def recipe_allowed(base: str) -> bool:
+        with DB.session() as db:
+            return recipe_access.permits(db, str(user.id), base)
+
     def normalized_address(raw: str) -> str | None:
         value = str(raw or "").strip()
         try:
@@ -16678,7 +16684,7 @@ def add_project(
             if remaining_new is not None:
                 slug_guess = _slug_from_base_url(base) or ""
                 exists = slug_guess in owned_slugs
-                if (not exists) and remaining_new <= 0:
+                if (not exists) and remaining_new <= 0 and not recipe_allowed(base):
                     capped = True
                     skipped += 1
                     continue
@@ -16715,7 +16721,7 @@ def add_project(
     slug_guess = _slug_from_base_url(base) or ""
     if source == "site-list" and slug_guess in owned_slugs:
         return RedirectResponse(url=f"/projects/{quote(slug_guess, safe='')}", status_code=303)
-    if remaining_new is not None and slug_guess not in owned_slugs and remaining_new <= 0:
+    if remaining_new is not None and slug_guess not in owned_slugs and remaining_new <= 0 and not recipe_allowed(base):
         return add_error("Une limite de votre formule est atteinte", 409)
     slug = _db_upsert_project(user_id=user.id, base_url=base, site_name=site_name)
     if not slug:
@@ -39402,6 +39408,13 @@ try:
 except ImportError:
     from activation_routes import router as activation_router
 app.include_router(activation_router)
+try:
+    from . import recipe_access
+    from .recipe_access_routes import router as recipe_access_router
+except ImportError:
+    import recipe_access
+    from recipe_access_routes import router as recipe_access_router
+app.include_router(recipe_access_router)
 try:
     from .legal_notice_routes import router as legal_notice_router
 except ImportError:
