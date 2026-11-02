@@ -1,0 +1,20 @@
+{# MESURE D'AUDIENCE (02/11/2026, decision du proprietaire) : Google Analytics 4 sur le site public
+   seulement, APRES « Accepter ». Les deux boutons ont le meme poids : refuser est aussi simple
+   qu'accepter (CNIL). Sans choix, rien de Google n'est charge ; le choix est garde six mois dans
+   le cookie `noyaru_consentement`, et se revoit par « Gerer les cookies ». #}
+{% set ga4 = mesure_audience(request) %}
+{% if ga4 %}
+  {% set choix = request.cookies.get('noyaru_consentement', '') %}
+  {# Les pages de connexion et d'inscription n'ont pas la feuille du site public. #}
+  {% if avec_style_bandeau %}<link rel="stylesheet" href="/static/navigation-feedback.css?v=2" />{% endif %}
+  <aside id="consentement-mesure" class="cookie-notice cookie-notice--floating" data-ga4="{{ ga4 }}"
+         data-choix="{{ choix }}" aria-label="{{ tr('Mesure d’audience') }}" {% if choix in ('accepte', 'refuse') %}hidden{% endif %}>
+    <span>{{ tr("Avec votre accord, nous mesurons l’audience de ce site avec Google Analytics : des cookies de mesure, et des données de visite envoyées à Google, aux États-Unis. Le site fonctionne de la même façon si vous refusez.") }}
+      <a href="{{ localized_path('/privacy', current_lang()) }}#cookies">{{ tr("En savoir plus") }}</a></span>
+    <span style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button type="button" data-consentement="refuse">{{ tr("Refuser") }}</button>
+      <button type="button" data-consentement="accepte">{{ tr("Accepter") }}</button>
+    </span>
+  </aside>
+  <script src="/static/mesure-audience.js?v=2" defer></script>
+{% endif %}

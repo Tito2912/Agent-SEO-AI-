@@ -15,6 +15,7 @@
 {% endblock %}
 
 {% block content %}
+{% set ga4_actif = mesure_audience(request) %}
 <article class="conf">
   <h1>Privacy Policy</h1>
   <p class="conf-date">Last updated: {{ updated.privacy }}</p>
@@ -49,6 +50,7 @@
         <tr><th scope="row">Team</th><td>Email addresses of the collaborators you invite.</td></tr>
         <tr><th scope="row">Billing</th><td>Plan, Stripe customer and subscription identifiers, invoices. Payment takes place on a Stripe page: no card data passes through our servers.</td></tr>
         <tr><th scope="row">Technical data</th><td>Server logs (IP address, browser, requested addresses), used for security and troubleshooting.</td></tr>
+        {% if ga4_actif %}<tr><th scope="row">Audience measurement</th><td>Only if you accept it, on the public website: pages viewed, landing page and source of the visit, device and browser, random identifier of the Google Analytics cookies. The screens of your account are not measured.</td></tr>{% endif %}
         <tr><th scope="row">Customer journey</th><td>Dates of the first steps reached: account created, site added, usable analysis and verified fix. With your optional consent at sign-up: source, medium and name of the originating campaign, and the date of your consent.</td></tr>
       </tbody>
     </table>
@@ -61,6 +63,7 @@
     <li><strong>Writing to you</strong> — address verification, forgotten password, approval of a written page, notice of a change to the terms or the service: performance of the contract.</li>
     <li><strong>Securing the service</strong> — preventing abuse, protecting accounts, troubleshooting errors: our legitimate interest in running a secure service.</li>
     <li><strong>Improving the customer journey</strong> — statistics on the first steps of the service: our legitimate interest in identifying usability difficulties. The results presented are aggregated counts.</li>
+    {% if ga4_actif %}<li id="mesure-audience"><strong>Measuring the audience of the public website</strong> — only with your consent, given or refused on the banner shown on your first visit, and changeable at any time through the “Manage cookies” link at the bottom of the page. Refusing changes nothing in how the site works. We use Google Analytics to know which pages are read and where visitors come from; the screens of your account are not measured.</li>{% endif %}
     <li id="signup-attribution"><strong>Measuring the campaigns that make Noyaru known</strong> — only with your optional consent, requested through an unticked box at sign-up. We link the three labels of the campaign link to your first steps in the service. No tracking cookie, advertising pixel or click identifier is used for this measurement. This data is not sent to any advertising platform. You can withdraw your consent and erase this origin at any time in <a href="/settings/accounts#signup-attribution">My account → Privacy</a>. Your account and the features of the service remain available if you refuse or withdraw your consent.</li>
   </ul>
 
@@ -82,6 +85,7 @@
         <tr><th scope="row">Netlify</th><td>If you connect your account: reading your sites and their deployments</td><td>List of Netlify sites and deployments</td><td>United States</td></tr>
         {% if ahrefs_actif %}<tr><th scope="row">Ahrefs</th><td>Backlink data</td><td>Domains of the analyzed sites</td><td>Singapore</td></tr>{% endif %}
         {% if gemini_actif %}<tr><th scope="row">Google (Gemini)</th><td>Artificial intelligence for the assistant</td><td>Questions asked to the assistant and the project data relating to them</td><td>United States</td></tr>{% endif %}
+        {% if ga4_actif %}<tr><th scope="row">Google (Analytics)</th><td>Audience measurement of the public website, with your consent</td><td>Pages viewed, source of the visit, device and browser, random identifier of the measurement cookies</td><td>United States</td></tr>{% endif %}
         {% if telegram_actif %}<tr><th scope="row">Telegram</th><td>Internal notifications to Noyaru's publisher: account creation, subscription, deletion</td><td>Account email address, plan and declared country</td><td>United Arab Emirates</td></tr>{% endif %}
         <tr><th scope="row">Sentry</th><td>Tracking technical errors</td><td>Error traces, without IP address or account identifier</td><td>{{ sentry_localisation }}</td></tr>
         <tr><th scope="row">Amazon Web Services (S3)</th><td>Backups: daily copies of the database, kept for 30 days{% if rapports_s3 %}; storage of analysis reports{% endif %}</td><td>All the data in the database</td><td>{{ sauvegarde_localisation }}</td></tr>
@@ -122,13 +126,23 @@
     <li><strong>On account deletion</strong> — the Stripe subscription is cancelled and the Stripe customer deleted, Search Console access is revoked, the account and its projects are erased; in the audit log, your identity is removed from the events. Backups that still contain them disappear at the end of their 30-day retention period. Only the data that a legal obligation requires us to keep remains, such as invoices.</li>
     <li><strong>Invoices</strong> — for the duration of accounting obligations (ten years in France), at Stripe.</li>
     <li><strong>Technical logs</strong> — the retention period applied by our host, Render, under the plan used.</li>
+    {% if ga4_actif %}<li><strong>Audience measurement</strong> — Google Analytics cookies expire at most 13 months after they are set; visit data is kept in Google Analytics for 14 months at most. Your choice on the banner is kept for 6 months, then asked again.</li>{% endif %}
   </ul>
 
   <h2 id="cookies">8. Cookies and browser storage</h2>
+  {% if ga4_actif %}
+  <p>
+    We use cookies that are strictly necessary for the service or for a preference you choose and,
+    <strong>only if you accept it</strong>, Google Analytics audience measurement cookies on the public
+    website. No advertising cookie. You can change your mind at any time:
+    <a href="#cookies" data-gerer-cookies>manage cookies</a>.
+  </p>
+  {% else %}
   <p>
     We only use cookies that are strictly necessary for the service or for a preference you choose.
     No advertising or audience measurement cookie.
   </p>
+  {% endif %}
   <div class="conf-tableau">
     <table>
       <thead><tr><th scope="col">Name</th><th scope="col">Purpose</th><th scope="col">Duration</th></tr></thead>
@@ -136,6 +150,8 @@
         <tr><th scope="row">seo_agent_session</th><td>Keeping you signed in to your account</td><td>30 days, or until you log out</td></tr>
         <tr><th scope="row">seo_agent_csrf</th><td>Protecting your actions against request forgery</td><td>30 days</td></tr>
         <tr><th scope="row">noyaru_lang</th><td>Remembering the display language you chose (French or English)</td><td>1 year</td></tr>
+        {% if ga4_actif %}<tr><th scope="row">noyaru_consentement</th><td>Remembering your choice on audience measurement (accepted or refused)</td><td>6 months</td></tr>
+        <tr><th scope="row">_ga, _ga_…</th><td>Google Analytics: telling visits apart to measure the audience of the public website. Set only after “Accept”</td><td>13 months</td></tr>{% endif %}
       </tbody>
     </table>
   </div>

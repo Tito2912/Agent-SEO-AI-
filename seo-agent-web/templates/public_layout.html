@@ -69,7 +69,7 @@
         .pub-nav-links a { white-space: nowrap; padding: 9px 10px; }
       }
     </style>
-    <link rel="stylesheet" href="/static/navigation-feedback.css?v=1" />
+    <link rel="stylesheet" href="/static/navigation-feedback.css?v=2" />
     {# Image de partage (12/10/2026) : le site n'en declarait aucune — 33 pages en « Open Graph
        incomplet » et 7 sans carte X chez Ahrefs comme chez Noyaru. Posee ICI une seule fois :
        aucune page ne declare d'image, donc aucun doublon possible. La carte X passe en grand
@@ -138,14 +138,21 @@
           {% for item in nav_items %}
             <a href="{{ campaign_link(request, item.href) }}" style="color:var(--muted);">{{ tr(item.label) }}</a>
           {% endfor %}
+          {% if mesure_audience(request) %}<a href="{{ localized_path('/privacy', current_lang()) }}#cookies" data-gerer-cookies style="color:var(--muted);">{{ tr("Gérer les cookies") }}</a>{% endif %}
         </div>
       </div>
     </footer>
 
+    {# Avec la mesure d'audience configuree, le bandeau DEMANDE l'accord (Accepter / Refuser) ;
+       sans elle, il informe seulement : le site n'a alors que des cookies necessaires. #}
+    {% if mesure_audience(request) %}
+    {% include "_mesure_audience.html" %}
+    {% else %}
     <aside id="cookie-banner" class="cookie-notice" aria-label="{{ tr('Politique de cookies') }}">
       <span>{{ tr("Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun cookie publicitaire.") }} <a href="{{ campaign_link(request, '/privacy') }}">{{ tr("En savoir plus") }}</a></span>
       <button id="cookie-accept" type="button" hidden>{{ tr("Fermer") }}</button>
     </aside>
+    {% endif %}
     <script src="/static/public-navigation.js?v=1" defer></script>
     <script>
       (() => {

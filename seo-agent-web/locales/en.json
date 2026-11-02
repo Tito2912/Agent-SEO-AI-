@@ -3255,5 +3255,10 @@
   "incluses à partir du plan Business. <a href=\"{url}\">Voir les forfaits</a>": "included from the Business plan. <a href=\"{url}\">See plans</a>",
   "Les illustrations IA sont incluses à partir du plan Business.": "AI illustrations are included from the Business plan.",
   "Site web": "Website",
-  "Votre inscription n’a pas pu être validée. Patientez quelques secondes, puis réessayez.": "Your sign-up could not be validated. Wait a few seconds, then try again."
+  "Votre inscription n’a pas pu être validée. Patientez quelques secondes, puis réessayez.": "Your sign-up could not be validated. Wait a few seconds, then try again.",
+  "Refuser": "Refuse",
+  "Accepter": "Accept",
+  "Gérer les cookies": "Manage cookies",
+  "Mesure d’audience": "Audience measurement",
+  "Avec votre accord, nous mesurons l’audience de ce site avec Google Analytics : des cookies de mesure, et des données de visite envoyées à Google, aux États-Unis. Le site fonctionne de la même façon si vous refusez.": "With your consent, we measure this site's audience with Google Analytics: measurement cookies, and visit data sent to Google, in the United States. The site works the same way if you refuse."
 }

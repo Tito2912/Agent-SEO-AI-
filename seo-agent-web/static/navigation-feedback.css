@@ -3,6 +3,7 @@
 .public-main, .public-main [id] { scroll-margin-top: 150px; }
 .cookie-notice { background: #111; color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; font-size: 14px; line-height: 1.6; }
 .cookie-notice--floating { position: fixed; inset: auto 0 0; z-index: 9999; }
+.cookie-notice[hidden] { display: none; }
 .cookie-notice a { color: #b9c2bd; display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; }
 .cookie-notice button { min-height: 44px; padding: 8px 18px; background: #fff; color: #111; border: 0; border-radius: 4px; font: inherit; font-weight: 600; cursor: pointer; }
 .cookie-notice [hidden] { display: none; }

@@ -1025,6 +1025,26 @@ def _csp_report_only() -> bool:
     return _env_bool("SEO_AGENT_CSP_REPORT_ONLY")
 
 
+_GA4_ID_RE = r"G-[A-Z0-9]{4,16}"
+
+
+def _mesure_audience(request: Any) -> str:
+    """L'ID GA4 si la mesure d'audience est configuree, sinon "". Appelee par les gabarits PUBLICS.
+
+    Decision du proprietaire, 02/11/2026 : Google Analytics sur le site public seulement, apres
+    « Accepter » sur un bandeau qui propose aussi « Refuser ». La page qui l'appelle se signale
+    pour que sa CSP autorise Google — et elle seule.
+    """
+    ident = _safe_env("GA4_MEASUREMENT_ID")
+    if not re.fullmatch(_GA4_ID_RE, ident):
+        return ""
+    try:
+        request.state.mesure_audience = True
+    except Exception:
+        pass
+    return ident
+
+
 def _content_security_policy(request: Request) -> str:
     custom = _safe_env("SEO_AGENT_CSP")
     if custom:
@@ -1033,6 +1053,11 @@ def _content_security_policy(request: Request) -> str:
     # Only the editor embeds an article preview. The iframe has an opaque sandbox origin
     # and a restrictive srcdoc policy; every other screen continues to forbid frames.
     article_preview = bool(re.fullmatch(r"/projects/[^/]+/content", str(getattr(request.url, "path", ""))))
+    # GOOGLE ANALYTICS, SEULEMENT LA OU LA PAGE L'A DEMANDE (02/11/2026). Une page publique qui
+    # affiche le bandeau de consentement le note pendant son rendu (`_mesure_audience`) ; les
+    # ecrans de l'application ne le font jamais, et gardent une politique sans hote tiers —
+    # autoriser googletagmanager.com partout ouvrirait un contournement connu de la CSP.
+    ga4 = bool(getattr(getattr(request, "state", None), "mesure_audience", False))
     directives = [
         "default-src 'self'",
         "base-uri 'self'",
@@ -1050,8 +1075,9 @@ def _content_security_policy(request: Request) -> str:
         "img-src 'self' data: https:",
         "font-src 'self' data:",
         "style-src 'self' 'unsafe-inline'",
-        "script-src 'self' 'unsafe-inline'",
-        "connect-src 'self'",
+        "script-src 'self' 'unsafe-inline'" + (" https://www.googletagmanager.com" if ga4 else ""),
+        "connect-src 'self'" + (" https://*.google-analytics.com https://*.analytics.google.com"
+                                " https://www.googletagmanager.com" if ga4 else ""),
         "frame-src 'self'" if article_preview else "frame-src 'none'",
         "manifest-src 'self'",
     ]
@@ -7777,6 +7803,7 @@ templates = CompatJinja2Templates(directory=str(REPO_ROOT / "seo-agent-web" / "t
 # Les captures d'ecran des pages publiques declarent leurs vraies dimensions (voir `_capture.html`).
 templates.env.globals["dimensions_capture"] = content_library.dimensions_capture
 templates.env.globals["capture_localisee"] = content_library.capture_localisee
+templates.env.globals["mesure_audience"] = _mesure_audience
 
 
 def _comptes_accessibles(user_id: str) -> list[str]:
@@ -12342,6 +12369,21 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
             ],
         },
     },
+    "GA4_MEASUREMENT_ID": {
+        "label": "Google Analytics 4",
+        "hint": "ID de mesure, ex. G-XXXXXXXXXX",
+        "group": "Mesure d'audience",
+        "order": 1,
+        "editable": True,
+        "help": {
+            "title": "Google Analytics 4 — ID de mesure",
+            "steps": [
+                "Dans Google Analytics : Administration → Flux de données → ton flux Web → « ID de mesure » (G-…).",
+                "Dans cette page : « Configurer », colle l'ID, « Enregistrer ».",
+                "Seul le site public le charge, et seulement après « Accepter » sur le bandeau.",
+            ],
+        },
+    },
     "TELEGRAM_BOT_TOKEN": {
         "label": "Bot Telegram",
         "hint": "Jeton donné par @BotFather",
@@ -12786,6 +12828,9 @@ def _validate_settings_env_value(key: str, value: str) -> str | None:
         if not re.fullmatch(r"-?\d{3,20}|@[A-Za-z][A-Za-z0-9_]{4,31}", v):
             return ("Identifiant de conversation invalide : c'est un nombre. Envoie /start à ton "
                     "bot dans Telegram, puis clique « Trouver ma conversation ».")
+
+    if k == "GA4_MEASUREMENT_ID" and not re.fullmatch(_GA4_ID_RE, v):
+        return "ID de mesure invalide : il a la forme G-XXXXXXXXXX (Administration → Flux de données)."
 
     if k == "TELEGRAM_BOT_TOKEN" and not re.fullmatch(r"\d{5,15}:[A-Za-z0-9_-]{30,64}", v):
         return "Jeton invalide : celui que donne @BotFather a la forme 123456789:ABC…"
@@ -16601,6 +16646,13 @@ def settings_system(request: Request) -> HTMLResponse:
                 _build_env_setting_item("PASSWORD_RESET_TTL_SECONDS"),
                 _build_env_setting_item("PASSWORD_RESET_EMAIL_SUBJECT"),
             ],
+        },
+        {
+            "id": "ga4-system",
+            "title": "Mesure d'audience",
+            "description": ("Google Analytics 4 sur le site public seulement (accueil, tarifs, documentation, "
+                            "blog, inscription, connexion), après « Accepter » sur le bandeau de cookies."),
+            "items": [_build_env_setting_item("GA4_MEASUREMENT_ID")],
         },
         {
             "id": "telegram-system",
