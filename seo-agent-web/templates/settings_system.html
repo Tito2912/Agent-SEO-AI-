@@ -297,6 +297,19 @@
           {% endif %}
         {% endfor %}
       </div>
+      {% if section.id == "telegram-system" %}
+        {# Le jeton ne quitte pas le serveur : c'est lui qui interroge Telegram (02/11/2026). #}
+        <div class="setting-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
+          <form method="post" action="/settings/system/telegram/conversation">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+            <button class="btn" type="submit">Trouver ma conversation</button>
+          </form>
+          <form method="post" action="/settings/system/telegram/test">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+            <button class="btn" type="submit">Envoyer un message de test</button>
+          </form>
+        </div>
+      {% endif %}
     </div>
   {% endfor %}
 

@@ -112,6 +112,7 @@ try:
     from . import visuels
     from . import naturel
     from . import anti_robots
+    from . import telegram
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -131,6 +132,7 @@ except ImportError:
     import visuels  # type: ignore
     import naturel  # type: ignore
     import anti_robots  # type: ignore
+    import telegram  # type: ignore
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -12340,6 +12342,35 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
             ],
         },
     },
+    "TELEGRAM_BOT_TOKEN": {
+        "label": "Bot Telegram",
+        "hint": "Jeton donné par @BotFather",
+        "group": "Notifications",
+        "order": 1,
+        "editable": True,
+        "help": {
+            "title": "Bot Telegram — jeton",
+            "steps": [
+                "Dans Telegram, ouvre @BotFather, envoie /newbot, choisis un nom puis un identifiant finissant par « bot ».",
+                "BotFather répond avec un jeton (123456789:ABC…). Dans cette page : « Configurer », colle-le, « Enregistrer ».",
+                "Ne le colle nulle part ailleurs : qui a ce jeton parle au nom du bot.",
+            ],
+        },
+    },
+    "TELEGRAM_CHAT_ID": {
+        "label": "Conversation Telegram",
+        "hint": "Identifiant de la conversation qui reçoit les notifications",
+        "group": "Notifications",
+        "order": 2,
+        "editable": True,
+        "help": {
+            "title": "Conversation Telegram — identifiant",
+            "steps": [
+                "Ouvre ton bot dans Telegram et envoie-lui /start.",
+                "Puis, ici : « Trouver ma conversation » — l'identifiant est lu chez Telegram et enregistré.",
+            ],
+        },
+    },
     "OPENAI_API_KEY": {
         "label": "OpenAI",
         "hint": "Clé API",
@@ -13675,6 +13706,8 @@ def auth_google_callback(
                 return RedirectResponse(url=_path_with_flash(signup_target, err="Erreur création compte. Réessaie."), status_code=303)
             db.refresh(user)
             uid = str(getattr(user, "id", "") or "")
+            _notifier_compte_cree(email=email, user_id=uid, pays=str(user.country or ""), via="Google",
+                                  campagne=campaign)
 
             if email_verified:
                 _mark_user_email_verified(db, user_id=uid)
@@ -14041,6 +14074,8 @@ def auth_signup_submit(
             db.rollback()
             return _signup_error("Ce compte existe déjà.", 400)
         db.refresh(user)
+    _notifier_compte_cree(email=e, user_id=str(user.id), pays=country_code, via="email",
+                          campagne=campaign)
 
     if bool(getattr(user, "is_admin", False)):
         _import_legacy_projects_for_user(str(user.id))
@@ -14415,6 +14450,9 @@ def privacy_public(request: Request) -> HTMLResponse:
         # ne les nomme que s'ils sont branches.
         ahrefs_actif=bool(_ahrefs_env_token()[0]),
         gemini_actif=_assistant_gemini_configured(),
+        # Les notifications du proprietaire (02/11/2026) : nomme des que le JETON est la, avant
+        # meme que la conversation soit choisie — declarer trop tot vaut mieux que trop tard.
+        telegram_actif=bool(_safe_env("TELEGRAM_BOT_TOKEN")),
     )
 
 
@@ -15122,6 +15160,125 @@ def _confirmer_la_resiliation(info: dict[str, Any]) -> None:
                      _mask_email(email), type(e).__name__, e)
 
 
+# ── NOTIFICATIONS DU PROPRIETAIRE (02/11/2026, backend/telegram.py) ────────────────────────────
+#
+# Ce que le proprietaire veut apprendre sans ouvrir l'administration : un compte cree, un
+# abonnement souscrit, change, en echec, resilie, termine, un compte supprime. Les robots refuses
+# a l'inscription n'en font pas partie : ce serait du bruit, et le journal d'audit les garde.
+
+def _lien_admin(chemin: str) -> str:
+    return (_safe_env("PUBLIC_BASE_URL").rstrip("/") or "https://noyaru.com") + chemin
+
+
+def _libelle_forfait(cle: str) -> str:
+    plan = billing.plan_catalog().get(str(cle or "")) or {}
+    libelle = str(plan.get("label") or cle or "?")
+    prix = str(plan.get("price_label") or "")
+    return "%s (%s)" % (libelle, prix) if prix else libelle
+
+
+def _notifier_compte_cree(*, email: str, user_id: str, pays: str, via: str, campagne: Any = None) -> None:
+    try:
+        source = (" · campagne %s / %s / %s" % (campagne.source, campagne.medium, campagne.name)
+                  if campagne is not None else "")
+        telegram.notifier("🆕 <b>Nouveau compte</b>\n%s\npays : %s · inscription par %s%s\n%s" % (
+            telegram.echapper(email), telegram.echapper(pays or "non renseigné"),
+            telegram.echapper(via), telegram.echapper(source),
+            _lien_admin("/settings/activation/accounts/%s" % user_id)))
+    except Exception as e:
+        logger.warning("[TELEGRAM] compte cree non notifie : %s: %s", type(e).__name__, e)
+
+
+def _abonnement_de_l_evenement(event: Any) -> str:
+    """L'abonnement Stripe dont parle l'evenement, ou ""."""
+    if not isinstance(event, dict):
+        return ""
+    etype = str(event.get("type") or "")
+    obj = ((event.get("data") or {}).get("object") or {}) if isinstance(event.get("data"), dict) else {}
+    if etype == "checkout.session.completed":
+        sid = obj.get("subscription")
+        return str((sid or {}).get("id") if isinstance(sid, dict) else (sid or ""))
+    if etype.startswith("customer.subscription."):
+        return str(obj.get("id") or "")
+    return ""
+
+
+def _etat_abonnement(sid: str) -> "dict[str, Any] | None":
+    if not sid:
+        return None
+    try:
+        with DB.session() as db:
+            row = db.scalar(select(BillingSubscription).where(BillingSubscription.stripe_subscription_id == sid))
+            if row is None:
+                return None
+            return {"user_id": str(row.user_id), "statut": str(row.status or "").lower(),
+                    "plan": str(row.plan_key or ""), "resilie": bool(row.cancel_at_period_end)}
+    except Exception as e:
+        # Une notification ne fait jamais echouer le webhook qui la porte.
+        logger.warning("[TELEGRAM] etat de l'abonnement illisible : %s: %s", type(e).__name__, e)
+        return None
+
+
+_IMPAYES = {"past_due", "unpaid"}
+
+
+def _evenements_d_abonnement(avant: "dict[str, Any] | None", apres: "dict[str, Any] | None",
+                             effet: Any) -> list[str]:
+    """Ce qui a CHANGE, en comparant la base avant et apres l'evenement. Un evenement que Stripe
+    rejoue ne change plus rien, donc n'annonce plus rien — la meme regle que la confirmation de
+    resiliation, qui ne part qu'une fois."""
+    if apres is None:
+        return []
+    statut, avant_statut = apres["statut"], (avant or {}).get("statut", "")
+    actif, etait_actif = statut in billing.ACTIVE_SUB_STATUSES, avant_statut in billing.ACTIVE_SUB_STATUSES
+    resiliation = effet.get("resiliation") if isinstance(effet, dict) else None
+    faits: list[str] = []
+    if actif and avant_statut in _IMPAYES:
+        faits.append("regle")
+    elif actif and not etait_actif:
+        faits.append("nouveau")
+    elif actif and etait_actif and (avant or {}).get("plan") and apres["plan"] != avant["plan"]:
+        faits.append("forfait")
+    if statut in _IMPAYES and statut != avant_statut:
+        faits.append("impaye")
+    if isinstance(resiliation, dict):
+        faits.append("resiliation_immediate" if resiliation.get("immediate") else "resiliation")
+    elif statut == "canceled" and avant_statut and avant_statut != "canceled":
+        faits.append("termine")
+    if actif and etait_actif and (avant or {}).get("resilie") and not apres["resilie"]:
+        faits.append("reprise")
+    return faits
+
+
+_TITRES_ABONNEMENT = {
+    "nouveau": "💳 <b>Nouvel abonnement</b>", "forfait": "🔁 <b>Changement de forfait</b>",
+    "impaye": "⚠️ <b>Paiement en échec</b>", "regle": "✅ <b>Paiement régularisé</b>",
+    "resiliation": "👋 <b>Résiliation programmée</b>", "resiliation_immediate": "👋 <b>Résiliation immédiate</b>",
+    "termine": "⏹ <b>Abonnement terminé</b>", "reprise": "↩️ <b>Résiliation annulée</b>",
+}
+
+
+def _notifier_abonnement(avant: "dict[str, Any] | None", apres: "dict[str, Any] | None", effet: Any) -> None:
+    try:
+        faits = _evenements_d_abonnement(avant, apres, effet)
+        if not faits:
+            return
+        with DB.session() as db:
+            user = db.get(User, apres["user_id"])
+            email = str(getattr(user, "email", "") or "?")
+        forfait = (_libelle_forfait(apres["plan"]) if "forfait" not in faits else
+                   "%s → %s" % (_libelle_forfait(avant["plan"]), _libelle_forfait(apres["plan"])))
+        resiliation = effet.get("resiliation") if isinstance(effet, dict) else None
+        fin = resiliation.get("fin") if isinstance(resiliation, dict) else None
+        for fait in faits:
+            telegram.notifier("%s\n%s\nforfait : %s%s\n%s" % (
+                _TITRES_ABONNEMENT[fait], telegram.echapper(email), telegram.echapper(forfait),
+                ("\nfin de l'abonnement : %s" % fin.strftime("%d/%m/%Y")) if fait == "resiliation" and fin else "",
+                _lien_admin("/settings/activation/accounts/%s" % apres["user_id"])))
+    except Exception as e:
+        logger.warning("[TELEGRAM] abonnement non notifie : %s: %s", type(e).__name__, e)
+
+
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request) -> JSONResponse:
     """Chaque webhook laisse une ligne, y compris — SURTOUT — ceux qu'on refuse.
@@ -15155,6 +15312,8 @@ async def stripe_webhook(request: Request) -> JSONResponse:
     _eid = str(event.get("id") or "?") if isinstance(event, dict) else "?"
     logger.info("[STRIPE] webhook recu : %s (%s)", _type, _eid)
 
+    _sid = _abonnement_de_l_evenement(event)
+    _avant = _etat_abonnement(_sid)
     with DB.session() as db:
         try:
             effet = billing.handle_stripe_event(db, event=event)
@@ -15165,6 +15324,7 @@ async def stripe_webhook(request: Request) -> JSONResponse:
 
     if isinstance(effet, dict) and isinstance(effet.get("resiliation"), dict):
         _confirmer_la_resiliation(effet["resiliation"])
+    _notifier_abonnement(_avant, _etat_abonnement(_sid), effet)
     logger.info("[STRIPE] webhook %s (%s) traite", _type, _eid)
     return JSONResponse({"ok": True})
 
@@ -15658,6 +15818,8 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
             "stripe": stripe_summary,
         },
     )
+    telegram.notifier("🗑 <b>Compte supprimé par son titulaire</b>\n%s\n%d site%s" % (
+        telegram.echapper(email or "?"), len(project_slugs), "s" if len(project_slugs) > 1 else ""))
     return resp
 
 
@@ -16426,6 +16588,16 @@ def settings_system(request: Request) -> HTMLResponse:
             ],
         },
         {
+            "id": "telegram-system",
+            "title": "Notifications Telegram",
+            "description": ("Un message dans ta conversation Telegram à chaque compte créé, abonnement "
+                            "souscrit, changé, en échec, résilié ou terminé, et compte supprimé."),
+            "items": [
+                _build_env_setting_item("TELEGRAM_BOT_TOKEN"),
+                _build_env_setting_item("TELEGRAM_CHAT_ID"),
+            ],
+        },
+        {
             "id": "assistant-system",
             "title": "Assistant IA",
             "description": "Réglages internes non exposés aux utilisateurs.",
@@ -16612,6 +16784,45 @@ def settings_system_save(
         url=_path_with_flash("/settings/system", msg=("Valeur supprimée." if op == "clear" else "Valeur enregistrée.")),
         status_code=303,
     )
+
+
+@app.post("/settings/system/telegram/conversation")
+def settings_telegram_conversation(request: Request) -> RedirectResponse:
+    """Lit chez Telegram la conversation qui vient d'ecrire au bot, et l'enregistre.
+
+    Le jeton reste sur le serveur : c'est lui qui interroge Telegram. Une seule conversation
+    recente : elle est enregistree. Plusieurs : elles sont citees, au proprietaire de choisir.
+    """
+    _require_system_owner(request)
+    page = "/settings/system#telegram-system"
+    trouvees, raison = telegram.conversations_recentes()
+    if raison:
+        return RedirectResponse(url=_path_with_flash(page, err=raison), status_code=303)
+    if not trouvees:
+        return RedirectResponse(url=_path_with_flash(page, err=(
+            "Aucun message reçu par le bot : envoie-lui /start dans Telegram, puis recommence.")), status_code=303)
+    if len(trouvees) > 1:
+        return RedirectResponse(url=_path_with_flash(page, err=(
+            "Plusieurs conversations ont écrit au bot : %s. Colle l'identifiant voulu dans « Conversation Telegram »."
+            % " ; ".join("%s (%s)" % (c["nom"], c["id"]) for c in trouvees[:5]))), status_code=303)
+    _write_env_key(_env_target_path("TELEGRAM_CHAT_ID"), "TELEGRAM_CHAT_ID", trouvees[0]["id"])
+    _apply_effective_env("TELEGRAM_CHAT_ID")
+    _audit_log(request, action="settings.system", status="saved", user=request.state.user,
+               target_type="env", target_id="TELEGRAM_CHAT_ID", meta={"op": "telegram_conversation"})
+    return RedirectResponse(url=_path_with_flash(page, msg=(
+        "Conversation « %s » enregistrée. Envoie un message de test pour vérifier." % trouvees[0]["nom"])),
+        status_code=303)
+
+
+@app.post("/settings/system/telegram/test")
+def settings_telegram_test(request: Request) -> RedirectResponse:
+    _require_system_owner(request)
+    page = "/settings/system#telegram-system"
+    reussi, raison = telegram.envoyer_maintenant(
+        "✅ <b>Noyaru</b> : les notifications arrivent bien ici.\n" + telegram.echapper(_lien_admin("/settings/system")))
+    if not reussi:
+        return RedirectResponse(url=_path_with_flash(page, err="Message non envoyé : %s." % raison), status_code=303)
+    return RedirectResponse(url=_path_with_flash(page, msg="Message de test envoyé : regarde Telegram."), status_code=303)
 
 
 @app.get("/projects/add", response_class=RedirectResponse)

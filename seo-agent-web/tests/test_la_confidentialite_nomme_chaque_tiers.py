@@ -58,7 +58,9 @@ TIERS = {
 }
 # Appelés seulement quand leur clé est configurée : la page les nomme dans ce cas-là.
 CONDITIONNELS = {"api.ahrefs.com": ("Ahrefs", "AHREFS_API_TOKEN"),
-                 "generativelanguage.googleapis.com": ("Gemini", "GOOGLE_GEMINI_API_KEY")}
+                 "generativelanguage.googleapis.com": ("Gemini", "GOOGLE_GEMINI_API_KEY"),
+                 # Les notifications du propriétaire (02/11/2026) : des adresses e-mail de clients.
+                 "api.telegram.org": ("Telegram", "TELEGRAM_BOT_TOKEN")}
 # Écartés, avec leur raison.
 ECARTES = {
     # Transports d'e-mail que le code SAIT utiliser mais qui ne le sont pas : Brevo l'est.
@@ -123,7 +125,8 @@ def test_un_tiers_INEXISTANT_n_est_pas_nomme() -> None:
 @pytest.mark.parametrize("hote", sorted(CONDITIONNELS))
 def test_un_tiers_CONDITIONNEL_n_apparait_que_s_il_est_branche(monkeypatch, hote) -> None:
     nom, variable = CONDITIONNELS[hote]
-    for v in ("AHREFS_API_TOKEN", "AHREFS_TOKEN", "AHREFS_API_KEY", "AHREFS_KEY", "cle_api", "GOOGLE_GEMINI_API_KEY"):
+    for v in ("AHREFS_API_TOKEN", "AHREFS_TOKEN", "AHREFS_API_KEY", "AHREFS_KEY", "cle_api", "GOOGLE_GEMINI_API_KEY",
+              "TELEGRAM_BOT_TOKEN"):
         monkeypatch.delenv(v, raising=False)
     assert not any(nom in l for l in _lignes_prestataires(_page()))
     monkeypatch.setenv(variable, "cle-de-test")

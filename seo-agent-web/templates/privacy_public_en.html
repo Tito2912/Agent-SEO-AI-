@@ -82,6 +82,7 @@
         <tr><th scope="row">Netlify</th><td>If you connect your account: reading your sites and their deployments</td><td>List of Netlify sites and deployments</td><td>United States</td></tr>
         {% if ahrefs_actif %}<tr><th scope="row">Ahrefs</th><td>Backlink data</td><td>Domains of the analyzed sites</td><td>Singapore</td></tr>{% endif %}
         {% if gemini_actif %}<tr><th scope="row">Google (Gemini)</th><td>Artificial intelligence for the assistant</td><td>Questions asked to the assistant and the project data relating to them</td><td>United States</td></tr>{% endif %}
+        {% if telegram_actif %}<tr><th scope="row">Telegram</th><td>Internal notifications to Noyaru's publisher: account creation, subscription, deletion</td><td>Account email address, plan and declared country</td><td>United Arab Emirates</td></tr>{% endif %}
         <tr><th scope="row">Sentry</th><td>Tracking technical errors</td><td>Error traces, without IP address or account identifier</td><td>{{ sentry_localisation }}</td></tr>
         <tr><th scope="row">Amazon Web Services (S3)</th><td>Backups: daily copies of the database, kept for 30 days{% if rapports_s3 %}; storage of analysis reports{% endif %}</td><td>All the data in the database</td><td>{{ sauvegarde_localisation }}</td></tr>
       </tbody>
