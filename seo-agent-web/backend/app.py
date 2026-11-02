@@ -12368,6 +12368,7 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
             "steps": [
                 "Ouvre ton bot dans Telegram et envoie-lui /start.",
                 "Puis, ici : « Trouver ma conversation » — l'identifiant est lu chez Telegram et enregistré.",
+                "Pas besoin de le saisir : c'est un nombre, pas le nom du bot (…_bot).",
             ],
         },
     },
@@ -12774,6 +12775,20 @@ def _validate_settings_env_value(key: str, value: str) -> str | None:
             return f"JSON invalide : {e}"
         if not isinstance(parsed, dict):
             return "Un objet JSON est attendu, ex. {\"solo\":{\"limits\":{\"ai_corrections_month\":120},\"correction\":{\"max_files\":15}}}"
+
+    if k == "TELEGRAM_CHAT_ID":
+        # Premier reglage en production (02/11/2026) : le NOM du bot (« …_bot ») colle ici, et le
+        # test repondait « chat not found ». Une conversation se designe par un nombre (negatif
+        # pour un groupe), ou une chaine publique par son @nom ; jamais par le nom du bot.
+        if v.lower().lstrip("@").endswith("bot"):
+            return ("C'est le nom de ton bot, pas ta conversation. Envoie /start à ton bot dans "
+                    "Telegram, puis clique « Trouver ma conversation ».")
+        if not re.fullmatch(r"-?\d{3,20}|@[A-Za-z][A-Za-z0-9_]{4,31}", v):
+            return ("Identifiant de conversation invalide : c'est un nombre. Envoie /start à ton "
+                    "bot dans Telegram, puis clique « Trouver ma conversation ».")
+
+    if k == "TELEGRAM_BOT_TOKEN" and not re.fullmatch(r"\d{5,15}:[A-Za-z0-9_-]{30,64}", v):
+        return "Jeton invalide : celui que donne @BotFather a la forme 123456789:ABC…"
 
     if k == "GOOGLE_APPLICATION_CREDENTIALS":
         p = Path(v).expanduser()
@@ -16821,6 +16836,9 @@ def settings_telegram_test(request: Request) -> RedirectResponse:
     reussi, raison = telegram.envoyer_maintenant(
         "✅ <b>Noyaru</b> : les notifications arrivent bien ici.\n" + telegram.echapper(_lien_admin("/settings/system")))
     if not reussi:
+        if "chat not found" in raison.lower() or "bot can't initiate" in raison.lower():
+            raison += (" — Telegram ne connaît pas cette conversation : envoie /start à ton bot, "
+                       "puis clique « Trouver ma conversation »")
         return RedirectResponse(url=_path_with_flash(page, err="Message non envoyé : %s." % raison), status_code=303)
     return RedirectResponse(url=_path_with_flash(page, msg="Message de test envoyé : regarde Telegram."), status_code=303)
 

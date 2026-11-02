@@ -249,6 +249,31 @@ def test_le_message_de_TEST_dit_s_il_est_parti(proprietaire, monkeypatch) -> Non
     assert "chat not found" in unquote_plus(rep.headers["location"])
 
 
+@pytest.mark.parametrize("valeur, accepte", [
+    ("noyaru_bot", False), ("@NoyaruNotifBot", False), ("abc", False), ("12", False),
+    ("123456789", True), ("-1001234567890", True), ("@ma_chaine_publique", True),
+], ids=["nom-du-bot", "arobase-bot", "texte", "trop-court", "personne", "groupe", "chaine"])
+def test_la_CONVERSATION_est_un_identifiant_jamais_le_nom_du_bot(valeur, accepte) -> None:
+    """Premier réglage en production (02/11/2026) : « …_bot » collé ici, et « chat not found »."""
+    erreur = m._validate_settings_env_value("TELEGRAM_CHAT_ID", valeur)
+    assert (erreur is None) is accepte, erreur
+    if valeur.endswith(("bot", "Bot")):
+        assert "nom de ton bot" in erreur and "Trouver ma conversation" in erreur
+
+
+def test_le_JETON_a_la_forme_de_BotFather() -> None:
+    assert m._validate_settings_env_value("TELEGRAM_BOT_TOKEN", "pas-un-jeton")
+    assert m._validate_settings_env_value("TELEGRAM_BOT_TOKEN", "123456789:" + "A" * 35) is None
+
+
+def test_chat_not_found_dit_QUOI_faire(proprietaire, monkeypatch) -> None:
+    from urllib.parse import unquote_plus
+    monkeypatch.setattr(m.telegram, "envoyer_maintenant",
+                        lambda texte: (False, "Telegram refuse : Bad Request: chat not found"))
+    rep = _poster(proprietaire, "/settings/system/telegram/test")
+    assert "Trouver ma conversation" in unquote_plus(rep.headers["location"])
+
+
 def test_seul_le_PROPRIETAIRE_du_systeme_peut_les_utiliser(monkeypatch) -> None:
     client, _uid, _sid = _client()
     monkeypatch.setattr(m, "_system_settings_owner_email", lambda: "autre@exemple.fr")
