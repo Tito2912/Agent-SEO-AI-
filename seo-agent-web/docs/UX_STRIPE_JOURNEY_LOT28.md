@@ -32,5 +32,48 @@ et les montants ne sont pas modifiés par le correctif de langue de l'interface.
 
 ## Réalisation et validation
 
-À compléter après tests et recette du correctif. Aucun paiement simulé réussi
-ni contrôle en production n'est encore revendiqué par ce bilan initial.
+Le changement applicatif se limite à `backend/billing.py` : la langue courante
+de Noyaru remplace les trois valeurs françaises imposées, pour Checkout, le
+portail et le repli de la résiliation. Aucun tarif, consentement, droit, document
+de facturation ou traitement de webhook n'est modifié.
+
+**77 tests ciblés réussis**, dont huit nouveaux cas FR/EN couvrant les trois
+appels, le repli du parcours de résiliation, la langue choisie différente de
+celle enregistrée sur le compte et les paramètres de paiement conservés.
+Les tests existants de consentement, synchronisation et droits passent aussi.
+
+Recette Chromium réelle sur la copie locale, code applicatif `25d94e2` :
+
+| Scénario | Résultat observé |
+| --- | --- |
+| Noyaru anglais → Checkout | API `locale=en`, HTML anglais, tarif fictif inchangé de 49 EUR. |
+| Noyaru français → Checkout | API `locale=fr`, HTML français, consentement initialement décoché et soumission bloquée tant qu'il n'est pas accepté ; quatre largeurs 1 440 / 768 / 390 / 360 px sans débordement. |
+| Paiement de la carte de test officielle | Checkout `complete` / `paid`, retour sur Abonnement anglais, formule Solo et quotas de 3 sites, 20 000 pages, 100 corrections et 400 messages. Aucun montant réel prélevé. |
+| Carte de test refusée pour fonds insuffisants | Erreur française explicite, session ouverte et impayée, retour Abonnement ; formule Free et quotas gratuits conservés. |
+| Événements signés relayés par Stripe CLI | `invoice.paid`, `checkout.session.completed`, `customer.subscription.created`, puis `customer.subscription.updated` reçus ; réponses HTTP 200. Le plan passe à Solo. |
+| Abonnement et portail FR/EN | Huit rendus de chaque écran à 1 440, 768, 390 et 360 px, aucun débordement ; HTML du portail `fr-FR` / `en-US`. Deux retours vers Noyaru préservent la langue. |
+| Résiliation directe FR/EN | Écran de confirmation et date de fin dans la langue choisie, à 1 440 et 390 px. Aucun changement avant confirmation. |
+| Confirmation de résiliation de test | Annulation programmée au 2 décembre ; Noyaru affiche « Cancellation recorded » et « Subscription ends », conserve Solo et ses quotas jusque-là. |
+| Nettoyage de l'abonnement fictif | Suppression explicite via API Stripe de test, événement signé `customer.subscription.deleted` accepté ; Noyaru revient à Free (1 site, 800 pages, 2 corrections). L'ancien abonnement reste visible comme annulé. Ce nettoyage ne simule pas l'horloge d'expiration. |
+
+Les preuves sans clés ni URLs de session sont conservées dans le dossier de
+recette local. La CI complète et la revue du commit final sont consignées dans
+la PR ; aucun déploiement manuel n'est déclenché.
+
+## Limites et coordination avec Claude
+
+- La recette porte sur Noyaru local et un fournisseur Stripe réel en mode test ;
+  elle ne prouve pas la configuration Stripe de production, ni le retour depuis
+  une autre instance hébergée.
+- SMTP est désactivé et l'adresse est fictive. La réception d'une confirmation
+  de paiement ou de résiliation n'est donc pas validée. Le journal signale
+  explicitement l'absence d'envoi lors de la résiliation.
+- Les préférences françaises des factures Stripe sont conservées, conformément
+  au comportement existant couvert par les tests. La présente correction
+  concerne la langue des écrans hébergés.
+- Deux textes résiduels sont réellement visibles au retour anglais du paiement :
+  « Paiement confirmé. » (`app.py`, `billing_page`) et « 49€/mois » (libellé du
+  catalogue des formules). Ils sont signalés au propriétaire pour le chantier
+  de traduction de Claude ; aucun de ses fichiers n'est retouché ici.
+- L'expiration à la date future n'est pas accélérée avec une horloge Stripe.
+  Le maintien des droits après programmation est vérifié dans le navigateur.
