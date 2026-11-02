@@ -25,7 +25,7 @@ def timestamp(value):
     return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
 
 
-_RECEIPT_KEYS = {"verify", "first_correction", "cms_change_id", "cms_nom", "verification_urls", "verification_expected_count",
+_RECEIPT_KEYS = {"verify", "first_correction", "cms_change_id", "cms_nom", "verification_urls", "verification_excluded", "verification_expected_count",
                  "deep", "bulk", "pages", "pr_url", "pr_number", "commit_sha"}
 
 
