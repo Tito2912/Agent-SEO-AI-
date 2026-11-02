@@ -1,6 +1,8 @@
 (() => {
   // Textes traduits : templates/_lang_script.html ; sans traduction, le francais reste.
   const noyaruT = window.noyaruT || ((text) => text);
+  // Nombres au format de la langue de la page (« 3.2K » en anglais, « 3,2 k » en français).
+  const LOCALE = (document.documentElement.lang || "fr").startsWith("en") ? "en-GB" : "fr-FR";
   const widgetStates = new WeakMap();
   const miniStates = new WeakMap();
   const METRIC_CONFIG = {
@@ -48,7 +50,7 @@
     if (!Number.isFinite(value)) return "—";
     if (metric === "ctr") return `${(value * 100).toFixed(1)}%`;
     if (metric === "position") return value > 0 ? value.toFixed(1) : "—";
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat(LOCALE, {
       notation: value >= 1000 ? "compact" : "standard",
       maximumFractionDigits: value >= 1000 ? 1 : 0,
     }).format(Math.round(value));
@@ -66,7 +68,7 @@
   function formatCompactInt(value) {
     if (!Number.isFinite(value)) return "—";
     const v = Math.round(value);
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat(LOCALE, {
       notation: v >= 1000 ? "compact" : "standard",
       maximumFractionDigits: v >= 1000 ? 1 : 0,
     }).format(v);
