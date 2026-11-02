@@ -1,0 +1,6 @@
+{% if help_project %}
+<nav class="help-project-context" data-help-project aria-label="{{ tr('Projet') }}">
+  <a href="{{ help_project_url }}"><span>{{ tr('Projet') }}</span><strong>{{ help_project.site_name }}</strong></a>
+  <a class="btn" href="/">{{ tr('Projets') }}</a>
+</nav>
+{% endif %}

@@ -8,7 +8,7 @@
     <h1>{{ tr("Concurrents") }}</h1>
     <p class="muted">
       {{ project.site_name }} · {{ tr("ce que vos concurrents traitent, et les réponses déjà présentes sur votre site") }}
-      <a href="/docs/analyser-les-concurrents" class="muted small" style="margin-left:8px;" title="{{ tr("Documentation") }}">{{ tr("Aide") }}</a>
+      <a href="{{ help_link(request, doc_path('analyser-les-concurrents')) }}" class="muted small" style="margin-left:8px;" title="{{ tr("Documentation") }}">{{ tr("Aide") }}</a>
     </p>
   </div>
 

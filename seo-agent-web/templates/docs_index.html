@@ -3,6 +3,7 @@
 {% block title %}{{ tr("Documentation") }} - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
+{% if help_project %}<link rel="stylesheet" href="/static/help-project-context.css?v=1" />{% endif %}
 <meta name="description" content="{{ meta_description }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
 <meta property="og:title" content="{{ tr("Documentation {app_name}", app_name=app_name) }}" />
@@ -14,6 +15,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "_help_project_context.html" %}
 <div class="public-help" data-help-directory>
   <header class="help-header">
     <div><h1>{{ tr("Comment {app_name} fonctionne, écran par écran", app_name=app_name) }}</h1><p class="help-intro">{{ tr("Votre premier audit, puis les corrections adaptées à votre site.") }}</p></div>

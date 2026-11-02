@@ -3,6 +3,7 @@
 {% block title %}{{ tr("Guides SEO") }} - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
+{% if help_project %}<link rel="stylesheet" href="/static/help-project-context.css?v=1" />{% endif %}
 <meta name="description" content="{{ meta_description }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
 <meta property="og:title" content="{{ tr("Guides SEO") }} - {{ app_name }}" />
@@ -97,6 +98,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "_help_project_context.html" %}
   <header class="resources-hero">
     <div class="resources-eyebrow">{{ tr("Guides et tutoriels SEO") }}</div>
     <h1>{{ tr("La méthode, pas seulement l'outil") }}</h1>

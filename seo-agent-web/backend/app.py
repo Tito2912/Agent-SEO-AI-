@@ -106,6 +106,7 @@ try:
     from . import plan_usage
     from . import search_results
     from . import cms_guidance
+    from . import help_navigation
     from . import i18n
     from . import legal
 except ImportError:
@@ -121,6 +122,7 @@ except ImportError:
     import plan_usage
     import search_results
     import cms_guidance
+    import help_navigation
     import i18n
     import legal
 
@@ -10727,14 +10729,45 @@ def _public_url(request: Request, path: str) -> str:
     return f"{_public_base_url(request)}{clean_path}"
 
 
-# Les balises sociales exigent une URL ABSOLUE (og:image, og:url), construite comme les canonical.
-# Toutes les routes publiques ne passent pas par `_public_template_context` : une fonction globale
-# sert donc toutes les pages, y compris /status et /support.
+def _help_project_context(request: Request) -> dict[str, str] | None:
+    if hasattr(request.state, "help_project_context"):
+        return request.state.help_project_context
+    request.state.help_project_context = None
+    user = getattr(request.state, "user", None)
+    if user is None:
+        return None
+    slug = str(request.path_params.get("slug") or "") if request.url.path.startswith("/projects/") else ""
+    if not slug and (help_navigation.is_help_path(request.url.path) or request.url.path == "/billing"):
+        values = request.query_params.getlist("project")
+        slug = values[0] if len(values) == 1 else ""
+    if not slug or len(slug) > 200:
+        return None
+    project = _db_project(str(user.id), slug)
+    if project is None:
+        return None
+    context = {"slug": str(project.slug), "site_name": str(project.site_name or project.slug), "crawl": ""}
+    stamps = request.query_params.getlist("crawl")
+    if len(stamps) == 1 and re.fullmatch(r"[0-9]{8}-[0-9]{6}", stamps[0]):
+        # A timestamp in a link is not proof that this site's report still exists.
+        report = _runs_dir_for_user(str(project.owner_user_id)) / str(project.slug) / stamps[0] / "audit" / "report.json"
+        if report.is_file():
+            context["crawl"] = stamps[0]
+    request.state.help_project_context = context
+    return context
+
+
+def _help_link(request: Request, path: str) -> str:
+    path = signup_attribution.carry(request, path)
+    return help_navigation.link(path, _help_project_context(request))
+
+
+# Les balises sociales exigent une URL ABSOLUE, comme les canonical, y compris sur /status.
 templates.env.globals["public_url"] = _public_url
-templates.env.globals["campaign_link"] = i18n.localized_links(signup_attribution.carry)
+templates.env.globals["help_link"] = i18n.localized_links(_help_link)
+templates.env.globals["campaign_link"] = i18n.localized_links(_help_link)
 templates.env.globals["country_options"] = customer_country.OPTIONS
 # Langue de l'interface (francais par defaut, anglais en traduction) : voir backend/i18n.py.
-i18n.install(app, templates, is_secure=lambda request: _request_is_secure(request), link_builder=signup_attribution.carry)
+i18n.install(app, templates, is_secure=lambda request: _request_is_secure(request), link_builder=_help_link)
 
 
 def _public_template_context(request: Request, **extra: Any) -> dict[str, Any]:
@@ -14291,6 +14324,18 @@ def _content_versions(collection: str, slug: str, french: dict[str, Any]) -> dic
     return {i18n.DEFAULT_LANG: str(french["path"]), **others} if others else {}
 
 
+def _help_headers(request: Request) -> dict[str, str]:
+    return {"Cache-Control": "private, no-store", "Referrer-Policy": "same-origin"} if getattr(request.state, "user", None) else {}
+
+
+def _help_response(template: str, context: dict[str, Any]) -> HTMLResponse:
+    request = context["request"]
+    project = _help_project_context(request)
+    context["help_project"] = project
+    context["help_project_url"] = help_navigation.app_path("docs", "lire-le-rapport", project)
+    return templates.TemplateResponse(template, context, headers=_help_headers(request))
+
+
 @app.api_route("/docs", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def docs_index_public(request: Request) -> HTMLResponse:
     lang = i18n.current_lang()
@@ -14299,7 +14344,7 @@ def docs_index_public(request: Request) -> HTMLResponse:
         {"name": section["name"], "pages": content_library.resolve_all(section["pages"], tokens)}
         for section in content_library.docs_sections(lang)
     ]
-    return templates.TemplateResponse(
+    return _help_response(
         "docs_index.html",
         _public_template_context(
             request,
@@ -14326,12 +14371,15 @@ def docs_article_public(request: Request, slug: str) -> HTMLResponse:
     translated = content_library.get_doc(slug, lang) if lang != i18n.DEFAULT_LANG else None
     if lang != i18n.DEFAULT_LANG and translated is None and getattr(request.state, "url_lang", None):
         # /en/docs/<page> sans traduction : la page n'existe qu'en francais, a son adresse.
-        return RedirectResponse(url=str(french["path"]), status_code=302)  # type: ignore[return-value]
+        return RedirectResponse(url=_help_link(request, str(french["path"])), status_code=302, headers=_help_headers(request))  # type: ignore[return-value]
     raw = translated or french
     tokens = _content_tokens(str(raw.get("lang") or i18n.DEFAULT_LANG))
     page = content_library.resolve(raw, tokens)
     path = str(page["path"])
-    return templates.TemplateResponse(
+    help_project = _help_project_context(request)
+    page["body_html"] = help_navigation.body_links(page["body_html"], help_project)
+    page["app_href"] = help_navigation.app_path("docs", slug, help_project, str(page.get("app_href") or ""))
+    return _help_response(
         "docs_article.html",
         _public_template_context(
             request,
@@ -14352,7 +14400,7 @@ def docs_article_public(request: Request, slug: str) -> HTMLResponse:
 def seo_resources_public(request: Request) -> HTMLResponse:
     lang = i18n.current_lang()
     tokens = _content_tokens(lang)
-    return templates.TemplateResponse(
+    return _help_response(
         "seo_resources_public.html",
         _public_template_context(
             request,
@@ -14375,12 +14423,15 @@ def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
     translated = content_library.get_article(slug, lang) if lang != i18n.DEFAULT_LANG else None
     if lang != i18n.DEFAULT_LANG and translated is None and getattr(request.state, "url_lang", None):
         # /en/ressources-seo/<guide> sans traduction : le guide n'existe qu'en francais.
-        return RedirectResponse(url=str(french["path"]), status_code=302)  # type: ignore[return-value]
+        return RedirectResponse(url=_help_link(request, str(french["path"])), status_code=302, headers=_help_headers(request))  # type: ignore[return-value]
     raw = translated or french
     tokens = _content_tokens(str(raw.get("lang") or i18n.DEFAULT_LANG))
     page = content_library.resolve(raw, tokens)
     path = str(page["path"])
-    return templates.TemplateResponse(
+    help_project = _help_project_context(request)
+    page["body_html"] = help_navigation.body_links(page["body_html"], help_project)
+    page["app_href"] = help_navigation.app_path("blog", slug, help_project)
+    return _help_response(
         "seo_resource_article_public.html",
         _public_template_context(
             request,

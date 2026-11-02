@@ -458,7 +458,7 @@
 <div class="page-header">
   <h1>{{ tr("Corrections") }}</h1>
   <p class="muted">{% if stats.total > 1 %}{{ tr("{n} corrections suivies", n=stats.total) }}{% else %}{{ tr("{n} correction suivie", n=stats.total) }}{% endif %} · {{ project.site_name }}</p>
-  <a href="/docs/corrections-automatiques" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
+  <a href="{{ help_link(request, doc_path('corrections-automatiques')) }}" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
 </div>
 
 {% if stats.total > 0 %}

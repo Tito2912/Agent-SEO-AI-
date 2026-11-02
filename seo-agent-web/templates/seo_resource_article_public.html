@@ -3,6 +3,7 @@
 {% block title %}{{ page.meta_title }} - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
+{% if help_project %}<link rel="stylesheet" href="/static/help-project-context.css?v=1" />{% endif %}
 <meta name="description" content="{{ page.description }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
 <meta property="og:title" content="{{ page.title }}" />
@@ -14,6 +15,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "_help_project_context.html" %}
 <div class="content-shell{% if not page.headings %} no-aside{% endif %}">
   {% if page.headings %}
     <aside class="content-aside" aria-label="{{ tr("Sommaire de l'article") }}">
@@ -65,7 +67,7 @@
         <h2>{{ tr("Mettre ce guide en pratique") }}</h2>
         <p>{{ page.cta }}</p>
         {% if request.state.user %}
-          <a class="btn primary" href="{{ campaign_link(request, '/') }}">{{ tr("Ouvrir le tableau de bord") }} &rarr;</a>
+          <a class="btn primary" href="{{ campaign_link(request, page.app_href) }}">{{ tr("Ouvrir dans l'application") if help_project else tr("Ouvrir le tableau de bord") }} &rarr;</a>
         {% else %}
           <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">{{ tr("Créer un compte gratuit") }}</a>
           <a class="btn" href="{{ campaign_link(request, '/docs') }}">{{ tr("Voir la documentation") }}</a>

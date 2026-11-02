@@ -1,0 +1,24 @@
+.help-project-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 18px;
+  margin-top: 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card-2);
+}
+.help-project-context > a:first-child {
+  display: flex;
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: 44px;
+  flex-direction: column;
+  justify-content: center;
+  overflow-wrap: anywhere;
+}
+.help-project-context span { color: var(--muted); font-size: 13px; }
+.help-project-context .btn { min-height: 44px; }
+.help-project-context a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
