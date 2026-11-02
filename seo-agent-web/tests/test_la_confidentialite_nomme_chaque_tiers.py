@@ -76,7 +76,7 @@ ECARTES = {
     "render.com", "www.cm2c.net",
     # Aides CMS affichées au client : aucune requête serveur ni transmission de données.
     "help.shopify.com", "help.webflow.com", "rankmath.com", "support.wix.com", "wordpress.org", "yoast.com",
-    "ghost.org",
+    "ghost.org", "help.systeme.io",
     # Le produit lui-même, et les exemples de docstrings et de tests.
     "noyaru.com", "example.com", "app.example.com", "exemple.fr", "site.fr", "oryvalo.com",
 }

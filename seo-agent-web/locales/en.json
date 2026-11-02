@@ -3360,5 +3360,16 @@
   "PrestaShop n’a pas renvoyé toutes les langues du champ : rien n’est écrit.": "PrestaShop did not return every language of the field: nothing is written.",
   "Collez la clé Webservice de votre boutique (32 lettres majuscules et chiffres).": "Paste your shop's Webservice key (32 capital letters and digits).",
   "Choisissez PrestaShop pour utiliser cette connexion.": "Choose PrestaShop to use this connection.",
-  "{0} page(s) enregistrée(s) dans PrestaShop.": "{0} page(s) saved to PrestaShop."
+  "{0} page(s) enregistrée(s) dans PrestaShop.": "{0} page(s) saved to PrestaShop.",
+  "Les instructions guidées sont disponibles pour Shopify, Wix, Webflow, Squarespace, Systeme.io et WordPress avec Rank Math. Vous effectuez la modification dans votre plateforme, puis Noyaru contrôle le résultat après une nouvelle analyse.": "Guided instructions are available for Shopify, Wix, Webflow, Squarespace, Systeme.io and WordPress with Rank Math. You make the change in your platform, then Noyaru checks the result after a new analysis.",
+  "Dans Squarespace, ouvrez le panneau Pages, survolez la page et cliquez sur l’icône des paramètres. Pour un article de blog ou un produit, ouvrez ses paramètres depuis sa liste.": "In Squarespace, open the Pages panel, hover over the page and click the settings icon. For a blog post or a product, open its settings from its list.",
+  "Dans l’onglet SEO, renseignez le champ Titre SEO.": "In the SEO tab, fill in the SEO title field.",
+  "Dans l’onglet SEO, renseignez le champ Description SEO.": "In the SEO tab, fill in the SEO description field.",
+  "Enregistrez. Pour la page d’accueil, utilisez Marketing → Apparence SEO.": "Save. For the home page, use Marketing → SEO Appearance.",
+  "Dans Systeme.io, ouvrez la page concernée dans l’éditeur (l’étape du tunnel ou l’article de blog).": "In Systeme.io, open the page concerned in the editor (the funnel step or the blog post).",
+  "Dans la section SEO (référencement) des paramètres de la page, renseignez le champ Titre.": "In the SEO section of the page settings, fill in the Title field.",
+  "Dans la section SEO (référencement) des paramètres de la page, renseignez le champ Description.": "In the SEO section of the page settings, fill in the Description field.",
+  "Enregistrez la page : la modification est en ligne dès l’enregistrement.": "Save the page: the change is live as soon as it is saved.",
+  "Squarespace": "Squarespace",
+  "Systeme.io": "Systeme.io"
 }

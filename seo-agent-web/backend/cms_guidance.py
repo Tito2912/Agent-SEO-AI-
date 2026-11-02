@@ -4,7 +4,8 @@ from __future__ import annotations
 import re
 
 PLATFORMS = {"": "Je ne sais pas encore", "wordpress": "WordPress", "shopify": "Shopify", "prestashop": "PrestaShop",
-             "webflow": "Webflow", "wix": "Wix", "ghost": "Ghost", "code": "Site développé sur mesure",
+             "webflow": "Webflow", "wix": "Wix", "squarespace": "Squarespace", "ghost": "Ghost",
+             "systemeio": "Systeme.io", "code": "Site développé sur mesure",
              "other": "Autre CMS"}
 SEO_PLUGINS = {"": "Je ne sais pas", "yoast": "Yoast SEO", "rank_math": "Rank Math", "other": "Autre extension"}
 SOURCES = {
@@ -15,6 +16,7 @@ SOURCES = {
     "webflow": "https://help.webflow.com/hc/en-us/articles/33961237278611-Add-SEO-title-and-meta-description",
     "wix": "https://support.wix.com/en/article/customizing-your-pages-seo-settings-in-the-seo-panel",
     "ghost": "https://ghost.org/help/post-settings/",
+    "systemeio": "https://help.systeme.io/article/510-what-is-the-search-engine-optimisation-seo-part-for",
 }
 
 
@@ -71,10 +73,19 @@ def for_issue(project_settings, key):
             steps = ["Ouvrez l’article ou la page concerné dans l’éditeur Ghost.",
                      f"Ouvrez les réglages de la publication (Post settings, icône en haut à droite), puis Meta data, et renseignez le champ {'Meta title' if field == 'seo_title' else 'Meta description'}.",
                      "Cliquez sur Update pour mettre la publication à jour."]
+        elif platform == "squarespace":
+            # Systeme.io et Squarespace n'ont pas d'API pour ces champs : instructions seulement (02/11/2026).
+            steps = ["Dans Squarespace, ouvrez le panneau Pages, survolez la page et cliquez sur l’icône des paramètres. Pour un article de blog ou un produit, ouvrez ses paramètres depuis sa liste.",
+                     f"Dans l’onglet SEO, renseignez le champ {'Titre SEO' if field == 'seo_title' else 'Description SEO'}.",
+                     "Enregistrez. Pour la page d’accueil, utilisez Marketing → Apparence SEO."]
+        elif platform == "systemeio":
+            steps = ["Dans Systeme.io, ouvrez la page concernée dans l’éditeur (l’étape du tunnel ou l’article de blog).",
+                     f"Dans la section SEO (référencement) des paramètres de la page, renseignez le champ {'Titre' if field == 'seo_title' else 'Description'}.",
+                     "Enregistrez la page : la modification est en ligne dès l’enregistrement."]
         elif platform == "code":
             steps = [f"Modifiez le {label} dans les métadonnées de la page ou du modèle concerné.",
                      "Relisez la modification dans votre dépôt, puis publiez-la sur le site analysé."]
-    elif platform in {"wordpress", "shopify", "webflow", "wix", "ghost", "prestashop"}:
+    elif platform in {"wordpress", "shopify", "webflow", "wix", "ghost", "prestashop", "squarespace", "systemeio"}:
         steps = [f"Ouvrez la page concernée dans {site['label']} et suivez les instructions du problème ci-dessous.",
                  "Selon le problème, le réglage peut dépendre du thème, d’une extension ou de votre hébergeur. Transmettez les instructions au prestataire si nécessaire.",
                  "Enregistrez et publiez la modification avant de lancer le contrôle."]
