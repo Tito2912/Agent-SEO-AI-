@@ -109,6 +109,15 @@
 .overview-source .card-title-actions { flex-wrap: wrap; justify-content: flex-end; margin-left: auto; min-width: 0; max-width: 100%; }
 .overview-source .card-title-actions > .pill-select { flex-shrink: 0; white-space: nowrap; }
 .overview-source .pill-select > label { flex-shrink: 0; white-space: nowrap; }
+/* Two readable metric columns inside each half-width source card. */
+.overview-source .ts-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.overview-source .ts-metric { min-width: 0; padding-inline: 12px; grid-template-columns: 18px minmax(0, 1fr); column-gap: 8px; }
+.overview-source .ts-metric-label { overflow-wrap: normal; word-break: normal; }
+.overview-source .overview-source-table { max-width: 100%; overflow-x: auto; }
+.overview-source .overview-source-table:focus-visible { outline: 2px solid var(--overview-accent); outline-offset: 2px; }
+.overview-source .mini-perf-table { min-width: 100%; table-layout: auto; }
+.overview-source .mini-perf-table th:first-child { min-width: 10rem; }
+.overview-source .mini-perf-table .num { padding-inline: 8px; white-space: nowrap; }
 .search-connection { position: relative; scroll-margin-top: 90px; }
 .search-connection > summary { cursor: pointer; list-style: none; gap: 6px; min-height: 32px; padding: 4px 9px; white-space: nowrap; }
 .search-connection > summary::-webkit-details-marker { display: none; }
@@ -165,5 +174,5 @@
   .overview-summary-line { padding-bottom: 12px; font-size: 12px; }
   .overview-section-subtitle { max-width: 200px; }
   .overview-source .card-title-row { gap: 8px; }
-  .overview-source .ts-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overview-source .ts-metrics { grid-template-columns: 1fr; }
 }
