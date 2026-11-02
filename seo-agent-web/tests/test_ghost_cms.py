@@ -158,7 +158,11 @@ def ghost(journey, monkeypatch):
             raise CmsError("Ghost ne trouve pas cette ressource.", code="introuvable")
         assert method == "PUT" and path == f'posts/{etat["article"]["id"]}/'
         (modif,) = payload["posts"]
-        if etat["collision"] or modif["updated_at"] != etat["article"]["updated_at"]:
+        # Comme un vrai Ghost 6.73 (essai du 02/11/2026) : updated_at est exigé (422 sans), mais un
+        # updated_at périmé n'est PAS refusé quand seuls les champs SEO changent.
+        if "updated_at" not in modif:
+            raise CmsError("Ghost n’a pas renvoyé une réponse exploitable.", uncertain=True, code="reponse_illisible")
+        if etat["collision"]:
             raise CmsError("La page a changé dans Ghost depuis l’aperçu. L’opération est arrêtée pour conserver les modifications actuelles.",
                            code="collision")
         etat["tour"] += 1

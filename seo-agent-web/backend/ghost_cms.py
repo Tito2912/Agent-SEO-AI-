@@ -6,8 +6,10 @@ HS256 de quelques minutes signé avec ce secret. Comme pour WordPress, la connex
 épinglée sur une adresse publique validée, et rien n'est envoyé hors du domaine du projet — sauf
 l'administration Ghost(Pro), qui vit en <site>.ghost.io quand le site a son propre domaine.
 
-Ghost refuse une modification si `updated_at` n'est plus celui de la lecture (détection de
-collision) : une page modifiée depuis l'aperçu n'est jamais écrasée.
+Ghost exige le `updated_at` lu (422 sans), mais sa détection de collision ne couvre PAS les champs
+SEO : ils vivent dans la table posts_meta, et Ghost ne compare que les champs de posts (constaté
+sur un vrai Ghost 6.73, 02/11/2026). Ce qui protège une page modifiée depuis l'aperçu est donc la
+relecture du parcours juste avant l'écriture, comme pour WordPress.
 """
 from __future__ import annotations
 
@@ -111,7 +113,8 @@ def exchange(base_url, cle, method, path, payload=None):
         if response.status == 404:
             raise CmsError("Ghost ne trouve pas cette ressource.", uncertain=write, code="introuvable")
         if response.status == 409:
-            # Collision : la page a change depuis la lecture, Ghost n'a rien enregistre.
+            # Collision : Ghost n'a rien enregistre. Il ne la signale que si un champ de posts
+            # (pas un champ SEO) a change entre-temps ; elle reste un refus certain.
             raise CmsError("La page a changé dans Ghost depuis l’aperçu. L’opération est arrêtée pour conserver les modifications actuelles.",
                            code="collision")
         if response.status >= 400 or len(data) > 262144 or "json" not in response.getheader("Content-Type", "").lower():
