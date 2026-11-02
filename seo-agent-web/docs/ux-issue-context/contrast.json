@@ -1,0 +1,197 @@
+{
+  "samples": [
+    {
+      "text": "Page à corriger",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5,
+      "width": 1440,
+      "lang": "fr"
+    },
+    {
+      "text": "Revenir à ma correction",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "fr"
+    },
+    {
+      "text": "Préparer l’aperçu",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "fr"
+    },
+    {
+      "text": "Page to fix",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5,
+      "width": 1440,
+      "lang": "en"
+    },
+    {
+      "text": "Back to my fix",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "en"
+    },
+    {
+      "text": "Prepare the preview",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "width": 1440,
+      "lang": "en"
+    },
+    {
+      "text": "Page à corriger",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5,
+      "width": 768,
+      "lang": "fr"
+    },
+    {
+      "text": "Revenir à ma correction",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "fr"
+    },
+    {
+      "text": "Préparer l’aperçu",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "fr"
+    },
+    {
+      "text": "Page to fix",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5,
+      "width": 768,
+      "lang": "en"
+    },
+    {
+      "text": "Back to my fix",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "en"
+    },
+    {
+      "text": "Prepare the preview",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "width": 768,
+      "lang": "en"
+    },
+    {
+      "text": "Page à corriger",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5,
+      "width": 390,
+      "lang": "fr"
+    },
+    {
+      "text": "Revenir à ma correction",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "fr"
+    },
+    {
+      "text": "Préparer l’aperçu",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "fr"
+    },
+    {
+      "text": "Page to fix",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5,
+      "width": 390,
+      "lang": "en"
+    },
+    {
+      "text": "Back to my fix",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "en"
+    },
+    {
+      "text": "Prepare the preview",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "width": 390,
+      "lang": "en"
+    },
+    {
+      "text": "Page à corriger",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5,
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "text": "Revenir à ma correction",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "text": "Préparer l’aperçu",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "fr"
+    },
+    {
+      "text": "Page to fix",
+      "ratio": 7.509854872554019,
+      "gradient": false,
+      "height": 20.5,
+      "width": 360,
+      "lang": "en"
+    },
+    {
+      "text": "Back to my fix",
+      "ratio": 14.446924488234227,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "en"
+    },
+    {
+      "text": "Prepare the preview",
+      "ratio": 6.820327051239553,
+      "gradient": false,
+      "height": 44,
+      "width": 360,
+      "lang": "en"
+    }
+  ],
+  "minimum": 6.820327051239553
+}

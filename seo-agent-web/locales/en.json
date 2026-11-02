@@ -1649,6 +1649,8 @@
   "Revenir au résultat vérifié": "Back to the verified result",
   "Revenir à ma correction": "Back to my fix",
   "Page à corriger": "Page to fix",
+  "Le contexte de cette page n’a pas pu être retrouvé dans cette analyse. Consultez les pages disponibles ou revenez à votre correction.": "This page's context could not be found in this analysis. Browse the available pages or return to your fix.",
+  "La préparation GitHub nécessite JavaScript. Vous pouvez toujours consulter les instructions et modifier votre page manuellement.": "GitHub preparation requires JavaScript. You can still read the instructions and edit your page manually.",
   "Sélectionnez une page": "Select a page",
   "Choisir cette correction": "Choose this fix",
   "Cette analyse ne permet pas de proposer une page à suivre dans ce parcours. Consultez les anomalies et les indications du rapport pour poursuivre.": "This analysis cannot suggest a page to track in this flow. Review the issues and the report's guidance to continue.",
