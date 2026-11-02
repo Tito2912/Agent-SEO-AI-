@@ -147,7 +147,7 @@
             {{ tr("Abonnement") }}
           </a>
 
-          <a class="nav-item {% if request.url.path.startswith('/docs') %}active{% endif %}"{% if request.url.path.startswith('/docs') %} aria-current="page"{% endif %} href="/docs">
+          <a class="nav-item {% if request.url.path.startswith('/docs') %}active{% endif %}"{% if request.url.path.startswith('/docs') %} aria-current="page"{% endif %} href="{{ help_link(request, '/docs') }}">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h9a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M20 4h-4a3 3 0 00-3 3v13a2.5 2.5 0 012.5-2.5H20z"/></svg>
             {{ tr("Documentation") }}
           </a>

@@ -153,7 +153,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
       <p class="muted">{{ tr("Ces choix s’appliquent aux prochaines analyses. Enregistrer ne lance pas d’analyse et ne change aucune page de votre site.") }}</p>
       <nav class="section-nav" aria-label="{{ tr('Sections des réglages') }}"><a href="#analysis-scope">{{ tr("Périmètre") }}</a><a href="#analysis-sources">{{ tr("Données en plus") }}</a><a href="#analysis-advanced">{{ tr("Options avancées") }}</a><a href="#github-repo">{{ tr("GitHub (facultatif)") }}</a></nav>
       {% if not can_edit_analysis %}<div class="alert notice">{{ tr_html("<strong>Consultation uniquement.</strong> Les réglages d’analyse sont gérés par <strong>{email}</strong>. Demandez à ce propriétaire de les modifier.", email=analysis_owner_email) }}</div>{% endif %}
-      <a href="/docs/lancer-un-crawl" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
+      <a href="{{ help_link(request, doc_path('lancer-un-crawl')) }}" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
     </div>
 
     {% if err %}

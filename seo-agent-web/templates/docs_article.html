@@ -3,6 +3,7 @@
 {% block title %}{{ page.meta_title }} - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
+{% if help_project %}<link rel="stylesheet" href="/static/help-project-context.css?v=1" />{% endif %}
 <meta name="description" content="{{ page.description }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
 <meta property="og:title" content="{{ page.title }}" />
@@ -14,6 +15,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "_help_project_context.html" %}
 <div class="content-shell">
   <aside class="content-aside" aria-label="{{ tr("Sommaire de la documentation") }}">
     {% for section in sections %}

@@ -26,7 +26,7 @@
 <section class="card">
   <h2>{{ tr("Une connexion limitée à ce projet") }}</h2>
   <p>{{ tr("Google et Bing fournissent les statistiques de recherche. Cette connexion ne modifie pas le contenu de votre site. Les autres projets conservent leurs propres réglages.") }}</p>
-  <details><summary>{{ tr("Propriété du site et réglages avancés") }}</summary><p>{{ tr_html('Si le compte est autorisé mais qu’aucune donnée n’est disponible, vérifiez la propriété Google ou l’adresse Bing dans les <a href="{url}">réglages de l’analyse</a>.', url='/projects/' ~ slug ~ '/settings/crawl') }}</p><p><a href="/docs/connecter-search-console">{{ tr("Aide pour connecter Google Search Console") }}</a></p></details>
+  <details><summary>{{ tr("Propriété du site et réglages avancés") }}</summary><p>{{ tr_html('Si le compte est autorisé mais qu’aucune donnée n’est disponible, vérifiez la propriété Google ou l’adresse Bing dans les <a href="{url}">réglages de l’analyse</a>.', url='/projects/' ~ slug ~ '/settings/crawl') }}</p><p><a href="{{ help_link(request, doc_path('connecter-search-console')) }}">{{ tr("Aide pour connecter Google Search Console") }}</a></p></details>
   <p class="muted small">{{ tr_html('Les préférences personnelles et les connexions communes GitHub/Netlify restent dans <a href="/settings/accounts#mon-compte">Mon compte</a>.') }}</p>
 </section>
 {% endblock %}

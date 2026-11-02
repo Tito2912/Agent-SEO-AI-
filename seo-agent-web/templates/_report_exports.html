@@ -34,7 +34,7 @@
           <p>{{ tr("Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo.") }}</p>
           {% if fix_pack_unlocked %}<a class="btn" href="{{ base ~ 'fix-pack.zip?' ~ ({'crawl': timestamp}|urlencode) }}">{{ tr("Archive de corrections ZIP") }}</a>
           {% else %}<a class="btn" href="{{ billing_url }}">{{ tr("Archive de corrections · Solo+") }}</a>{% endif %}
-          <a class="report-exports-help" href="{{ doc_path('fix-pack-sans-depot') }}">{{ tr("Voir les instructions") }}</a>
+          <a class="report-exports-help" href="{{ help_link(request, doc_path('fix-pack-sans-depot')) }}">{{ tr("Voir les instructions") }}</a>
         </div>
       {% endif %}
       {% if source_path %}

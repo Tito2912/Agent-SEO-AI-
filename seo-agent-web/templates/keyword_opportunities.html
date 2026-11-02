@@ -10,7 +10,7 @@
     <h1>{{ tr("Mots-clés") }}</h1>
     <p class="muted">
       {{ project.site_name }} · Google Search Console · {{ tr("période demandée : {n} jours", n=days) }}
-      <a href="/docs/opportunites-de-mots-cles" class="muted small" style="margin-left:8px;" title="{{ tr("Documentation") }}">{{ tr("Aide") }}</a>
+      <a href="{{ help_link(request, doc_path('opportunites-de-mots-cles')) }}" class="muted small" style="margin-left:8px;" title="{{ tr("Documentation") }}">{{ tr("Aide") }}</a>
     </p>
   </div>
 
