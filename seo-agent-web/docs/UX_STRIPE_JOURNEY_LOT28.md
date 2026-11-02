@@ -51,10 +51,29 @@ Recette Chromium réelle sur la copie locale, code applicatif `25d94e2` :
 | Paiement de la carte de test officielle | Checkout `complete` / `paid`, retour sur Abonnement anglais, formule Solo et quotas de 3 sites, 20 000 pages, 100 corrections et 400 messages. Aucun montant réel prélevé. |
 | Carte de test refusée pour fonds insuffisants | Erreur française explicite, session ouverte et impayée, retour Abonnement ; formule Free et quotas gratuits conservés. |
 | Événements signés relayés par Stripe CLI | `invoice.paid`, `checkout.session.completed`, `customer.subscription.created`, puis `customer.subscription.updated` reçus ; réponses HTTP 200. Le plan passe à Solo. |
-| Abonnement et portail FR/EN | Huit rendus de chaque écran à 1 440, 768, 390 et 360 px, aucun débordement ; HTML du portail `fr-FR` / `en-US`. Deux retours vers Noyaru préservent la langue. |
-| Résiliation directe FR/EN | Écran de confirmation et date de fin dans la langue choisie, à 1 440 et 390 px. Aucun changement avant confirmation. |
+| Abonnement Noyaru FR/EN | Huit rendus à 1 440, 768, 390 et 360 px, aucun débordement. Deux retours du portail vers Noyaru préservent la langue. |
+| Portail et résiliation FR/EN | HTML `fr-FR` / `en-US`, date et confirmation dans la langue choisie. Aucun changement avant confirmation. La relecture visuelle repère une limite du portail pendant un redimensionnement, détaillée ci-dessous. |
 | Confirmation de résiliation de test | Annulation programmée au 2 décembre ; Noyaru affiche « Cancellation recorded » et « Subscription ends », conserve Solo et ses quotas jusque-là. |
 | Nettoyage de l'abonnement fictif | Suppression explicite via API Stripe de test, événement signé `customer.subscription.deleted` accepté ; Noyaru revient à Free (1 site, 800 pages, 2 corrections). L'ancien abonnement reste visible comme annulé. Ce nettoyage ne simule pas l'horloge d'expiration. |
+
+### Contrôle complémentaire de l'affichage du portail
+
+La première mesure de `document.scrollWidth` ne révélait aucun débordement, mais
+les captures du portail déjà ouvert à 1 440 px puis réduit à 390 px montrent du
+contenu tronqué. L'absence de défilement horizontal ne suffit donc pas à déclarer
+ce cas conforme. Ce comportement concerne l'écran hébergé par Stripe ; le
+correctif de langue ne modifie pas sa mise en page. Point P2 à conserver pour la
+recette de redimensionnement du fournisseur.
+
+Un contrôle indépendant est ensuite exécuté avec un abonnement fictif de test,
+la taille fixée **avant** chaque navigation : huit entrées dans le portail FR/EN
+à 1 440, 768, 390 et 360 px, puis quatre entrées dans sa confirmation de
+résiliation à 390 et 360 px. **12 rendus réussis**, toutes les actions visibles
+dans la largeur de l'écran, captures mobiles relues visuellement. Le contenu
+chargé et son tarif sont attendus explicitement avant mesure. Ces observations
+complémentaires concernent Stripe seul ; les retours et droits Noyaru sont
+attestés par la première recette complète ci-dessus. Les ressources fictives et
+clés temporaires des contrôles sont nettoyées après chaque essai.
 
 Les preuves sans clés ni URLs de session sont conservées dans le dossier de
 recette local. La CI complète et la revue du commit final sont consignées dans
