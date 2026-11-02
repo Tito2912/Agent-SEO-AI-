@@ -5470,6 +5470,11 @@ def _verify_corrections_after_crawl(
                 baseline = _baseline_report(str(t.crawl_ts or ""))
                 scope = {_verification_url(u) for u in note_obj.get("verification_urls", [])
                          if isinstance(u, str)} - {""}
+                # Les pages que la PR a declare ne pas toucher (`_pages_non_traitees`) ne la
+                # jugent pas : ni pour dire « encore present », ni pour exiger leur visite.
+                exclues = {_verification_url(u) for u in note_obj.get("verification_excluded", [])
+                           if isinstance(u, str)} - {""}
+                scope -= exclues
                 if not scope and whole_family and runs_dir is not None and t.crawl_ts:
                     try:
                         old_issues = baseline.get("issues", {}) if isinstance(baseline, dict) else {}
@@ -5480,7 +5485,15 @@ def _verify_corrections_after_crawl(
                 url = _verification_url(str(t.url or ""))
                 if not scope and url:
                     scope = {url}
-                still_present = bool(positive) if whole_family or not scope else bool(flagged & scope)
+                # Toute la famille, sauf les pages exclues. S'il n'en reste que d'exclues mais que
+                # le rapport ne liste pas TOUTES les occurrences, ce n'est pas « encore present »
+                # (muet sur une tache en cours) : la regle des exemples ci-dessous dit « non
+                # verifiable », avec sa raison.
+                exemples_complets = all(int(issues[k].get("count") or 0) == len(_impacted_norm(k)) for k in positive)
+                if whole_family and exclues:
+                    still_present = bool(flagged - exclues)
+                else:
+                    still_present = bool(positive) if whole_family or not scope else bool(flagged & scope)
                 reason = ""
                 before, after = _time(str(t.crawl_ts or "")), _time(crawl_ts)
                 expected = max(int(note_obj.get("verification_expected_count") or note_obj.get("pages") or 0),
@@ -5513,10 +5526,10 @@ def _verify_corrections_after_crawl(
                     reason = "Une page est noindex ; la disparition peut masquer le défaut."
                 elif not scope or not scope <= observed:
                     reason = "Certaines URL du correctif n'ont pas été revisitées avec succès."
-                elif whole_family and expected > len(scope):
+                elif whole_family and expected > len(scope | exclues):
                     reason = "Le périmètre complet de cet ancien correctif est inconnu."
-                elif positive and not (note_obj.get("first_correction") and not whole_family and scope
-                                       and all(int(issues[k].get("count") or 0) == len(_impacted_norm(k)) for k in positive)):
+                elif positive and not (((note_obj.get("first_correction") and not whole_family and scope)
+                                        or (whole_family and exclues)) and exemples_complets):
                     # Examples are capped: an absent URL is not proof when occurrences remain.
                     reason = "Des occurrences subsistent ; les exemples ne prouvent pas leur périmètre."
                 elif meta.get("stopped_on_time_budget") or (meta.get("blocked_by_host") or {}).get("count"):
@@ -19868,6 +19881,28 @@ class _ReviewFixBody(BaseModel):
     review_only: bool = False
 
 
+def _pages_non_traitees(impacted: list[str], index: dict[str, Any] | None, all_paths: list[str],
+                        non_traites: list[str]) -> list[str]:
+    """Les pages signalees dont TOUS les fichiers ont ete ecartes ou refuses par cette PR.
+
+    Elles ne la jugent pas a la verification. 19/10/2026, creativeai-tools PR #3 : huit pages
+    corrigees, `/fr/tools/` refusee et annoncee « non corrigee » dans la PR — et la tache est
+    restee « en cours » sans reçu, parce qu'une correction en lot vise toute la famille et que
+    cette page-la la gardait vivante. Une page dont on ne connait aucun fichier (gabarit
+    partage, carte muette) reste dans le perimetre : rien ne prouve que la PR ne l'a pas touchee.
+    """
+    ecartes = set(non_traites or [])
+    if not ecartes:
+        return []
+    connus = set(all_paths or [])
+    exclues: list[str] = []
+    for url in impacted or []:
+        fichiers = {f for f in repo_index.route_files(index or {}, url) if f in connus}
+        if fichiers and fichiers <= ecartes:
+            exclues.append(url)
+    return exclues
+
+
 @app.post("/api/projects/{slug}/github/bulk-fix")
 @_correction_operation
 def api_github_bulk_fix(request: Request, slug: str, body: _ReviewFixBody | None = None) -> JSONResponse:
@@ -20015,6 +20050,7 @@ def api_github_bulk_fix(request: Request, slug: str, body: _ReviewFixBody | None
         results.append({
             **result, "ok": bool(patched), "files": patched,
             "verification_urls": impacted,
+            "verification_excluded": _pages_non_traitees(impacted, idx, all_paths, applied["skipped"] + ecartes),
             "verification_expected_count": _verification_scope_count(issue_key, report_issues),
             "skipped": applied["skipped"],
             "not_attempted_files": ecartes, "config_fixed": applied["config_notes"],
@@ -20047,6 +20083,7 @@ def api_github_bulk_fix(request: Request, slug: str, body: _ReviewFixBody | None
         tasks=[{"issue_key": r["issue_key"], "issue_label": r["issue_label"], "url": r["url"], "crawl_ts": ts,
                 "note": {"bulk": True, "deep": True, "files": r.get("files", []),
                          "verification_urls": r.get("verification_urls", []),
+                         "verification_excluded": r.get("verification_excluded", []),
                          "verification_expected_count": r.get("verification_expected_count", 0),
                          "partial": r.get("partial", False)}} for r in fixed_results])
     try:
@@ -20087,6 +20124,7 @@ def api_github_bulk_fix(request: Request, slug: str, body: _ReviewFixBody | None
             _extra, _trace_verif = (_trace_verif or {}), None
             _note = json.dumps({**pr_note_base, **_extra, "files": r.get("files", []),
                                "verification_urls": r.get("verification_urls", []),
+                               "verification_excluded": r.get("verification_excluded", []),
                                "verification_expected_count": r.get("verification_expected_count", 0),
                                "partial": r.get("partial", False)}, ensure_ascii=False)
             _meta = dash.issue_meta(r["issue_key"])
@@ -31376,7 +31414,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     correction_journal.pr_intent(owner=owner, repo=repo_name, base=branch, billable=len(_ai_files), motif=issue_key,
         tasks=[{"issue_key": issue_key, "issue_label": issue_label, "url": primary_url, "crawl_ts": ts,
                 "note": {"deep": True, "files": all_changed, "pages": len(impacted),
-                         "verification_urls": impacted, "verification_expected_count": _verification_scope_count(issue_key, issues),
+                         "verification_urls": impacted,
+                         "verification_excluded": _pages_non_traitees(impacted, idx, all_paths, skipped + _ecartes),
+                         "verification_expected_count": _verification_scope_count(issue_key, issues),
                          "config": bool(config_changes)}}])
     try:
         pr_data = _ouvrir_pull_request(
@@ -31403,7 +31443,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
                                 pr_data, fusion_auto=_fusion_auto,
                                 **({"controle_sitemap": _controle} if _controle else {})),
                             "pr_title": pr_title,
-                            "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": all_changed, "deep": True, "pages": len(impacted), "verification_urls": impacted, "verification_expected_count": _verification_scope_count(issue_key, issues), "config": bool(config_changes)}, ensure_ascii=False)
+                            "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": all_changed, "deep": True, "pages": len(impacted), "verification_urls": impacted, "verification_excluded": _pages_non_traitees(impacted, idx, all_paths, skipped + _ecartes), "verification_expected_count": _verification_scope_count(issue_key, issues), "config": bool(config_changes)}, ensure_ascii=False)
         with DB.session() as _db:
             _ex = _db.scalar(select(IssueTask).where(IssueTask.project_id == proj.id, IssueTask.issue_key == issue_key, IssueTask.url == primary_url))
             if _ex:

@@ -1702,9 +1702,12 @@ def project_overview(runs_dir: Path, slug: str, timestamp: str | None, compare_t
         # n'a rien vu, et chaque anomalie passait pour nouvelle (« +17 », 13/10/2026, domaine
         # suspendu d'un client). On remonte au dernier crawl qui a vu le site. Un choix explicite
         # de l'utilisateur (`compare_to`), lui, est respecte tel quel.
+        # Ni un crawl SANS rapport (19/10/2026, creativeai-tools : un crawl coupe par un
+        # redeploiement est devenu la reference, et toute la colonne Evolution affichait « - »).
         idx = crawls.index(current_ts)
         for candidat in reversed(crawls[:idx]):
-            if site_injoignable(load_report_json(runs_dir, slug, candidat)):
+            rapport = load_report_json(runs_dir, slug, candidat)
+            if not rapport or site_injoignable(rapport):
                 continue
             compare_ts = candidat
             break
