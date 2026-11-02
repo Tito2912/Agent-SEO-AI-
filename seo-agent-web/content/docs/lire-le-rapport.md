@@ -28,7 +28,7 @@ Les scores résument l'état du site par famille : indexabilité, balises, conte
 interne, performance. Ils servent à **une** chose : repérer d'un coup d'œil la famille qui
 s'effondre.
 
-![Vue d'ensemble d'un projet : score de santé, erreurs, avertissements, infos, pages crawlées et URL totales](/static/captures/resume-projet.webp "Le score de santé et les compteurs, en tête de la vue d'ensemble.")
+![Vue d'ensemble d'un projet : score de santé, pages analysées, erreurs et avertissements](/static/captures/resume-projet.webp "Le score de santé et les compteurs, en tête de la vue d'ensemble.")
 
 Ne les prenez pas pour une note Google. Aucun moteur ne calcule ce chiffre, et un site à 92
 peut être invisible pendant qu'un site à 61 se porte très bien. Le score est un thermomètre
@@ -69,7 +69,7 @@ page tarifs passe avant une erreur sur une page d'archive de 2019.
 
 C'est la vue la plus utile du produit, et la plus ignorée.
 
-![Histogramme de l'évolution du score de santé, un barreau par crawl avec sa date et sa durée](/static/captures/evolution-du-score.webp "L'évolution du score, un barreau par crawl.")
+![Courbe de l'évolution du score de santé, un point par analyse](/static/captures/evolution-du-score.webp "L'évolution du score, un point par analyse.")
 
 Sélectionnez un crawl de référence : la vue d'ensemble affiche alors les **deltas** —
 anomalies apparues, anomalies résolues, pages gagnées ou perdues, évolution par famille.

@@ -145,10 +145,10 @@ section[id] { scroll-margin-top: 112px; }
 
     <div class="hero-apercu">
       <p class="h-kicker">{{ tr("Ce que vous obtenez") }}</p>
-      {{ capture("anomalies", tr("Extrait d'un audit réel : 17 titres trop longs, 9 descriptions trop longues et des redirections, classés par gravité"),
+      {{ capture("anomalies", tr("Extrait d'un audit réel : une image cassée, une page 404, des liens cassés et 10 méta-descriptions trop courtes, classés par gravité"),
                  tr("Une liste des problèmes détectés, de leur gravité et du nombre de pages concernées."), chargement="eager") }}
-      <p class="hero-resultat">{{ tr("Dans cet exemple, 17 pages ont un titre trop long : vous savez quels titres examiner avant de préparer les corrections.") }}</p>
-      <a href="/static/captures/anomalies.webp">{{ tr("Ouvrir la capture en grand") }}</a>
+      <p class="hero-resultat">{{ tr("Dans cet exemple, 10 pages ont une méta-description trop courte : vous savez quelles descriptions revoir avant de préparer les corrections.") }}</p>
+      <a href="/static/captures/{{ capture_localisee('anomalies', current_lang()) }}.webp">{{ tr("Ouvrir la capture en grand") }}</a>
     </div>
   </section>
 
@@ -178,8 +178,8 @@ section[id] { scroll-margin-top: 112px; }
   </section>
 
   <section class="apercu" aria-label="{{ tr("Aperçu de l'application") }}">
-    {{ capture("apercu-projet", tr("Vue d'ensemble d'un projet dans {app_name} : score de santé, anomalies par gravité, historique des crawls et répartition des URL", app_name=app_name),
-               tr("Un vrai projet : prosperfactory.com, 112 pages analysées lors du dernier crawl."), chargement="eager") }}
+    {{ capture("apercu-projet", tr("Vue d'ensemble d'un projet dans {app_name} : score de santé, prochaine étape, pages analysées, erreurs et avertissements", app_name=app_name),
+               tr("Un vrai projet : creativeai-tools.com, 87 pages analysées lors du dernier crawl."), chargement="eager") }}
   </section>
 
   <section class="h-section" id="fonctionnement">
@@ -265,7 +265,7 @@ section[id] { scroll-margin-top: 112px; }
           <h3>{{ tr("Voyez la correction avant de l'envoyer") }}</h3>
           <p>{{ tr("Sur un dépôt compatible, ouvrez l'aperçu du changement proposé, puis créez une pull request à relire. L'écran ci-contre montre les commandes disponibles dans l'application.") }}</p>
         </div>
-        {{ capture("accueil-corrections", tr("Accélérateur de correction : anomalies candidates avec leurs boutons Voir, Aperçu IA et Créer PR")) }}
+        {{ capture("accueil-corrections", tr("Anomalies encore détectées : chaque anomalie avec ses boutons Voir les instructions, Aperçu IA et Créer une proposition GitHub")) }}
       </div>
       <div class="ecran">
         <div class="ecran-texte">

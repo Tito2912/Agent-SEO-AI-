@@ -53,7 +53,7 @@ vérifiée est une correction dont vous ne savez rien.
 
 Un crawl isolé donne une photo. Une série donne trois choses qu'aucune photo ne contient :
 
-![Histogramme du score de santé d'un site, un barreau par crawl](/static/captures/evolution-du-score.webp "Un historique régulier : un barreau par crawl.")
+![Courbe du score de santé d'un site, un point par analyse](/static/captures/evolution-du-score.webp "Un historique régulier : un point par crawl.")
 
 **Le sens de la marche.** Le nombre d'anomalies baisse-t-il ou monte-t-il ? Sur un site vivant,
 stable veut dire que vous corrigez au rythme où vous cassez.

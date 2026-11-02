@@ -27,7 +27,7 @@ surveille. Il n'obtient pas de liens à votre place, parce que personne ne le pe
 
 Page **Liens entrants** d’un projet. Le bloc « Liens vers votre site » présente les sources importées ; le bloc « Liens dans les pages analysées » présente les liens internes et sortants de l’analyse sélectionnée. Deux façons de la remplir :
 
-![Bloc Netlinking du crawl : pages analysées, pages orphelines et domaines externes](/static/captures/netlinking.webp "Ce que le crawl dit déjà de vos liens : pages analysées, pages orphelines, domaines externes.")
+![Bloc Liens dans les pages analysées : pages analysées, pages orphelines et domaines externes](/static/captures/netlinking.webp "Ce que le crawl dit déjà de vos liens : pages analysées, pages orphelines, domaines externes.")
 
 **Import CSV** — depuis n'importe quel outil qui exporte un profil de liens. C'est la voie
 universelle, et elle ne demande aucun abonnement.

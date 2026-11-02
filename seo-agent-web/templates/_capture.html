@@ -1,6 +1,8 @@
 {# Une capture d'ecran de l'application (30/09/2026), prise sur un vrai projet. Dimensions lues
-   dans le fichier : aucun decalage au chargement. Texte alternatif obligatoire, legende facultative. #}
+   dans le fichier : aucun decalage au chargement. Texte alternatif obligatoire, legende facultative.
+   En anglais, la capture prise dans l'interface anglaise (static/captures/en/, 02/11/2026). #}
 {% macro capture(nom, alt, legende="", chargement="lazy", classe="") -%}
+{%- set nom = capture_localisee(nom, current_lang()) -%}
 {%- set dims = dimensions_capture(nom) -%}
 <figure class="capture{% if classe %} {{ classe }}{% endif %}">
   <img src="/static/captures/{{ nom }}.webp" alt="{{ alt }}" width="{{ dims[0] }}" height="{{ dims[1] }}" loading="{{ chargement }}" decoding="async" />

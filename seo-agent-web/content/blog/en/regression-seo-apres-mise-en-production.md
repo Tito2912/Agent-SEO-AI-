@@ -64,7 +64,7 @@ And the traffic lost in the meantime is gone for good.
 
 The principle fits in one sentence: **compare two states, don't just look at one**.
 
-![Bar chart of a site's health score, one bar per crawl](/static/captures/evolution-du-score.webp "A site's score, crawl after crawl: each bar is one crawl.")
+![Line chart of a site's health score, one point per analysis](/static/captures/evolution-du-score.webp "A site's score, crawl after crawl: each point is one crawl.")
 
 The crawl before is the baseline. The crawl after reveals the gap. Without a baseline, a
 post-deployment crawl doesn't tell you what changed — only what exists, which proves nothing.

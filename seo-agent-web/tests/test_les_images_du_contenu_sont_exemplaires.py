@@ -64,6 +64,10 @@ def test_toutes_les_captures_publiees_sont_UTILISEES_et_toutes_les_utilisees_EXI
     assert captures, "le témoin : il y a des captures"
     assert not captures - utilisees, "captures inutilisées : %s" % sorted(captures - utilisees)
     assert not utilisees - captures, "captures absentes : %s" % sorted(utilisees - captures)
+    # Les pages anglaises écrivent l'adresse française : leur capture, `en/<nom>.webp`, n'a pas
+    # d'autre usage que sa jumelle française (test_les_captures_anglaises.py).
+    anglaises = {p.stem for p in (cl.STATIC_DIR / "captures" / "en").glob("*.webp")}
+    assert anglaises == captures, "sans jumelle : %s" % sorted(anglaises ^ captures)
 
 
 def test_les_captures_de_l_ACCUEIL_declarent_leurs_vraies_dimensions() -> None:

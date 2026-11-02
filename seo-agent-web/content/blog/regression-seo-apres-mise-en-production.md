@@ -65,7 +65,7 @@ Et le trafic perdu entre-temps ne se rattrape pas.
 
 Le principe tient en une phrase : **comparer deux états, pas regarder un état**.
 
-![Histogramme du score de santé d'un site, un barreau par crawl](/static/captures/evolution-du-score.webp "Le score d'un site, crawl après crawl : chaque barreau est un crawl.")
+![Courbe du score de santé d'un site, un point par analyse](/static/captures/evolution-du-score.webp "Le score d'un site, crawl après crawl : chaque point est un crawl.")
 
 Le crawl d'avant est la référence. Le crawl d'après révèle l'écart. Sans référence, un crawl
 post-déploiement ne vous dit pas ce qui a changé — seulement ce qui existe, ce qui ne prouve

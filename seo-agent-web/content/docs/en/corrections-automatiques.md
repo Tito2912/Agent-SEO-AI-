@@ -32,7 +32,7 @@ Prerequisite: a [GitHub repository connected](/docs/connecter-github) to the pro
 The button depends on what you want to fix. All three exist because no two situations
 are alike.
 
-![Fixes screen: candidate issues, with View, AI preview and Create PR buttons](/static/captures/accueil-corrections.webp "The candidate issues, each with its preview and its pull request.")
+![Fixes screen, Issues still detected block: each issue with its View instructions, AI preview and Create a GitHub proposal buttons](/static/captures/accueil-corrections.webp "The issues still detected, each with its preview and its GitHub proposal.")
 
 ### A single occurrence
 

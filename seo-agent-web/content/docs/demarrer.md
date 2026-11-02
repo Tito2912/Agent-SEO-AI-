@@ -28,7 +28,7 @@ celles qui sont faites.
 ## Les trois étapes indispensables
 
 
-![Vue d'ensemble d'un projet après son premier crawl : score de santé, anomalies par gravité, pages crawlées](/static/captures/resume-projet.webp "Ce que vous verrez après le premier crawl : la vue d'ensemble du projet.")
+![Vue d'ensemble d'un projet : score de santé, prochaine étape, pages analysées, erreurs et avertissements](/static/captures/resume-projet.webp "Ce que vous verrez après le premier crawl : la vue d'ensemble du projet.")
 ### 1. Ajouter le site à auditer
 
 Depuis le tableau de bord, bouton **Ajouter un site**. Une URL de départ suffit —

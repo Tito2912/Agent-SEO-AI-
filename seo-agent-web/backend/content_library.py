@@ -136,7 +136,18 @@ def dimensions_capture(nom: str) -> tuple[int, int]:
         return image.size
 
 
-def _figures(html_text: str, *, source: Path) -> str:
+def capture_localisee(nom: str, lang: str = "fr") -> str:
+    """La capture `nom` prise dans l'interface de `lang` : `static/captures/<lang>/<nom>.webp`
+    (02/11/2026, captures anglaises), ou la française si cette langue n'en a pas."""
+    if lang and lang != "fr" and (STATIC_DIR / "captures" / lang / (nom + ".webp")).is_file():
+        return f"{lang}/{nom}"
+    return nom
+
+
+_CAPTURE_SRC_RE = re.compile(r"^/static/captures/([a-z0-9-]+)\.webp$")
+
+
+def _figures(html_text: str, *, source: Path, lang: str = "fr") -> str:
     """Chaque image devient une figure complète (30/09/2026, captures d'écran des pages).
 
     Un produit qui vend du SEO doit être exemplaire sur ses propres pages : dimensions déclarées
@@ -150,6 +161,11 @@ def _figures(html_text: str, *, source: Path) -> str:
         src, alt, legende = attrs.get("src", ""), attrs.get("alt", "").strip(), attrs.get("title", "").strip()
         if not alt:
             raise ContentError(f"{source.name}: image {src!r} sans texte alternatif")
+        # Une page traduite garde l'adresse française de la capture, comme pour ses liens : le
+        # chargement lui donne la capture prise dans sa langue.
+        capture = _CAPTURE_SRC_RE.match(src)
+        if capture:
+            src = "/static/captures/%s.webp" % capture_localisee(capture.group(1), lang)
         if not src.startswith("/static/"):
             raise ContentError(f"{source.name}: image {src!r} hors de /static/")
         fichier = (STATIC_DIR / src[len("/static/"):]).resolve()
@@ -218,7 +234,7 @@ def _load_page(path: Path, *, collection: str, lang: str = "fr") -> dict[str, An
         raise ContentError(f"{path.name}: 'updated_at' must be YYYY-MM-DD, got {updated_at!r}")
 
     md = _markdown_instance()
-    body_html = _figures(_wrap_tables(md.convert(body)), source=path)
+    body_html = _figures(_wrap_tables(md.convert(body)), source=path, lang=lang)
     headings = [
         {"id": _clean_str(token.get("id")), "title": _clean_str(token.get("name")), "level": 2}
         for token in (getattr(md, "toc_tokens", None) or [])

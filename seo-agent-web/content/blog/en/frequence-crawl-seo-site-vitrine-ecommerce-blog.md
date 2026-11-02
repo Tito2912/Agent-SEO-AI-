@@ -53,7 +53,7 @@ fix is a fix you know nothing about.
 
 A single crawl gives you a snapshot. A series gives you three things no snapshot contains:
 
-![Bar chart of a site's health score, one bar per crawl](/static/captures/evolution-du-score.webp "A regular history: one bar per crawl.")
+![Line chart of a site's health score, one point per analysis](/static/captures/evolution-du-score.webp "A regular history: one point per crawl.")
 
 **The direction of travel.** Is the number of issues going down or up? On a living site,
 stable means you're fixing things as fast as you're breaking them.

@@ -28,7 +28,7 @@ The scores summarize the site's state by family: indexability, tags, content, in
 linking, performance. They serve **one** purpose: spotting at a glance the family that
 is collapsing.
 
-![Project overview: health score, errors, warnings, notices, crawled pages and total URLs](/static/captures/resume-projet.webp "The health score and the counters, at the top of the overview.")
+![Project overview: health score, analyzed pages, errors and warnings](/static/captures/resume-projet.webp "The health score and the counters, at the top of the overview.")
 
 Don't mistake them for a Google rating. No search engine calculates this number, and a site at 92
 can be invisible while a site at 61 is doing very well. The score is an internal thermometer,
@@ -69,7 +69,7 @@ pricing page comes before an error on a 2019 archive page.
 
 This is the most useful view in the product, and the most overlooked.
 
-![Bar chart of the health score over time, one bar per crawl with its date and duration](/static/captures/evolution-du-score.webp "The score's evolution, one bar per crawl.")
+![Line chart of the health score over time, one point per analysis](/static/captures/evolution-du-score.webp "The score's evolution, one point per analysis.")
 
 Select a baseline crawl: the overview then shows the **deltas** —
 new issues, resolved issues, pages gained or lost, change by family.

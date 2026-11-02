@@ -27,7 +27,7 @@ monitors. It doesn't get links for you, because no one can.
 
 A project's **Backlinks** page. The “Links to your site” block shows the imported sources; the “Links in the analyzed pages” block shows the internal and outgoing links from the selected analysis. Two ways to fill it:
 
-![Link building block from the crawl: analyzed pages, orphan pages and external domains](/static/captures/netlinking.webp "What the crawl already tells you about your links: analyzed pages, orphan pages, external domains.")
+![Links in the analyzed pages block: analyzed pages, orphan pages and external domains](/static/captures/netlinking.webp "What the crawl already tells you about your links: analyzed pages, orphan pages, external domains.")
 
 **CSV import** — from any tool that exports a link profile. It's the universal
 route, and it requires no subscription.

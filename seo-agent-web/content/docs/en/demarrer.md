@@ -28,7 +28,7 @@ the ones you have completed.
 ## The three essential steps
 
 
-![Overview of a project after its first crawl: health score, issues by severity, crawled pages](/static/captures/resume-projet.webp "What you will see after the first crawl: the project overview.")
+![Project overview: health score, next step, analyzed pages, errors and warnings](/static/captures/resume-projet.webp "What you will see after the first crawl: the project overview.")
 ### 1. Add the site to audit
 
 From the dashboard, click the **Add a site** button. A start URL is enough —

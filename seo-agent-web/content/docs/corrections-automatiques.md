@@ -32,7 +32,7 @@ Prérequis : un [dépôt GitHub connecté](/docs/connecter-github) au projet.
 Le bouton dépend de ce que vous voulez corriger. Les trois existent parce que les situations
 ne se ressemblent pas.
 
-![Écran des corrections : anomalies candidates, boutons Voir, Aperçu IA et Créer PR](/static/captures/accueil-corrections.webp "Les anomalies candidates, chacune avec son aperçu et sa pull request.")
+![Écran Corrections, bloc Anomalies encore détectées : chaque anomalie avec ses boutons Voir les instructions, Aperçu IA et Créer une proposition GitHub](/static/captures/accueil-corrections.webp "Les anomalies encore détectées, chacune avec son aperçu et sa proposition GitHub.")
 
 ### Une occurrence
 
