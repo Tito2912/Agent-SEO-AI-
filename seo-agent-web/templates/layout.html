@@ -58,7 +58,7 @@
 
           {% if project and project.slug %}
             {% set project_path = '/projects/' ~ project.slug %}
-            {% set correction_path = request.url.path == project_path ~ '/first-correction' or request.url.path.startswith(project_path ~ '/corrections') or request.url.path.startswith(project_path ~ '/cms/wordpress/') %}
+            {% set correction_path = request.url.path == project_path ~ '/first-correction' or request.url.path.startswith(project_path ~ '/corrections') or request.url.path.startswith(project_path ~ '/cms/') %}
             {% set report_params = request.query_params if request.url.query else {} %}
             {% set report_query = '?crawl=' ~ (report_params.get('crawl') | urlencode) if report_params.get('crawl') else '' %}
             {% if report_params.get('compare') %}{% set report_query = report_query ~ ('&compare=' if report_query else '?compare=') ~ (report_params.get('compare') | urlencode) %}{% endif %}

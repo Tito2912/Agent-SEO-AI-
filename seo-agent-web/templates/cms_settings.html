@@ -13,31 +13,24 @@
       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
       <label>{{ tr("Plateforme") }}<select name="platform" id="cms-platform">{% for key, label in platforms.items() %}<option value="{{ key }}" {% if site.platform == key %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></label>
       <label id="cms-plugin">{{ tr("Extension SEO WordPress") }}<select name="seo_plugin">{% for key, label in seo_plugins.items() %}<option value="{{ key }}" {% if site.seo_plugin == key %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></label>
-      {% if wordpress.connected %}<p class="muted small">{{ tr("Choisir une autre plateforme ou une autre extension SEO retire la connexion WordPress de ce projet.") }}</p>{% endif %}
+      {% for carte in connecteurs if carte.etat.connected %}<p class="muted small">{% if carte.cx.nom == 'wordpress' %}{{ tr("Choisir une autre plateforme ou une autre extension SEO retire la connexion WordPress de ce projet.") }}{% else %}{{ tr("Choisir une autre plateforme retire la connexion {cms} de ce projet.", cms=carte.cx.libelle) }}{% endif %}</p>{% endfor %}
       <button class="btn" type="submit">{{ tr("Enregistrer ma plateforme") }}</button>
     </form>
   </section>
-  <section class="card">
-    <div class="cms-heading"><h2>WordPress + Yoast SEO</h2><span class="badge {% if wordpress.connected %}ok{% endif %}">{% if wordpress.connected %}{{ tr("Connecté") }}{% else %}{{ tr("Disponible en pilote") }}{% endif %}</span></div>
+  {% for carte in connecteurs %}{% set cx = carte.cx %}{% set etat = carte.etat %}
+  <section class="card" id="cms-{{ cx.nom }}">
+    <div class="cms-heading"><h2>{{ cx.libelle_complet }}</h2><span class="badge {% if etat.connected %}ok{% endif %}">{% if etat.connected %}{{ tr("Connecté") }}{% else %}{{ tr("Disponible en pilote") }}{% endif %}</span></div>
     <p>{{ tr("Appliquez un titre SEO ou une méta-description sur une page ou un article publié, après avoir validé l’aperçu.") }}</p>
-    {% if wordpress.connected %}
-      <p class="muted">{{ tr("Compte : {account}. Noyaru revérifie l’accès lors de chaque opération.", account=wordpress.label) }}</p>
+    {% if etat.connected %}
+      <p class="muted">{{ tr("Compte : {account}. Noyaru revérifie l’accès lors de chaque opération.", account=etat.label) }}</p>
       <div class="cms-actions"><a class="btn primary" href="/projects/{{ slug }}/first-correction">{{ tr("Choisir une correction") }}</a>
-      <form method="post" action="/projects/{{ slug }}/cms/wordpress/disconnect"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn" type="submit">{{ tr("Déconnecter WordPress") }}</button></form></div>
+      <form method="post" action="/projects/{{ slug }}/cms/{{ cx.nom }}/disconnect"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn" type="submit">{{ tr("Déconnecter {cms}", cms=cx.libelle) }}</button></form></div>
     {% else %}
-      <p class="muted small">{{ tr("WordPress 6.9 minimum, Yoast SEO 28.7 minimum, données SEO optimisées et compte autorisé à modifier les métadonnées Yoast. La disponibilité est vérifiée à la connexion.") }}</p>
-      <details class="cms-help"><summary>{{ tr("Où trouver le mot de passe d’application ?") }}</summary><p>{{ tr("Dans WordPress, ouvrez Utilisateurs → Profil → Mots de passe d’application. Créez un accès nommé « Noyaru », puis copiez le mot de passe affiché. Utilisez cet accès dédié ici.") }}</p><a href="https://wordpress.org/documentation/article/users-your-profile-screen/#application-passwords" target="_blank" rel="noreferrer">{{ tr("Aide WordPress") }}</a></details>
-      <form method="post" action="/projects/{{ slug }}/cms/wordpress/connect" class="cms-form">
-        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-        <label>{{ tr("Adresse HTTPS de WordPress") }}<input type="url" name="site_url" placeholder="{{ tr('https://monsite.fr') }}" required autocomplete="url" /><span class="muted small">{{ tr("Même domaine que {url}. Ajoutez le sous-dossier si WordPress y est installé.", url=project.base_url) }}</span></label>
-        <label>{{ tr("Identifiant WordPress") }}<input name="username" required maxlength="200" autocomplete="off" /></label>
-        <label>{{ tr("Mot de passe d’application") }}<input type="password" name="password" required maxlength="200" autocomplete="new-password" /></label>
-        <button class="btn primary" type="submit">{{ tr("Vérifier et connecter WordPress") }}</button>
-        <p class="muted small">{{ tr("La connexion vérifie l’accès. Chaque correction demande ensuite votre validation.") }}</p>
-      </form>
+      {% include "cms_connexion_" ~ cx.nom ~ ".html" %}
     {% endif %}
   </section>
-  {% if history %}<section class="card"><h2>{{ tr("Vos dernières opérations WordPress") }}</h2><ul class="cms-history">{% for change in history %}<li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ change.id }}">{{ change.data.url }}</a><span class="muted small">{{ tr({'preview':'Aperçu à valider','applied':'Enregistrée','restored':'Valeur rétablie'}.get(change.state,'À confirmer')) }}</span></li>{% endfor %}</ul></section>{% endif %}
+  {% endfor %}
+  {% if history %}<section class="card"><h2>{% if connecteurs | length == 1 %}{{ tr("Vos dernières opérations {cms}", cms=connecteurs[0].cx.libelle) }}{% else %}{{ tr("Vos dernières opérations") }}{% endif %}</h2><ul class="cms-history">{% for change in history %}<li><a href="/projects/{{ slug }}/cms/{{ change.data.cms or 'wordpress' }}/changes/{{ change.id }}">{{ change.data.url }}</a><span class="muted small">{{ tr({'preview':'Aperçu à valider','applied':'Enregistrée','restored':'Valeur rétablie'}.get(change.state,'À confirmer')) }}</span></li>{% endfor %}</ul></section>{% endif %}
   <section class="card"><h2>{{ tr("Autres plateformes") }}</h2><p class="muted">{{ tr("Les instructions guidées sont disponibles pour Shopify, Webflow, Wix et WordPress avec Rank Math. Vous effectuez la modification dans votre plateforme, puis Noyaru contrôle le résultat après une nouvelle analyse.") }}</p><a class="btn" href="/projects/{{ slug }}/first-correction">{{ tr("Reprendre ma correction") }}</a></section>
 </div>
 <script>document.addEventListener('DOMContentLoaded',function(){const select=document.getElementById('cms-platform');const plugin=document.getElementById('cms-plugin');function update(){plugin.hidden=select.value!=='wordpress';}select.addEventListener('change',update);update();});</script>

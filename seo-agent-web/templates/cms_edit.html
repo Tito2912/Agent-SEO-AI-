@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% from "_cms_workflow.html" import steps %}
-{% block title %}{{ tr("Préparer une correction WordPress") }}{% endblock %}
+{% block title %}{{ tr("Préparer une correction {cms}", cms=cx.libelle) }}{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=3" defer></script>{% endblock %}
 {% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">{{ tr("CMS et intégrations") }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Préparer") }}</span>{% endblock %}
 {% block content %}<div class="cms-page">
@@ -11,13 +11,13 @@
     <h2>{{ page.post_title }}</h2><p class="cms-url"><a href="{{ task.url }}" target="_blank" rel="noreferrer">{{ task.url }}</a></p>
     <p class="muted">{{ tr("Valeur actuelle affichée :") }} {{ page[field ~ '_rendered'] or tr('Non renseignée') }}</p>
     {% if can_suggest %}
-      <form method="post" action="/projects/{{ slug }}/cms/wordpress/suggest" class="cms-form" id="cms-suggest">
+      <form method="post" action="/projects/{{ slug }}/cms/{{ cx.nom }}/suggest" class="cms-form" id="cms-suggest">
         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="task_id" value="{{ task.id }}" />
         <button class="btn primary" type="submit" data-busy-label="{{ tr('Rédaction en cours…') }}">{{ tr("Proposer un texte") }}</button>
         <p class="muted small">{{ tr("Noyaru rédige une proposition à partir de cette page, dans la bonne longueur. Elle compte pour une correction IA de votre forfait, et rien n’est modifié sur votre site avant votre validation.") }}</p>
       </form>
     {% endif %}
-    <form method="post" action="/projects/{{ slug }}/cms/wordpress/preview" class="cms-form">
+    <form method="post" action="/projects/{{ slug }}/cms/{{ cx.nom }}/preview" class="cms-form">
       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="task_id" value="{{ task.id }}" />
       {% set initial = draft or page[field] or '' %}
       {% if can_suggest %}<p class="muted small">{{ tr("Ou écrivez-le vous-même :") }}</p>{% endif %}

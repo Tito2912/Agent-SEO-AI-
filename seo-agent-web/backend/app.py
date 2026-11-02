@@ -16532,7 +16532,7 @@ def settings_operations(request: Request, mois: str | None = None) -> HTMLRespon
             "project": None,
             "snapshot": snapshot,
             "couts_ia": _couts_ia_du_mois(periode),
-            "pilote_wordpress": cms_connection_report(),
+            "pilotes_cms": [cms_connection_report(cx=cx) for cx in cms_connecteurs.values()],
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -17063,9 +17063,8 @@ def delete_projects(request: Request, slugs: list[str] = Form(default=[])) -> Re
         )
         deleted_slugs = [str(p.slug or "").strip() for p in rows if str(p.slug or "").strip()]
         for p in rows:
-            cms_connection = db.scalar(select(UserConnection).where(
-                UserConnection.user_id == str(user.id), UserConnection.key == "CMS_WORDPRESS:" + str(p.id)))
-            if cms_connection is not None:
+            for cms_connection in db.scalars(select(UserConnection).where(
+                    UserConnection.user_id == str(user.id), UserConnection.key.in_(cms_connection_keys(p)))):
                 db.delete(cms_connection)
             db.delete(p)
         db.commit()
@@ -20031,7 +20030,7 @@ def project_issue_detail(
             "github_cfg": _project_github_cfg(proj_row),
             "correction_controls": correction_controls,
             "platform_guide": cms_guidance.for_issue(getattr(proj_row, "settings", None), issue_key),
-            "wordpress_batch_href": cms_batch_href(proj_row, issue_key),
+            "cms_lot": cms_batch_link(proj_row, issue_key),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -32211,7 +32210,7 @@ def _first_correction_context(request: Request, project: Project) -> dict[str, A
             .order_by(JobRecord.created_at.desc()).limit(1))
         live_job = {"id": str(en_cours.id), "status": str(en_cours.status)} if en_cours else None
     return {"platform_guide": cms_guidance.for_issue(project.settings, state["issue_key"] if state else ""),
-            "cms_connected": bool(_user_connection_row(user_id=str(project.owner_user_id), key="CMS_WORDPRESS:" + str(project.id))),
+            "cms_projet": cms_etat_du_projet(project),
             "state": state, "candidates": candidates, "crawl_ts": crawl_ts, "instructions": instructions,
             "clean": clean, "live_job": live_job, "usable": bool(report.get("pages")) and not dash.site_injoignable(report),
             "unreachable": bool(dash.site_injoignable(report)) if report else False}
@@ -32372,6 +32371,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
                 "cms_supported": bool(cms_guidance.field_for_issue(t.issue_key)),
                 "cms_change_id": str(_note_parsed.get("cms_change_id") or ""),
+                "cms_nom": str(_note_parsed.get("cms_nom") or "wordpress"),
                 "verified": bool(first_correction.progress([t]).get("verified")),
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
             }
@@ -32453,9 +32453,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             "request": request,
             "project": project_ctx,
             "slug": slug,
-            "wordpress_connected": bool(cms_guidance.settings(proj_row.settings)["platform"] == "wordpress"
-                                        and cms_guidance.settings(proj_row.settings)["seo_plugin"] in {"", "yoast"}
-                                        and _user_connection_row(user_id=str(proj_row.owner_user_id), key="CMS_WORDPRESS:" + str(proj_row.id))),
+            "cms_projet": cms_etat_du_projet(proj_row),
             "groups": groups,
             "total": total,
             "github_cfg": github_cfg,
@@ -39695,9 +39693,13 @@ def cron_verify_pull_requests(request: Request) -> JSONResponse:
 
 
 try:
-    from .cms_routes import batch_href as cms_batch_href, connection_report as cms_connection_report, router as cms_router
+    from .cms_routes import (CONNECTEURS as cms_connecteurs, batch_link as cms_batch_link,
+                             connection_keys as cms_connection_keys, connection_report as cms_connection_report,
+                             etat_du_projet as cms_etat_du_projet, router as cms_router)
 except ImportError:
-    from cms_routes import batch_href as cms_batch_href, connection_report as cms_connection_report, router as cms_router
+    from cms_routes import (CONNECTEURS as cms_connecteurs, batch_link as cms_batch_link,
+                            connection_keys as cms_connection_keys, connection_report as cms_connection_report,
+                            etat_du_projet as cms_etat_du_projet, router as cms_router)
 app.include_router(cms_router)
 
 

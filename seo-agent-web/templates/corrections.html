@@ -664,7 +664,7 @@
           {# A keyword rewrite has no anomaly page: no crawl produced it. Linking to one would
              be a 404 on the row that describes the correction. #}
           {% if task.cms_change_id %}
-            <a href="/projects/{{ slug }}/cms/wordpress/changes/{{ task.cms_change_id }}" class="corr-item-label">{{ tr(task.issue_label) }}</a>
+            <a href="/projects/{{ slug }}/cms/{{ task.cms_nom }}/changes/{{ task.cms_change_id }}" class="corr-item-label">{{ tr(task.issue_label) }}</a>
           {% elif task.issue_key == 'keyword_snippet_rewrite' %}
             <a href="/projects/{{ slug }}/keywords/opportunities" class="corr-item-label">{{ tr(task.issue_label) }}</a>
           {% else %}
@@ -707,8 +707,8 @@
       </div>
 
       <div class="corr-item-detail" style="display:none;">
-        {% if wordpress_connected and task.cms_supported and task.status not in ['done', 'ignored'] %}
-          <p><a class="btn" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ task.id }}">{{ tr("Préparer dans WordPress") }}</a></p>
+        {% if cms_projet.connecte and task.cms_supported and task.status not in ['done', 'ignored'] %}
+          <p><a class="btn" href="/projects/{{ slug }}/cms/{{ cms_projet.cx.nom }}/edit?task_id={{ task.id }}">{{ tr("Préparer dans {cms}", cms=cms_projet.cx.libelle) }}</a></p>
         {% endif %}
         <textarea class="corr-note" rows="2" placeholder="{{ tr("Note (optionnel)…") }}">{{ task.user_note or '' }}</textarea>
         <div class="corr-segmented">

@@ -25,7 +25,7 @@ def timestamp(value):
     return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
 
 
-_RECEIPT_KEYS = {"verify", "first_correction", "cms_change_id", "verification_urls", "verification_expected_count",
+_RECEIPT_KEYS = {"verify", "first_correction", "cms_change_id", "cms_nom", "verification_urls", "verification_expected_count",
                  "deep", "bulk", "pages", "pr_url", "pr_number", "commit_sha"}
 
 
@@ -107,6 +107,8 @@ def progress(tasks, *, prefer_selection=False):
                              or (task.status in {"in_progress", "done"} and not web_url(note.get("pr_url")))),
             "guided": bool(journey), "selected_at": journey.get("selected_at"), "pr_url": web_url(note.get("pr_url")),
             "cms_change_id": str(note.get("cms_change_id") or ""),
+            # Recus d'avant le 02/11/2026 : WordPress, seul connecteur alors.
+            "cms_nom": str(note.get("cms_nom") or "wordpress"),
         })
     if not states:
         return {}

@@ -81,7 +81,8 @@ def resume(selected, state, live, last_job, has_crawl, clean):
             result.update(title="La correction reste à ajuster",
                           detail="Le dernier contrôle retrouve encore ce problème. Reprenez la modification avant de la faire vérifier.")
         elif (state.get("verify") or {}).get("result") == "unverified":
-            verification = (base + "/cms/wordpress/changes/" + quote(str(state["cms_change_id"]), safe="")
+            verification = (base + "/cms/" + quote(str(state.get("cms_nom") or "wordpress"), safe="") + "/changes/"
+                            + quote(str(state["cms_change_id"]), safe="")
                             if state.get("cms_change_id") else base + "/first-correction")
             result.update(title="Le contrôle n’a pas pu confirmer le résultat.", label="Comprendre le contrôle",
                           href=verification + "#verification",

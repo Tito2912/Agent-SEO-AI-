@@ -1,9 +1,9 @@
 {% extends "layout.html" %}
-{% block title %}{{ tr("Corriger dans WordPress") }} - {{ project.site_name }}{% endblock %}
+{% block title %}{{ tr("Corriger dans {cms}", cms=cx.libelle) }} - {{ project.site_name }}{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=3" defer></script>{% if poll %}<meta http-equiv="refresh" content="20" />{% endif %}{% endblock %}
 {% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">{{ tr("CMS et intégrations") }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr(label) }}</span>{% endblock %}
 {% block content %}
-{#- LE LOT WORDPRESS (19/10/2026) : toutes les pages d'une anomalie, une validation, UNE analyse de
+{#- LE LOT (WordPress le 19/10/2026, tout connecteur depuis le 02/11/2026) : toutes les pages d'une anomalie, une validation, UNE analyse de
     controle. Les textes se redigent page par page depuis le navigateur : quarante ecritures d'IA
     dans une seule requete depasseraient n'importe quel proxy. -#}
 {% set field_label = tr('Titre SEO' if field == 'seo_title' else 'Méta-description') %}
@@ -17,7 +17,7 @@
 <div class="cms-page">
   <div class="page-header">
     <h1>{{ tr(label) }}</h1>
-    <p class="muted">{{ tr("{n} page(s) signalée(s) dans la dernière analyse", n=rows | length) }} · {{ field_label }} · WordPress + Yoast SEO</p>
+    <p class="muted">{{ tr("{n} page(s) signalée(s) dans la dernière analyse", n=rows | length) }} · {{ field_label }} · {{ cx.libelle_complet }}</p>
   </div>
   {% if err %}<div class="alert error" role="alert">{{ tr(err) }}</div>{% endif %}
   {% if msg %}<div class="alert ok" role="status">{{ tr(msg) }}</div>{% endif %}
@@ -34,7 +34,7 @@
       <p>{% if remaining is not none %}{{ tr("Noyaru rédige un texte pour chaque page, à partir de son contenu et dans la bonne longueur. Chaque texte compte pour une correction IA : il vous en reste {n} ce mois-ci. Rien n’est écrit sur votre site à cette étape.", n=remaining) }}{% else %}{{ tr("Noyaru rédige un texte pour chaque page, à partir de son contenu et dans la bonne longueur. Chaque texte compte pour une correction IA. Rien n’est écrit sur votre site à cette étape.") }}{% endif %}</p>
       {% if remaining is none or remaining > 0 %}
         <button class="btn primary" type="button" id="batch-propose-all"
-                data-action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/propose"
+                data-action="/projects/{{ slug }}/cms/{{ cx.nom }}/issues/{{ issue_key }}/propose"
                 data-limit="{{ remaining if remaining is not none else '' }}">{{ tr("Proposer les textes ({n} page(s))", n=a_preparer | length if remaining is none else [a_preparer | length, remaining] | min) }}</button>
         <p class="muted small" id="batch-progress" aria-live="polite"></p>
       {% else %}
@@ -44,11 +44,11 @@
         {% for row in a_preparer %}
           <li data-batch-url="{{ row.url }}">
             <a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a>
-            <form method="post" action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/propose" class="inline">
+            <form method="post" action="/projects/{{ slug }}/cms/{{ cx.nom }}/issues/{{ issue_key }}/propose" class="inline">
               <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="url" value="{{ row.url }}" />
               <button class="btn small" type="submit" data-busy-label="{{ tr('Rédaction…') }}">{{ tr("Proposer") }}</button>
             </form>
-            {% if row.task %}<a class="small" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ row.task.id }}">{{ tr("Écrire moi-même") }}</a>{% endif %}
+            {% if row.task %}<a class="small" href="/projects/{{ slug }}/cms/{{ cx.nom }}/edit?task_id={{ row.task.id }}">{{ tr("Écrire moi-même") }}</a>{% endif %}
           </li>
         {% endfor %}
       </ul>
@@ -56,11 +56,11 @@
   {% endif %}
 
   {% if apercus %}
-    <form method="post" action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/apply" class="card" id="batch-review">
+    <form method="post" action="/projects/{{ slug }}/cms/{{ cx.nom }}/issues/{{ issue_key }}/apply" class="card" id="batch-review">
       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
       <input type="hidden" name="shown_at" value="{{ now }}" />
       <h2>{{ tr("2. Relire et enregistrer") }}</h2>
-      <p class="muted">{{ tr("Corrigez un texte si besoin, décochez une page pour la laisser de côté. Chaque page est relue dans WordPress juste avant d’être modifiée, et son état est vérifié après.") }}</p>
+      <p class="muted">{{ tr("Corrigez un texte si besoin, décochez une page pour la laisser de côté. Chaque page est relue dans {cms} juste avant d’être modifiée, et son état est vérifié après.", cms=cx.libelle) }}</p>
       {% for row in apercus %}{% set ch = row.change %}{% set f = ch.data.field %}
         <div class="cms-form" data-batch-change="{{ ch.id }}">
           <label><input type="checkbox" name="pick" value="{{ ch.id }}" checked /> <a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a>{% if ch.data.suggested %} <span class="badge">{{ tr("proposé par Noyaru") }}</span>{% endif %}</label>
@@ -69,7 +69,7 @@
           <label>{{ field_label }}{% if f == 'seo_title' %}<input name="values" value="{{ ch.data.after[f] }}" maxlength="400" />{% else %}<textarea name="values" rows="3" maxlength="2000">{{ ch.data.after[f] }}</textarea>{% endif %}</label>
         </div>
       {% endfor %}
-      <button class="btn primary" type="submit" data-busy-label="{{ tr('Enregistrement dans WordPress…') }}">{{ tr("Enregistrer la sélection dans WordPress") }}</button>
+      <button class="btn primary" type="submit" data-busy-label="{{ tr('Enregistrement dans {cms}…', cms=cx.libelle) }}">{{ tr("Enregistrer la sélection dans {cms}", cms=cx.libelle) }}</button>
       <p class="muted small">{{ tr("Ces aperçus restent valables 20 minutes après l’affichage de cette page.") }}</p>
     </form>
   {% endif %}
@@ -79,16 +79,16 @@
       <h2>{{ tr("3. Vérifier le résultat") }}</h2>
       <ul class="cms-history">
         {% for row in a_confirmer %}
-          <li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small">{{ tr("À confirmer dans WordPress") }}</span></li>
+          <li><a href="/projects/{{ slug }}/cms/{{ cx.nom }}/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small">{{ tr("À confirmer dans {cms}", cms=cx.libelle) }}</span></li>
         {% endfor %}
         {% for row in enregistrees %}
-          <li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small" data-batch-state="{{ row.verification.state }}">{{ etats.get(row.verification.state, tr('Enregistrée')) }}</span></li>
+          <li><a href="/projects/{{ slug }}/cms/{{ cx.nom }}/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small" data-batch-state="{{ row.verification.state }}">{{ etats.get(row.verification.state, tr('Enregistrée')) }}</span></li>
         {% endfor %}
       </ul>
       {% if poll %}
         <p role="status">{{ tr("L’analyse de contrôle est en cours. Cette page s’actualise toute seule.") }}</p>
       {% elif enregistrees | rejectattr('verification.state', 'in', ['verified', 'superseded']) | list %}
-        <form method="post" action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/verify">
+        <form method="post" action="/projects/{{ slug }}/cms/{{ cx.nom }}/issues/{{ issue_key }}/verify">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <button class="btn {% if not apercus %}primary{% endif %}" type="submit" data-busy-label="{{ tr('Lancement de la vérification…') }}">{{ tr("Lancer une analyse de contrôle") }}</button>
         </form>

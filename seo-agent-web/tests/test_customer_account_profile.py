@@ -167,7 +167,7 @@ def test_sites_integrations_and_teams_are_scoped_without_checking_credentials(la
     data = dossier(database, owner)
     assert data['members'] == 1 and len(data['sites']) == 2
     sites = {row['platform']: row for row in data['sites']}
-    assert sites['WordPress']['google']['saved'] and sites['WordPress']['wordpress']['saved']
+    assert sites['WordPress']['google']['saved'] and sites['WordPress']['cms']['saved']
     assert not sites['Non renseigné']['google']['saved']
     assert all(row['bing']['saved'] for row in data['sites'])
     assert next(row for row in data['connections'] if row['label'] == 'Netlify')['saved']

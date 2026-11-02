@@ -1,0 +1,13 @@
+{#- La connexion WordPress : un mot de passe d'application, WordPress 6.9 et Yoast 28.7 (pilote du
+    17/10/2026). Chaque connecteur a son gabarit cms_connexion_<nom>.html ; ses champs sont ceux de
+    `Connecteur.champs`. -#}
+<p class="muted small">{{ tr("WordPress 6.9 minimum, Yoast SEO 28.7 minimum, données SEO optimisées et compte autorisé à modifier les métadonnées Yoast. La disponibilité est vérifiée à la connexion.") }}</p>
+<details class="cms-help"><summary>{{ tr("Où trouver le mot de passe d’application ?") }}</summary><p>{{ tr("Dans WordPress, ouvrez Utilisateurs → Profil → Mots de passe d’application. Créez un accès nommé « Noyaru », puis copiez le mot de passe affiché. Utilisez cet accès dédié ici.") }}</p><a href="https://wordpress.org/documentation/article/users-your-profile-screen/#application-passwords" target="_blank" rel="noreferrer">{{ tr("Aide WordPress") }}</a></details>
+<form method="post" action="/projects/{{ slug }}/cms/wordpress/connect" class="cms-form">
+  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+  <label>{{ tr("Adresse HTTPS de WordPress") }}<input type="url" name="site_url" placeholder="{{ tr('https://monsite.fr') }}" required autocomplete="url" /><span class="muted small">{{ tr("Même domaine que {url}. Ajoutez le sous-dossier si WordPress y est installé.", url=project.base_url) }}</span></label>
+  <label>{{ tr("Identifiant WordPress") }}<input name="username" required maxlength="200" autocomplete="off" /></label>
+  <label>{{ tr("Mot de passe d’application") }}<input type="password" name="password" required maxlength="200" autocomplete="new-password" /></label>
+  <button class="btn primary" type="submit">{{ tr("Vérifier et connecter WordPress") }}</button>
+  <p class="muted small">{{ tr("La connexion vérifie l’accès. Chaque correction demande ensuite votre validation.") }}</p>
+</form>

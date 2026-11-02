@@ -82,7 +82,9 @@ def snapshot(database, account_id, *, google_key, bing_key):
                       'platform': cms_guidance.PLATFORMS.get(project['platform'], 'Non renseigné'),
                       'google': saved(google_key(project['slug'])),
                       'bing': saved([bing_key(project['slug']), 'BING_OAUTH_REFRESH_TOKEN', 'BING_WEBMASTER_API_KEY']),
-                      'wordpress': saved('CMS_WORDPRESS:' + project['id'])})
+                      # Une connexion CMS, quel que soit le connecteur : CMS_<NOM>:<projet>.
+                      'cms': saved([key for key in connections
+                                    if key.startswith('CMS_') and key.endswith(':' + project['id'])])})
     limits = billing.plan_catalog()[account['plan_key']].get('limits') or {}
     quotas = []
     for key, label in METRICS.items():
@@ -153,7 +155,7 @@ def csv_bytes(data):
         section = 'Site ' + str(index)
         for key, label in [('name', 'Nom'), ('url', 'URL'), ('created_at', 'Ajouté le (Paris)'), ('platform', 'CMS renseigné')]:
             row(section, label, site[key])
-        for key, label in [('google', 'Google Search Console'), ('bing', 'Bing'), ('wordpress', 'WordPress')]:
+        for key, label in [('google', 'Google Search Console'), ('bing', 'Bing'), ('cms', 'CMS connecté')]:
             row(section, label, 'Configuration enregistrée' if site[key]['saved'] else 'Non retrouvée en base')
             row(section, label + ' · mise à jour (Paris)', site[key]['date'])
     for job in data['jobs']:

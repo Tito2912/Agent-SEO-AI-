@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import base64
-import hashlib
-import hmac
 import http.client
 import ipaddress
 import json
@@ -11,17 +9,16 @@ import socket
 import ssl
 from urllib.parse import unquote, urlencode, urlsplit, urlunsplit
 
+try:
+    # Le socle commun des connecteurs (02/11/2026) : ces noms restent ceux de ce module.
+    from .cms_commun import FIELDS, CmsError, Connecteur, fingerprint, same_connection
+except ImportError:
+    from cms_commun import FIELDS, CmsError, Connecteur, fingerprint, same_connection
+
+__all__ = ["FIELDS", "CmsError", "fingerprint", "same_connection", "WordPressClient", "CONNECTEUR"]
+
 READ = "yoast-seo/get-post-seo-data"
 WRITE = "yoast-seo/update-post-seo-data"
-FIELDS = {"seo_title", "meta_description"}
-
-
-class CmsError(Exception):
-    def __init__(self, message, *, uncertain=False, code=""):
-        super().__init__(message)
-        self.uncertain = uncertain
-        # A stable reason for the operations journal; the message stays the customer's.
-        self.code = code
 
 
 # Why a connection was declined, as read on /settings/operations.
@@ -120,19 +117,6 @@ def exchange(base_url, username, password, method, path, payload=None):
         connection.close()
 
 
-def fingerprint(credentials, key):
-    # Keyed: a stored fingerprint must not let anyone test a guessed password offline.
-    return "hmac:" + hmac.new(key, json.dumps(credentials, sort_keys=True).encode(), hashlib.sha256).hexdigest()
-
-
-def same_connection(credentials, stored, key):
-    stored = str(stored or "")
-    if stored.startswith("hmac:"):
-        return hmac.compare_digest(stored, fingerprint(credentials, key))
-    # Changes recorded before the keyed fingerprint can still be restored.
-    return hmac.compare_digest(stored, hashlib.sha256(json.dumps(credentials, sort_keys=True).encode()).hexdigest())
-
-
 def values(page):
     result = {}
     for field in FIELDS:
@@ -207,3 +191,29 @@ class WordPressClient:
         except CmsError as error:
             raise CmsError(str(error), uncertain=True) from None
         return result
+
+
+def identifiants(form, project):
+    """Le formulaire de connexion -> identifiants valides (adresse sur le domaine du projet)."""
+    username, password = str(form.get("username") or ""), str(form.get("password") or "")
+    if (not username.strip() or len(username) > 200 or len(password) > 200 or ":" in username
+            or any(c in username + password for c in "\r\n\0") or not password.strip()):
+        raise CmsError("Renseignez votre identifiant WordPress et un mot de passe d’application valide.", code="saisie")
+    return {"site_url": site_url(str(form.get("site_url") or ""), project.base_url),
+            "username": username.strip(), "password": password.strip()}
+
+
+def recharger(value, project):
+    value["site_url"] = site_url(value["site_url"], project.base_url)
+    if not value.get("username") or not value.get("password"):
+        raise ValueError()
+    return value
+
+
+CONNECTEUR = Connecteur(
+    nom="wordpress", libelle="WordPress", libelle_complet="WordPress + Yoast SEO",
+    provider="wordpress_yoast", client=lambda c: WordPressClient(c), identifiants=identifiants,
+    recharger=recharger,
+    plateforme_ok=lambda site: site["platform"] == "wordpress" and site["seo_plugin"] in {"", "yoast"},
+    message_plateforme="Choisissez WordPress avec Yoast pour utiliser cette connexion.",
+    values=values, raisons=REASONS, champs=("site_url", "username", "password"))

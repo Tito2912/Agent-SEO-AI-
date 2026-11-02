@@ -58,7 +58,7 @@
     {% endif %}
 
     {% include "_cms_guidance.html" %}
-    {% if wordpress_batch_href %}<p><a class="btn primary" href="{{ wordpress_batch_href }}">{{ tr("Corriger ces pages dans WordPress") }}</a></p>{% endif %}
+    {% if cms_lot %}<p><a class="btn primary" href="{{ cms_lot.href }}">{{ tr("Corriger ces pages dans {cms}", cms=cms_lot.cms) }}</a></p>{% endif %}
 
     <div class="metric-band" style="margin-bottom:16px;">
       <div class="metric-tile">

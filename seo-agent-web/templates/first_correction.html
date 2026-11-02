@@ -60,7 +60,7 @@
       {% if state.verify.introduced %}<p class="muted">{{ tr("D’autres anomalies sont en hausse depuis l’analyse de référence. Consultez le bilan avant de poursuivre.") }}</p>{% endif %}
       <a class="btn primary" href="/projects/{{ slug }}/first-correction?choose=1">{{ tr("Choisir une autre correction") }}</a>
       <a class="btn" href="/projects/{{ slug }}?crawl={{ state.verify.crawl_ts }}">{{ tr("Voir le bilan du contrôle") }}</a>
-      {% if state.cms_change_id %}<a class="btn" href="/projects/{{ slug }}/cms/wordpress/changes/{{ state.cms_change_id }}#restoration">{{ tr("Rétablir la valeur précédente") }}</a>{% endif %}
+      {% if state.cms_change_id %}<a class="btn" href="/projects/{{ slug }}/cms/{{ state.cms_nom }}/changes/{{ state.cms_change_id }}#restoration">{{ tr("Rétablir la valeur précédente") }}</a>{% endif %}
       <p><a href="/projects/{{ slug }}/corrections">{{ tr("Voir le suivi et l’historique des corrections") }}</a></p>
     </section>
   {% elif clean %}
@@ -128,11 +128,11 @@
     </section>
   {% elif state.cms_change_id %}
     <section class="card first-correction-control" id="verification">
-      <h2>{{ tr("Retrouvez votre correction WordPress") }}</h2>
+      <h2>{% if cms_projet.cx %}{{ tr("Retrouvez votre correction {cms}", cms=cms_projet.cx.libelle) }}{% else %}{{ tr("Retrouvez votre correction") }}{% endif %}</h2>
       <p>{{ tr(state.label) }}</p>
       <p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>
       <p class="muted">{{ tr("L’application, la vérification et son résultat sont regroupés sur votre écran de suivi.") }}</p>
-      <a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/changes/{{ state.cms_change_id }}">{{ tr("Suivre ma correction") }}</a>
+      <a class="btn primary" href="/projects/{{ slug }}/cms/{{ state.cms_nom }}/changes/{{ state.cms_change_id }}">{{ tr("Suivre ma correction") }}</a>
     </section>
   {% else %}
     {% if state.declared and state.verify.result != 'still_present' %}{{ check_control() }}{% endif %}
@@ -145,14 +145,14 @@
       <h2>{{ tr(state.label) }}</h2>
       <p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>
       <p><a class="btn" href="/projects/{{ slug }}/first-correction?choose=1">{{ tr("Choisir une autre page") }}</a></p>
-      {% set wordpress_editor = cms_connected and platform_guide.platform == 'wordpress' and platform_guide.seo_plugin in ['', 'yoast'] and platform_guide.field %}
-      {% if wordpress_editor %}
-        <p><a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ state.task_id }}">{{ tr("Préparer dans WordPress") }}</a></p>
+      {% set cms_editor = cms_projet.connecte and platform_guide.field %}
+      {% if cms_editor %}
+        <p><a class="btn primary" href="/projects/{{ slug }}/cms/{{ cms_projet.cx.nom }}/edit?task_id={{ state.task_id }}">{{ tr("Préparer dans {cms}", cms=cms_projet.cx.libelle) }}</a></p>
         <p class="muted small">{{ tr("Relisez l’avant/après avant de valider l’enregistrement sur votre site.") }}</p>
-      {% elif platform_guide.platform == 'wordpress' and platform_guide.seo_plugin == 'yoast' and platform_guide.field %}
-        <p><a class="btn" href="/projects/{{ slug }}/cms">{{ tr("Connecter WordPress pour appliquer cette correction") }}</a></p>
+      {% elif cms_projet.cx and platform_guide.field and (cms_projet.cx.nom != 'wordpress' or platform_guide.seo_plugin == 'yoast') %}
+        <p><a class="btn" href="/projects/{{ slug }}/cms">{{ tr("Connecter {cms} pour appliquer cette correction", cms=cms_projet.cx.libelle) }}</a></p>
       {% endif %}
-      {% if wordpress_editor %}<details class="cms-help"><summary>{{ tr("Faire la modification moi-même dans WordPress") }}</summary>{% endif %}
+      {% if cms_editor %}<details class="cms-help"><summary>{{ tr("Faire la modification moi-même dans {cms}", cms=cms_projet.cx.libelle) }}</summary>{% endif %}
       {% include "_cms_guidance.html" %}
       <h3>{{ tr("Modifiez votre page") }}</h3>
       <p class="muted">{{ tr("Appliquez ces instructions dans votre site, ou faites-les suivre à votre prestataire.") }}</p>
@@ -171,7 +171,7 @@
           <button class="btn{% if state.verify.result != 'unverified' %} primary{% endif %}" type="submit">{% if state.verify %}{{ tr("J’ai à nouveau modifié cette page") }}{% else %}{{ tr("J’ai modifié cette page") }}{% endif %}</button>
         </form>
       {% endif %}
-      {% if wordpress_editor %}</details>{% endif %}
+      {% if cms_editor %}</details>{% endif %}
     </section>
     {% if waiting_for_control %}</details>{% endif %}
     {% if state.declared and state.verify.result == 'still_present' %}{{ check_control() }}{% endif %}
