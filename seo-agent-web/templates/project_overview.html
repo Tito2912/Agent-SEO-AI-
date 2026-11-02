@@ -586,7 +586,7 @@
                 <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">{{ tr("Requêtes") }}</button><button type="button" class="tab-btn" data-dim="page">{{ tr("Pages") }}</button></div>
                 <a class="muted small" href="/projects/{{ project.slug }}/performance?source=gsc&dim=query&days={{ gsc_days }}">{{ tr("Voir tout") }}</a>
               </div>
-              <div class="table-wrap">
+              <div class="table-wrap overview-source-table" tabindex="0" role="region" aria-label="{{ tr("Google Search Console") }} · {{ tr("Requêtes") }} / {{ tr("Pages") }}">
                 <table class="table compact mini-perf-table">
                   <thead><tr><th>{{ tr("Requête / page") }}</th><th class="num">{{ tr("Clics") }}</th><th class="num">{{ tr("Impressions") }}</th><th class="num">{{ tr("CTR") }}</th><th class="num">{{ tr("Position") }}</th></tr></thead>
                   <tbody data-mini-body><tr><td colspan="5" class="muted">{{ tr("Chargement…") }}</td></tr></tbody>
@@ -675,7 +675,7 @@
                 <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">{{ tr("Requêtes") }}</button><button type="button" class="tab-btn" data-dim="page">{{ tr("Pages") }}</button></div>
                 <a class="muted small" href="/projects/{{ project.slug }}/performance?source=bing&dim=query&days={{ bing_days }}">{{ tr("Voir tout") }}</a>
               </div>
-              <div class="table-wrap">
+              <div class="table-wrap overview-source-table" tabindex="0" role="region" aria-label="{{ tr("Bing Webmaster Tools") }} · {{ tr("Requêtes") }} / {{ tr("Pages") }}">
                 <table class="table compact mini-perf-table">
                   <thead><tr><th>{{ tr("Requête / page") }}</th><th class="num">{{ tr("Clics") }}</th><th class="num">{{ tr("Impressions") }}</th><th class="num">{{ tr("CTR") }}</th><th class="num">{{ tr("Position") }}</th></tr></thead>
                   <tbody data-mini-body><tr><td colspan="5" class="muted">{{ tr("Chargement…") }}</td></tr></tbody>
