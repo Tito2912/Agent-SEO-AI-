@@ -1,6 +1,6 @@
 # Lot 26 — Retrouver son site après une lecture de l'aide
 
-Base initiale : `f1a53c4` ; base finale : `b334f54`, avec les captures FR/EN de Claude. 2 novembre 2026. Branche/worktree isolés.
+Base initiale : `f1a53c4` ; base finale : `9584987`, avec les captures FR/EN et les nombres localisés de Claude. 2 novembre 2026. Branche/worktree isolés.
 Les articles, traductions, captures et fichiers de langue restent réservés à Claude.
 
 ## Audit avant changement
@@ -31,7 +31,9 @@ Le contexte est résolu une seule fois par requête, à partir du site de l'écr
 ou du paramètre explicite `project`. Les droits du propriétaire ou du membre
 sont relus ; aucune sélection automatique ou persistante n'est ajoutée. Le
 paramètre `crawl` n'est transmis que s'il désigne un rapport encore présent chez
-le propriétaire de ce même site. Une analyse absente ou mal formée est écartée.
+le propriétaire de ce même site. Les rapports persistants sont d’abord restaurés
+par le mécanisme existant après un redémarrage ; une analyse indisponible ou mal
+formée est écartée.
 
 Les liens du menu, de l'aide de l'écran, des sommaires, articles liés et corps
 d'article conservent ce contexte. Le sélecteur de langue réutilise son extension
@@ -53,7 +55,7 @@ Canonical, alternates et données structurées ne contiennent pas de projet.
 | Contrôle | Résultat et portée |
 | --- | --- |
 | Production avant changement | Anomalies → aide sans projet ni analyse, CTA `/`, constat authentifié en lecture seule. Aucun formulaire soumis. |
-| Tests ciblés | 158 réussis, 1 ignoré : droits propriétaire/membre, révocation, contexte inconnu ou ambigu, rapport absent/mal formé, réglages du compte distincts, neuf guides, langues, cache, inventaire et nouveaux tests de captures de Claude. |
+| Tests ciblés | 162 réussis, 1 ignoré : droits propriétaire/membre, révocation, contexte inconnu ou ambigu, rapport absent/mal formé, réglages du compte distincts, neuf guides, langues, cache, inventaire et nouveaux tests de captures de Claude. |
 | Chromium local | 232 observations : propriétaire/membre, FR/EN, 1 440/1 030/768/390/360 px, plus 360 px sans JavaScript ; anonymes et contexte refusé à 1 440/360 px. Parcours aller-retour, corps d'article, sommaire, pages liées, changement de langue, menu mobile et sortie explicite du contexte. Quatre cas supplémentaires avec nom de site long à 320/360 px, FR/EN. Aucun débordement, erreur JS, requête externe ou écriture HTTP. |
 | Accessibilité locale | Bandeau nommé, texte du site échappé, cibles de 44 px et focus visible ; captures locales de travail examinées à 1 440/360 px. Aucune capture de documentation ou traduction de Claude modifiée. |
 | Contrôles statiques | Compilation Python et des 90 templates Jinja, Ruff F/E9 et Bandit medium/high sur le nouveau module réussis. CI complète et revue automatique à consigner dans la PR avant fusion. |
@@ -66,3 +68,9 @@ après déploiement est consigné séparément dans la PR.
 Coordination : le commit de Claude `b334f54` (captures FR/EN, adaptation du moteur
 de contenu, textes associés) est intégré avant la validation finale. Aucun de
 ses fichiers de contenu, de langues ou d'images n'est modifié par ce lot.
+
+La revue automatique de la première version a signalé le cas du rapport présent
+uniquement dans le stockage persistant. Le correctif réutilise
+`_ensure_runs_artifact_local` avant le contrôle d’existence. Quatre tests réels
+de route vérifient la restauration unique pour le propriétaire et le membre,
+et son absence pour une personne anonyme ou étrangère au projet.

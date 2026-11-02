@@ -43,7 +43,7 @@ def help_site(tmp_path, monkeypatch):
         return result
 
     return {"owner": client(owner), "member": client(member), "outsider": client(outsider),
-            "anonymous": client(), "slug": slug, "owner_id": owner, "member_id": member}
+            "anonymous": client(), "slug": slug, "owner_id": owner, "member_id": member, "report": report}
 
 
 @pytest.mark.parametrize("who", ["owner", "member"])
@@ -103,6 +103,37 @@ def test_only_an_existing_report_of_the_authorized_site_can_travel(help_site, st
     assert response.context["help_project"]["crawl"] == ""
     assert "private-sentinel" not in response.text
     assert BeautifulSoup(response.text, "html.parser").select_one('.content-header .btn')["href"] == f'/projects/{help_site["slug"]}'
+
+
+@pytest.mark.parametrize('who', ['owner', 'member'])
+def test_persisted_report_is_restored_once_before_preserving_the_selected_analysis(help_site, monkeypatch, who):
+    report = help_site['report']
+    report.unlink()
+    restored = []
+
+    def restore(path):
+        assert path == report
+        restored.append(path)
+        path.write_text(json.dumps({'pages': [], 'issues': {}}))
+        return True
+
+    monkeypatch.setattr(m, '_ensure_runs_artifact_local', restore)
+    response = help_site[who].get(f'/docs/anomalies-et-priorites?project={help_site["slug"]}&crawl={STAMP}')
+    assert response.status_code == 200 and response.context['help_project']['crawl'] == STAMP
+    assert len(restored) == 1
+    assert BeautifulSoup(response.text, 'html.parser').select_one('.content-header .btn')['href'] == f'/projects/{help_site["slug"]}/issues?crawl={STAMP}'
+
+
+@pytest.mark.parametrize('who', ['anonymous', 'outsider'])
+def test_persisted_artifact_is_never_requested_before_project_authorization(help_site, monkeypatch, who):
+    help_site['report'].unlink()
+
+    def forbidden(path):
+        raise AssertionError('Unauthorized request must not access object storage')
+
+    monkeypatch.setattr(m, '_ensure_runs_artifact_local', forbidden)
+    response = help_site[who].get(f'/docs/lire-le-rapport?project={help_site["slug"]}&crawl={STAMP}')
+    assert response.status_code == 200 and response.context['help_project'] is None
 
 
 @pytest.mark.parametrize("slug,screen", [

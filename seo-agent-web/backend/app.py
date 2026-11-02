@@ -10748,9 +10748,9 @@ def _help_project_context(request: Request) -> dict[str, str] | None:
     context = {"slug": str(project.slug), "site_name": str(project.site_name or project.slug), "crawl": ""}
     stamps = request.query_params.getlist("crawl")
     if len(stamps) == 1 and re.fullmatch(r"[0-9]{8}-[0-9]{6}", stamps[0]):
-        # A timestamp in a link is not proof that this site's report still exists.
+        # Restore persisted reports just as the report screens do after a restart.
         report = _runs_dir_for_user(str(project.owner_user_id)) / str(project.slug) / stamps[0] / "audit" / "report.json"
-        if report.is_file():
+        if _ensure_runs_artifact_local(report) and report.is_file():
             context["crawl"] = stamps[0]
     request.state.help_project_context = context
     return context
