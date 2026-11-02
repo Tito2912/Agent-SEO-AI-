@@ -33,6 +33,8 @@ Choose the destination, the **topic**, its **section**, then the length, tone an
 
 In **Content only** mode, review the isolated preview or the Markdown text, then copy or download the version you want. Copying does not publish the article: paste it into your CMS afterward and check the live page.
 
+In both modes, the text is reviewed so that it **reads like the work of a practitioner**: the stock phrases of AI models ("in today's fast-paced world", "it's important to note", the conclusion that sums up what you just read) are spotted and their paragraphs rewritten, without touching links, images or figures. What remains — overly regular sentences, lists everywhere — is flagged in the review notes. This is quality work, not a promise to escape AI detectors, which are often wrong; Google judges how useful a page is, not how it was written.
+
 ## Add visuals
 
 In **Content only** mode, the **Add visuals** block enriches the article in two ways, which you can combine.

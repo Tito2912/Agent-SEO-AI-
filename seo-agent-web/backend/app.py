@@ -110,6 +110,7 @@ try:
     from . import i18n
     from . import legal
     from . import visuels
+    from . import naturel
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -127,6 +128,7 @@ except ImportError:
     import i18n
     import legal
     import visuels  # type: ignore
+    import naturel  # type: ignore
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -24973,6 +24975,7 @@ def rediger_une_page(
             "adresse de la reference ;\n"
             "- les ancres de sommaire suivent les titres TRADUITS."
             % (langue_reference or "langue par defaut", reference[:14000]))
+    demande += naturel.CONSIGNE_DE_NATUREL
     if slug_sur_le_modele:
         demande += (
             "\n\nAJOUTE a l'objet JSON une cle \"slug\" : l'adresse de la page, dans SA langue, "
@@ -34000,6 +34003,7 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
 
     if not cle:
         _reparer_les_liens([principal], routes=routes, traduire=_traduire_lien)
+        _rendre_naturels([principal])
         return {"ok": True, "plans": [principal], "cle": "", "valeur": ""}
     soeur = str(principal["soeur"])
     plans = [principal]
@@ -34057,6 +34061,7 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
     for plan in plans:
         plan["contenu"] = _poser_valeur_de_tete(str(plan["contenu"]), cle, valeur)
     _reparer_les_liens(plans, routes=routes, traduire=_traduire_lien)
+    _rendre_naturels(plans)
     return {"ok": True, "plans": plans, "cle": cle, "valeur": valeur}
 
 
@@ -34673,6 +34678,7 @@ def rediger_un_article(
                               "series": [s["nom"] for s in g["series"]], "unite": g["unite"],
                               "source": g["source"]}
                      for n, g in graphiques_a_traduire.items()}, ensure_ascii=False))
+    demande += naturel.CONSIGNE_DE_NATUREL
     images_jointes: list[bytes] = []
     if demande_visuels and not reference:
         demande += _consigne_de_visuels(demande_visuels)
@@ -34910,6 +34916,68 @@ def _produire_les_visuels(plan: "dict[int, dict[str, Any]]", versions: "list[dic
     return fichiers, poses
 
 
+_NATUREL_MAX_PARAGRAPHES = 8
+# Les fichiers d'un depot ou la prose se lit telle quelle : ailleurs (JSX, Astro, gabarits), un
+# paragraphe est entoure de code, et le reecrire par remplacement de texte n'est pas sur.
+_NATUREL_FORMATS = (".md", ".mdx", ".markdown")
+
+
+def _rendre_naturel(version: "dict[str, Any]", *, langue: str, model_override: str = "") -> None:
+    """Reecrit les seuls paragraphes ou un lecteur reconnaitrait un texte de modele.
+
+    Demande du proprietaire, 02/11/2026 : « le contenu doit paraitre avoir ete fait par un
+    humain ». `naturel.examiner` designe les paragraphes (formules toutes faites, debuts
+    repetes) ; UN appel les reecrit tous ; `naturel.remplacer_les_paragraphes` ne pose une
+    reecriture que si elle garde liens, visuels et chiffres. Ce qui reste — et les defauts
+    d'ensemble (phrases trop regulieres, listes partout) — est DIT dans les notes de relecture.
+
+    Ce n'est pas un contournement de detecteur, et rien ne le promet : voir backend/naturel.py.
+    """
+    texte = str(version["contenu"])
+    examen = naturel.examiner(texte, langue)
+    cibles = sorted(examen["a_reecrire"])[:_NATUREL_MAX_PARAGRAPHES]
+    poses = 0
+    if cibles:
+        paras = naturel.paragraphes(texte)
+        anciens = [paras[i] for i in cibles]
+        out = _correction_ai_json(
+            system=naturel.SYSTEME_REECRITURE,
+            user_msg=naturel.demande_de_reecriture(
+                anciens, [examen["a_reecrire"][i] for i in cibles], langue),
+            max_tokens=3000, model_override=model_override) or {}
+        nouveaux = out.get("paragraphes")
+        if isinstance(nouveaux, list) and len(nouveaux) == len(anciens):
+            texte, poses = naturel.remplacer_les_paragraphes(texte, anciens, [str(n) for n in nouveaux])
+            version["contenu"] = texte
+    apres = naturel.examiner(texte, langue)
+    if poses:
+        version["notes_redaction"].append(
+            "naturel : %d paragraphe(s) réécrit(s) pour retirer des formules de modèle" % poses)
+    restes = ((["%d paragraphe(s) gardent une formule toute faite" % len(apres["a_reecrire"])]
+               if apres["a_reecrire"] else []) + list(apres["global"]))
+    if restes:
+        version["notes_redaction"].append("naturel, à relire : %s" % " ; ".join(restes))
+
+
+def _rendre_naturels(versions: "list[dict[str, Any]]", *, model_override: str = "") -> None:
+    """`_rendre_naturel` sur chaque version, en parallele. Une page du depot n'est relue que si
+    sa prose se lit telle quelle (Markdown) ; un echec ne fait jamais tomber la redaction."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _une(version: "dict[str, Any]") -> None:
+        fichier = str(version.get("fichier") or "")
+        if fichier and not fichier.lower().endswith(_NATUREL_FORMATS):
+            return
+        try:
+            _rendre_naturel(version, langue=str(version.get("code") or version.get("langue") or ""),
+                            model_override=model_override)
+        except Exception as e:
+            logger.warning("[contenu] relecture du naturel impossible : %s: %s", type(e).__name__, e)
+
+    with ThreadPoolExecutor(max_workers=max(1, min(len(versions), 4))) as pool:
+        list(pool.map(_dans_ce_contexte(_une), versions))
+
+
 def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section: str,
                            langues: "list[str] | None" = None, site_name: str = "",
                            model_override: str = "",
@@ -35059,6 +35127,7 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
 
     suivi("Vérification des liens internes")
     _reparer_les_liens(versions, routes={c: [c] for c in chemins}, traduire=_traduire_lien)
+    _rendre_naturels(versions, model_override=model_override)
     return {"ok": True, "versions": versions, "visuels": plan_visuels}
 
 

@@ -33,6 +33,8 @@ Choisissez la destination, le **sujet**, sa **rubrique**, puis la longueur, le t
 
 En mode **Contenu seul**, relisez l’aperçu isolé ou le texte en Markdown, puis copiez ou téléchargez la version choisie. Aucune copie ne publie l’article : insérez-le ensuite dans votre CMS et contrôlez la page en ligne.
 
+Dans les deux modes, le texte est relu pour **se lire comme celui d’une personne du métier** : les formules toutes faites des modèles (« dans un monde en constante évolution », « il est important de noter », la conclusion qui résume ce qu’on vient de lire) sont repérées et leurs paragraphes réécrits, sans toucher aux liens, aux images ni aux chiffres. Ce qui reste — des phrases trop régulières, des listes partout — est signalé dans les notes de relecture. C’est un travail de qualité, pas une promesse d’échapper aux détecteurs d’IA, qui se trompent souvent ; Google juge l’utilité d’une page, pas la façon dont elle a été écrite.
+
 ## Ajouter des visuels
 
 En mode **Contenu seul**, le bloc **Ajouter des visuels** enrichit l’article de deux façons, que vous pouvez combiner.
