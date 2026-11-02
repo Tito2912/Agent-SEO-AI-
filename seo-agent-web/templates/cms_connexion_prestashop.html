@@ -1,0 +1,11 @@
+{#- La connexion PrestaShop (02/11/2026) : une clé Webservice, PrestaShop 8 minimum (PATCH). Les
+    pages CMS restent hors du connecteur : PrestaShop réenregistrerait leur contenu. -#}
+<p class="muted small">{{ tr("PrestaShop 8 minimum. Noyaru modifie le titre SEO et la méta-description des produits et des catégories, dans la langue de chaque page, après votre validation de chaque aperçu. Les pages CMS se corrigent dans PrestaShop. La disponibilité est vérifiée à la connexion.") }}</p>
+<details class="cms-help"><summary>{{ tr("Comment créer la clé Webservice ?") }}</summary><p>{{ tr("Dans PrestaShop, ouvrez Paramètres avancés → Webservice, activez le service web, puis ajoutez une clé nommée « Noyaru ». Cochez, pour products et categories, la lecture (GET) et la modification partielle (PATCH) ; pour languages, la lecture (GET) seulement. Rien d’autre n’est nécessaire.") }}</p><p>{{ tr("Si l’adresse /api de la boutique ne répond pas, la réécriture d’adresses doit être activée chez l’hébergeur (c’est le cas par défaut avec Apache).") }}</p></details>
+<form method="post" action="/projects/{{ slug }}/cms/prestashop/connect" class="cms-form">
+  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+  <label>{{ tr("Adresse HTTPS de la boutique") }}<input type="url" name="site_url" placeholder="{{ tr('https://monsite.fr') }}" required autocomplete="url" /><span class="muted small">{{ tr("Même domaine que {url}. Ajoutez le sous-dossier si PrestaShop y est installé.", url=project.base_url) }}</span></label>
+  <label>{{ tr("Clé Webservice") }}<input type="password" name="cle" required maxlength="40" autocomplete="off" /></label>
+  <button class="btn primary" type="submit">{{ tr("Vérifier et connecter PrestaShop") }}</button>
+  <p class="muted small">{{ tr("La connexion vérifie l’accès. Chaque correction demande ensuite votre validation.") }}</p>
+</form>
