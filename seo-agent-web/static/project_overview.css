@@ -105,7 +105,10 @@
 .overview-source-empty .pill-select { display: none; }
 .overview-source-empty .card-title-row { margin-bottom: 10px; }
 .overview-source { scroll-margin-top: 90px; }
-.overview-source .card-title-actions { flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+.overview-source .card-title-row { flex-wrap: wrap; }
+.overview-source .card-title-actions { flex-wrap: wrap; justify-content: flex-end; margin-left: auto; min-width: 0; max-width: 100%; }
+.overview-source .card-title-actions > .pill-select { flex-shrink: 0; white-space: nowrap; }
+.overview-source .pill-select > label { flex-shrink: 0; white-space: nowrap; }
 .search-connection { position: relative; scroll-margin-top: 90px; }
 .search-connection > summary { cursor: pointer; list-style: none; gap: 6px; min-height: 32px; padding: 4px 9px; white-space: nowrap; }
 .search-connection > summary::-webkit-details-marker { display: none; }
