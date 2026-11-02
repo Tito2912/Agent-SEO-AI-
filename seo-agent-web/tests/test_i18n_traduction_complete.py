@@ -33,3 +33,19 @@ def test_the_analysis_history_reads_in_english(lab) -> None:
 ])
 def test_messages_sent_back_to_customers_have_an_english_version(message: str) -> None:
     assert i18n.translate(message, 'en') != message
+
+# Scripts des écrans d'administration, qui restent en français (docs/I18N.md, « Pas encore traduit »).
+SCRIPTS_ADMINISTRATION = {'plan-counts.js'}
+
+
+def test_customer_scripts_format_numbers_in_the_page_language() -> None:
+    """02/11/2026 : « 3,2 k » impressions sur la carte Search Console anglaise. Le format des
+    nombres suit la langue de la page (`<html lang>`), jamais un « fr-FR » écrit en dur."""
+    import re
+    from pathlib import Path
+
+    fige = re.compile(r'''(NumberFormat|DateTimeFormat|toLocale\w*String)\(\s*['"]fr-FR['"]''')
+    statique = Path(__file__).resolve().parents[1] / 'static'
+    figes = sorted(p.name for p in statique.glob('*.js')
+                   if p.name not in SCRIPTS_ADMINISTRATION and fige.search(p.read_text(encoding='utf-8')))
+    assert figes == [], figes
