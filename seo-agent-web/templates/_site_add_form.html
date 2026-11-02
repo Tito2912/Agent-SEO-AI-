@@ -9,6 +9,7 @@
   <label for="{{ field_prefix }}-name">{{ tr("Nom (optionnel)") }}</label>
   <input id="{{ field_prefix }}-name" name="site_name" type="text" maxlength="200" value="{{ site_add.name }}" placeholder="{{ tr('Nom affiché') }}" />
   <div class="site-add-allowance">
+    {% if site_add.recipe %}{% include "_recipe_access_notice.html" %}{% endif %}
     {% if site_add.admin %}
       <strong>{{ tr("Accès administrateur") }}</strong><p class="muted small">{{ tr("Les limites des formules clients ne s’appliquent pas à ce compte.") }}</p>
     {% else %}

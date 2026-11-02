@@ -1,0 +1,9 @@
+.recipe-access { overflow-wrap: anywhere; }
+.recipe-access form { display: grid; gap: 16px; margin-top: 20px; }
+.recipe-access form p { margin: 0; }
+.recipe-access form label { display: block; margin-bottom: 6px; }
+.recipe-access input:not([type="checkbox"]):not([type="hidden"]),
+.recipe-access select { width: 100%; min-height: 44px; box-sizing: border-box; }
+.recipe-access .btn { min-height: 44px; max-width: 100%; justify-self: start; white-space: normal; }
+.recipe-access form .recipe-confirm { display: flex; flex-direction: row; gap: 10px; align-items: center; min-height: 44px; }
+.recipe-access .recipe-confirm input { flex-shrink: 0; width: auto; }

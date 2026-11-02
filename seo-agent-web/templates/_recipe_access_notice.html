@@ -1,0 +1,11 @@
+{# Local copy for this new feature, isolated from Claude's shared catalog. #}
+<div class="alert" role="status" style="display:block;overflow-wrap:anywhere">
+  {% if current_lang() == 'en' %}
+    <strong>Temporary test access</strong>
+    <p>You can add only this demo site until {{ site_add.recipe.expires_label }} (Paris). Your plan and monthly quotas stay the same.</p>
+  {% else %}
+    <strong>Autorisation de recette temporaire</strong>
+    <p>Vous pouvez ajouter uniquement ce site de démonstration jusqu’au {{ site_add.recipe.expires_label }} (Paris). Votre formule et vos quotas mensuels sont conservés.</p>
+  {% endif %}
+  <span class="mono">{{ site_add.recipe.base_url }}</span>
+</div>

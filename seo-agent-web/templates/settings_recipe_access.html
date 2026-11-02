@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block title %}Accès de recette - Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/recipe-access.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/settings/activation/accounts/{{ account.id }}">Fiche client</a><span class="crumb-sep">/</span><span class="crumb-current">Accès de recette</span>{% endblock %}
+{% block content %}
+<div class="recipe-access">
+<div class="page-header"><h1>Accès de recette</h1><p class="muted">{{ account.email }}</p></div>
+<section class="card">
+  <h2>Ajouter un site de démonstration</h2>
+  <p>Cette autorisation permet à ce compte d’ajouter le seul site indiqué lorsque sa limite de projets est atteinte. Elle expire automatiquement. Les quotas d’analyse et d’IA, la formule et l’abonnement Stripe restent ceux du compte.</p>
+  <p>Le projet créé reste visible après l’expiration : supprimez-le une fois la recette terminée. Le retrait de l’autorisation ferme la possibilité de l’ajouter de nouveau.</p>
+  {% if access %}
+  <div class="notice"><strong>{{ 'Autorisation active' if access_active else 'Autorisation terminée' }}</strong><p class="mono">{{ access.base_url }}</p><p>Expiration : {{ date_label(access.expires_at) }} (Paris)</p><p>{{ access.reason }}</p></div>
+  {% if access_active %}<form method="post" action="/settings/activation/accounts/{{ account.id }}/recipe-access/revoke"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="grant_id" value="{{ access.grant_id }}" /><button class="btn" type="submit">Retirer cette autorisation</button></form>{% endif %}
+  {% endif %}
+  <form method="post" action="/settings/activation/accounts/{{ account.id }}/recipe-access" class="form">
+    <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+    <p><label for="recipe-origin">Origine HTTPS du site de démonstration</label><input id="recipe-origin" name="base_url" type="url" required maxlength="2048" placeholder="https://demo.example.com/" autocomplete="off" /></p>
+    <p><label for="recipe-hours">Durée de l’autorisation</label><select id="recipe-hours" name="hours"><option value="1">1 heure</option><option value="4">4 heures</option><option value="24" selected>24 heures</option><option value="48">48 heures</option></select></p>
+    <p><label for="recipe-reason">Motif de recette</label><input id="recipe-reason" name="reason" required maxlength="320" /></p>
+    <p><label class="recipe-confirm"><input name="confirm" type="checkbox" value="1" required />Autoriser cet ajout temporaire pour {{ account.email }}</label></p>
+    <button class="btn primary" type="submit">Autoriser ce site pour la recette</button>
+  </form>
+</section>
+<p><a href="/settings/activation/accounts/{{ account.id }}">Retour à la fiche client</a></p>
+</div>
+{% endblock %}
