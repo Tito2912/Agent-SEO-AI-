@@ -1,0 +1,276 @@
+{
+  "date": "2026-11-02",
+  "scope": "Anonymous production browser; public screens and private access gates only. No authentication, form submission, analysis, AI preparation or site change.",
+  "checks": [
+    {
+      "path": "/",
+      "width": 1440,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Comprenez votre SEO.Passez aux corrections.",
+      "canonical": "https://noyaru.com/"
+    },
+    {
+      "path": "/en/",
+      "width": 1440,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Understand your SEO.Move on to the fixes.",
+      "canonical": "https://noyaru.com/en/"
+    },
+    {
+      "path": "/pricing",
+      "width": 1440,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Des quotas réels, fonction par fonction.",
+      "canonical": "https://noyaru.com/pricing"
+    },
+    {
+      "path": "/en/pricing",
+      "width": 1440,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Real quotas, feature by feature.",
+      "canonical": "https://noyaru.com/en/pricing"
+    },
+    {
+      "path": "/support",
+      "width": 1440,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Obtenir de l’aide",
+      "canonical": "https://noyaru.com/support"
+    },
+    {
+      "path": "/en/support",
+      "width": 1440,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Get help",
+      "canonical": "https://noyaru.com/en/support"
+    },
+    {
+      "path": "/status",
+      "width": 1440,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "État du service",
+      "canonical": "https://noyaru.com/status"
+    },
+    {
+      "path": "/en/status",
+      "width": 1440,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Service status",
+      "canonical": "https://noyaru.com/en/status"
+    },
+    {
+      "path": "/docs",
+      "width": 1440,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Comment Noyaru fonctionne, écran par écran",
+      "canonical": "https://noyaru.com/docs"
+    },
+    {
+      "path": "/en/docs",
+      "width": 1440,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "How Noyaru works, screen by screen",
+      "canonical": "https://noyaru.com/en/docs"
+    },
+    {
+      "path": "/auth/login?lang=fr",
+      "width": 1440,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Connexion",
+      "canonical": null
+    },
+    {
+      "path": "/auth/login?lang=en",
+      "width": 1440,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Log in",
+      "canonical": null
+    },
+    {
+      "path": "/auth/signup?lang=fr",
+      "width": 1440,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Créer un compte",
+      "canonical": null
+    },
+    {
+      "path": "/auth/signup?lang=en",
+      "width": 1440,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Create an account",
+      "canonical": null
+    },
+    {
+      "path": "/",
+      "width": 390,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Comprenez votre SEO.Passez aux corrections.",
+      "canonical": "https://noyaru.com/"
+    },
+    {
+      "path": "/en/",
+      "width": 390,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Understand your SEO.Move on to the fixes.",
+      "canonical": "https://noyaru.com/en/"
+    },
+    {
+      "path": "/pricing",
+      "width": 390,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Des quotas réels, fonction par fonction.",
+      "canonical": "https://noyaru.com/pricing"
+    },
+    {
+      "path": "/en/pricing",
+      "width": 390,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Real quotas, feature by feature.",
+      "canonical": "https://noyaru.com/en/pricing"
+    },
+    {
+      "path": "/support",
+      "width": 390,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Obtenir de l’aide",
+      "canonical": "https://noyaru.com/support"
+    },
+    {
+      "path": "/en/support",
+      "width": 390,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Get help",
+      "canonical": "https://noyaru.com/en/support"
+    },
+    {
+      "path": "/status",
+      "width": 390,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "État du service",
+      "canonical": "https://noyaru.com/status"
+    },
+    {
+      "path": "/en/status",
+      "width": 390,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Service status",
+      "canonical": "https://noyaru.com/en/status"
+    },
+    {
+      "path": "/docs",
+      "width": 390,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Comment Noyaru fonctionne, écran par écran",
+      "canonical": "https://noyaru.com/docs"
+    },
+    {
+      "path": "/en/docs",
+      "width": 390,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "How Noyaru works, screen by screen",
+      "canonical": "https://noyaru.com/en/docs"
+    },
+    {
+      "path": "/auth/login?lang=fr",
+      "width": 390,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Connexion",
+      "canonical": null
+    },
+    {
+      "path": "/auth/login?lang=en",
+      "width": 390,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Log in",
+      "canonical": null
+    },
+    {
+      "path": "/auth/signup?lang=fr",
+      "width": 390,
+      "status": 200,
+      "lang": "fr",
+      "overflow": false,
+      "h1": "Créer un compte",
+      "canonical": null
+    },
+    {
+      "path": "/auth/signup?lang=en",
+      "width": 390,
+      "status": 200,
+      "lang": "en",
+      "overflow": false,
+      "h1": "Create an account",
+      "canonical": null
+    },
+    {
+      "type": "access-gate",
+      "screen": "guided-correction",
+      "redirects_to_login": true,
+      "status": 200
+    },
+    {
+      "type": "access-gate",
+      "screen": "issue",
+      "redirects_to_login": true,
+      "status": 200
+    },
+    {
+      "type": "api-access-gate",
+      "status": 401
+    }
+  ],
+  "javascript_errors": [],
+  "blocked_writes": []
+}

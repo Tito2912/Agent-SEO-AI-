@@ -1,0 +1,200 @@
+{
+  "scope": "Local fictitious account and report; response states simulated; no providers, actual GitHub writes or confirmations.",
+  "checks": [
+    {
+      "width": 1440,
+      "lang": "fr",
+      "state": "no_change",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "lang": "fr",
+      "state": "source_unresolved",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "lang": "fr",
+      "state": "valid",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "state": "no_change",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "state": "source_unresolved",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "state": "valid",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "lang": "fr",
+      "state": "no_change",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "lang": "fr",
+      "state": "source_unresolved",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "lang": "fr",
+      "state": "valid",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "lang": "en",
+      "state": "no_change",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "lang": "en",
+      "state": "source_unresolved",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "lang": "en",
+      "state": "valid",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "lang": "fr",
+      "state": "no_change",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "lang": "fr",
+      "state": "source_unresolved",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "lang": "fr",
+      "state": "valid",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "state": "no_change",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "state": "source_unresolved",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "state": "valid",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "lang": "fr",
+      "state": "no_change",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "lang": "fr",
+      "state": "source_unresolved",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "lang": "fr",
+      "state": "valid",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "lang": "en",
+      "state": "no_change",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "lang": "en",
+      "state": "source_unresolved",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "lang": "en",
+      "state": "valid",
+      "simulated_preparations": 1,
+      "confirmations": 0,
+      "overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "unexpected_writes": []
+}
