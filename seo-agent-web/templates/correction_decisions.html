@@ -5,7 +5,8 @@
 {% block content %}
 <div class="correction-decisions">
   <header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
-  <p><a class="btn" href="/projects/{{ slug }}/corrections">{{ copy.back }}</a></p>
+  <p><a class="btn" href="/projects/{{ slug }}/corrections">{{ copy.back }}</a>
+     <a class="btn" href="/projects/{{ slug }}/corrections/autonomy">{{ 'Automatic preparation' if lang == 'en' else 'Préparation autonome' }}</a></p>
   {% if error %}<div class="alert error" role="alert">{{ copy.unavailable }}</div>
   {% else %}
   {% if refreshed %}<p class="alert ok" role="status">{{ copy.refreshed }}</p>{% endif %}

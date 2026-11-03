@@ -143,7 +143,7 @@ revenir à un repère antérieur exige une nouvelle vérification contre la vers
 
 ## Lot 3A : décisions après contrôle et limites de recommandation
 
-Implémenté dans la branche `feat/noyaru-autocorrection-decisions` :
+Livré par la PR #68, fusionnée et vérifiée en production le 3 novembre 2026 :
 
 - Le moteur de contrôle transmet son périmètre exact au journal de décisions,
   dans la même transaction que l'observation et le résultat de la tâche.
@@ -195,7 +195,70 @@ Implémenté dans la branche `feat/noyaru-autocorrection-decisions` :
 - L'assistant reçoit la décision et les compteurs bornés du seul projet autorisé,
   sans URL, note ou identifiant de tâche. Une décision ne vaut pas mandat d'exécuter.
 
-## Suite du lot 3 : exécution de l'autocorrection
+## Lot 3B : premier exécuteur, préparation autonome d'un aperçu
+
+Implémenté dans `feat/noyaru-autocorrection-executor`, depuis `main` `8c28003`.
+L'activation est volontaire et limitée à une tâche ; aucun compte existant ne
+reçoit de mandat à la migration. Claude conserve les intégrations CMS.
+
+- Écran **Corrections → Suite de vos corrections → Préparation autonome**, FR/EN,
+  à `/projects/{slug}/corrections/autonomy`. Les membres lisent le suivi ; seul le
+  propriétaire autorise, suspend, retire le mandat ou confirme le brouillon GitHub.
+- Premier périmètre : titres et descriptions de pages GitHub, dont la source est
+  résolue par le parcours unitaire existant. Aucun choix de fichier IA, correction
+  CMS, correction structurelle, audit supplémentaire, email ou publication autonome.
+- Un contrôle serveur de moins de sept jours doit encore observer le défaut après
+  une modification déclarée, sur cette seule page. Historique complet et première
+  application en échec requis ; le seuil du lot 3A reste bloquant. Le propriétaire
+  confirme avoir vérifié la publication, la page et le fichier avant d'autoriser.
+- Une autorisation couvre **un seul aperçu**, pendant **24 heures**, avec au plus
+  **1 crédit** selon le décompte existant. Forfait et quota courants sont relus au
+  départ sous le verrou payeur. Le décompte intervient uniquement lorsqu'un aperçu
+  exploitable est enregistré ; la réservation du travail ne promet pas une place
+  de quota avant son départ.
+- Bornes fournisseur supplémentaires réservées avant chaque requête HTTP : au plus
+  4 requêtes, 360 000 caractères d'entrée et 20 000 jetons de sortie au total ; au
+  plus 100 000 caractères et 8 000 jetons de sortie par requête. Le repli technique
+  OpenAI sur la température réserve lui aussi une requête. Ces plafonds sont des
+  limites conservatrices, pas une mesure de coût en euros ni de consommation réelle.
+- Table additive `autocorrection_runs`, migration `20261103_0022`. Elle réunit
+  mandat, file durable, preuves opaques, limites, réservations et lien vers le
+  `CorrectionOperation` existant. Clé unique par tâche et application : répéter un
+  contrôle, cliquer deux fois ou renouveler la demande ne crée pas un autre aperçu.
+  Les consentements versionnés et transitions sont audités sans URL ou contenu brut.
+- Ordonnanceur du service web toutes les 30 secondes, file bornée ; route de secours
+  `POST /cron/autocorrection-previews` sous le secret cron existant. La route n'est
+  pas ajoutée au workflow quotidien dans ce lot. Les demandes survivent à un
+  redémarrage ; les ordonnanceurs de test restent désactivables.
+- Avant chaque lecture GitHub et requête IA : relecture de la propriété, du mandat,
+  de l'expiration, du contrôle, de l'application, de la configuration et des limites.
+  Les lectures sont bornées au dépôt autorisé. Les écritures GitHub sont refusées
+  dans le contexte de préparation, y compris GraphQL. Une note client ou un contenu
+  de fichier ne peut étendre ces droits.
+- Retrait du mandat et suspension du projet sans attendre le long verrou payeur.
+  Une préparation en attente reste reprenable après suspension, dans sa validité.
+  Arrêt opérateur par `NOYARU_AUTOCORRECTION_PAUSED=true` ; les ordonnanceurs respectent
+  aussi `SEO_AGENT_DISABLE_SCHEDULERS`. Une requête déjà réservée/partie peut terminer ;
+  son résultat et son éventuel crédit sont conservés. L'arrêt ne promet pas de
+  rappeler une requête déjà transmise.
+- Erreur ou timeout fournisseur : arrêt sans repli automatique aveugle. Après
+  interruption, seul un aperçu déjà sauvegardé peut être réconcilié et décompté une
+  fois. Sans reçu exploitable, revue requise et journal conservé ; aucun verrou
+  effacé pour relancer le modèle. Les reprises transitoires plus générales restent
+  hors de ce premier exécuteur.
+- L'aperçu est affiché avec son diff échappé. Une **confirmation humaine distincte**
+  autorise la branche et la PR en brouillon par le chemin existant. Le serveur relit
+  sa cible à chaque transport, refuse une source distante changée, interdit tout
+  nouvel appel IA dans cette confirmation et ne fusionne pas la PR. Aucun code
+  fourni par un champ caché n'est accepté : le serveur reprend son aperçu enregistré.
+
+Ce lot ne prépare pas plusieurs stratégies en boucle et ne publie pas une correction
+sur un site client. La prochaine extension devra apporter ses propres preuves de
+publication, mandats par type d'écriture, contrôle et reprise après résultat inconnu.
+Les scénarios peuplés se testent localement avec transports simulés ; une recette
+réelle consommant un crédit nécessite un mandat propre au compte/projet choisi.
+
+## Suite du lot 3 : application et contrôle autonomes
 
 Séparer trois objets : constat, décision et exécution. La décision porte la règle
 et ses versions, les preuves, le projet, l'action ciblée, le coût maximal et les
