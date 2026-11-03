@@ -458,7 +458,7 @@
 {% set sev_color = {'error': '#ef4444', 'warning': '#f59e0b', 'notice': '#818cf8'} %}
 <div class="page-header">
   <h1>{{ tr("Corrections") }}</h1>
-  <p><a class="btn" href="/projects/{{ slug }}/correction-decisions">{{ 'What happens after your corrections' if current_lang() == 'en' else 'Suite de vos corrections' }}</a></p>
+  <p><a class="btn" href="/projects/{{ slug }}/corrections/decisions">{{ 'What happens after your corrections' if current_lang() == 'en' else 'Suite de vos corrections' }}</a></p>
   <p class="muted">{% if stats.total > 1 %}{{ tr("{n} corrections suivies", n=stats.total) }}{% else %}{{ tr("{n} correction suivie", n=stats.total) }}{% endif %} · {{ project.site_name }}</p>
   <a href="{{ help_link(request, doc_path('corrections-automatiques')) }}" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
 </div>

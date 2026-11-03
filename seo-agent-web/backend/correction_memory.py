@@ -69,6 +69,12 @@ def record_control(db, task, *, crawl_ts, result, baseline_confirmed, scope_urls
         raise RuntimeError("Unsupported correction memory database")
     # No SAVEPOINT: SQLite's legacy transaction mode can commit a released
     # savepoint before the first DML even if the caller later rolls back.
+    if scope_urls is not None:
+        if __package__:
+            from . import correction_decisions
+        else:
+            import correction_decisions
+        correction_decisions.lock_project(db,task.project_id)
     statement = insert(CorrectionObservation).values(
         project_id=str(task.project_id), task_id=str(task.id), observation_key=identity,
         attempt_key=attempt, issue_key=str(task.issue_key), baseline_ts=baseline,
@@ -79,10 +85,6 @@ def record_control(db, task, *, crawl_ts, result, baseline_confirmed, scope_urls
     # caller's transaction rather than claiming the journal entry exists.
     inserted = db.execute(statement).rowcount == 1
     if scope_urls is not None:
-        if __package__:
-            from . import correction_decisions
-        else:
-            import correction_decisions
         observation = db.scalar(select(CorrectionObservation).where(CorrectionObservation.observation_key == identity))
         inserted |= correction_decisions.record(db, task, observation, urls=scope_urls)
     return inserted

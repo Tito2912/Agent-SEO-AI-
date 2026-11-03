@@ -190,7 +190,7 @@ def test_customer_notes_cannot_supply_a_decision_or_scope(lab):
 def test_project_routes_preserve_team_rights_and_equal_slug_isolation(lab):
     owner,p,t=case(lab);add(lab['db'],t)
     stranger=user(lab['db']);project(lab['db'],stranger,slug=p.slug)
-    path=f'/api/projects/{p.slug}/correction-decisions'
+    path=f'/api/projects/{p.slug}/corrections/decisions'
     assert client(owner).get(path).json()['summary']['decisions'][0]['code']=='inspect_publication'
     assert client(stranger).get(path).json()['summary']['decisions']==[]
     member=user(lab['db'])
@@ -213,7 +213,7 @@ def test_gets_are_read_only_refresh_requires_csrf_and_never_calls_external_servi
     def forbidden(*a,**kw):raise AssertionError('No provider, quota, GitHub or site calls for diagnostics')
     monkeypatch.setattr(m,'_github_api_get',forbidden)
     monkeypatch.setattr(m.billing,'ensure_within_quota',forbidden)
-    c=client(owner);path=f'/projects/{p.slug}/correction-decisions'
+    c=client(owner);path=f'/projects/{p.slug}/corrections/decisions'
     assert c.get(path).status_code==200
     assert c.get('/api'+path).status_code==200
     assert not audits(lab['db'])
@@ -230,11 +230,13 @@ def test_bilingual_actions_keep_the_exact_page_and_control_context(lab,lang,head
     from test_correction_memory import report
     directory=m._runs_dir_for_user(owner.id)/p.slug/stamp(CONTROL)/'audit'
     directory.mkdir(parents=True);(directory/'report.json').write_text(json.dumps(report(present=True)))
-    c=client(owner);response=c.get(f'/projects/{p.slug}/correction-decisions?lang={lang}')
+    c=client(owner);response=c.get(f'/projects/{p.slug}/corrections/decisions?lang={lang}')
     assert response.status_code==200 and heading in response.text
     from bs4 import BeautifulSoup
     from urllib.parse import parse_qs,urlsplit
-    card=BeautifulSoup(response.text,'html.parser').select_one('[data-decision="inspect_publication"]')
+    soup=BeautifulSoup(response.text,'html.parser')
+    assert soup.select_one('a.nav-item.active[href="/projects/'+p.slug+'/corrections"][aria-current="page"]') is not None
+    card=soup.select_one('[data-decision="inspect_publication"]')
     action=card.select_one('a.btn')['href'];query=parse_qs(urlsplit(action).query)
     assert query['page_url']==[URL] and query['crawl']==[stamp(CONTROL)]
     assert urlsplit(action).fragment=='page-selection' and urlsplit(action).path.endswith('/issues/missing_title')
@@ -276,7 +278,7 @@ def test_error_response_is_private_and_does_not_include_internal_database_detail
     def fail(*args,**kwargs):raise OperationalError('credential=private-connection',{},RuntimeError())
     monkeypatch.setattr(d,'project_summary',fail)
     c=client(owner)
-    for path in (f'/projects/{p.slug}/correction-decisions',f'/api/projects/{p.slug}/correction-decisions'):
+    for path in (f'/projects/{p.slug}/corrections/decisions',f'/api/projects/{p.slug}/corrections/decisions'):
         response=c.get(path)
         assert response.status_code==503 and response.headers['cache-control']=='no-store'
         assert 'private-connection' not in response.text
@@ -300,7 +302,7 @@ def test_missing_report_returns_to_the_exact_task_and_opens_verified_history(lab
         current=db.get(IssueTask,t.id);note=first_correction.note_data(current.note)
         note['verify']={'result':'resolved','crawl_ts':stamp(CONTROL),'verified_at':NOW.isoformat()}
         current.note=json.dumps(note);current.status='done';db.commit()
-    c=client(owner);page=c.get(f'/projects/{p.slug}/correction-decisions')
+    c=client(owner);page=c.get(f'/projects/{p.slug}/corrections/decisions')
     card=BeautifulSoup(page.text,'html.parser').select_one('[data-decision="confirm_baseline"]')
     href=card.select_one('a.btn')['href'];query=parse_qs(urlsplit(href).query)
     assert query['task_id']==[t.id] and urlsplit(href).fragment=='correction-task-'+t.id
@@ -326,9 +328,9 @@ def test_only_the_authorized_report_is_restored_before_building_contextual_links
         return True
     monkeypatch.setattr(m,'_ensure_runs_file_local',restore)
     stranger=user(lab['db'])
-    assert client(stranger).get(f'/projects/{p.slug}/correction-decisions').status_code==404
+    assert client(stranger).get(f'/projects/{p.slug}/corrections/decisions').status_code==404
     assert not requested
-    response=client(owner).get(f'/projects/{p.slug}/correction-decisions')
+    response=client(owner).get(f'/projects/{p.slug}/corrections/decisions')
     assert response.status_code==200 and len(requested)==1
     assert requested[0]==m._runs_dir_for_user(owner.id)/p.slug/stamp(CONTROL)/'audit/report.json'
     href=BeautifulSoup(response.text,'html.parser').select_one('.decision-card a')['href']
@@ -389,3 +391,77 @@ def test_cms_application_is_counted_and_restoration_is_not_a_new_correction(lab)
     add(lab['db'],t,at=CONTROL+timedelta(hours=1))
     value=decision(lab['db'],t)
     assert value['failed_applications']==1 and not value['publication_declared']
+
+
+@pytest.mark.parametrize('observed',['title_too_short_not_indexable','title_too_long_indexable'])
+def test_observed_variant_link_opens_the_exact_reported_page(lab,observed):
+    from bs4 import BeautifulSoup
+    from urllib.parse import parse_qs,urlsplit
+    owner=user(lab['db']);p=project(lab['db'],owner)
+    original='title_too_short_indexable'
+    assert observed in m._verification_family_keys(original)
+    t=task(lab['db'],p,key=original)
+    with lab['db'].session() as db:
+        stored=db.get(IssueTask,t.id);stored.url=URL+'#section';db.commit()
+    add(lab['db'],t)
+    report={'meta':{'base_url':'https://atelier.example/'},
+            'pages':[{'url':URL,'status_code':200,'content_type':'text/html','meta_robots':'noindex'}],
+            'issues':{observed:{'count':1,'examples':[URL]}}}
+    directory=m._runs_dir_for_user(owner.id)/p.slug/stamp(CONTROL)/'audit'
+    directory.mkdir(parents=True);(directory/'report.json').write_text(json.dumps(report))
+    c=client(owner);response=c.get(f'/projects/{p.slug}/corrections/decisions')
+    card=BeautifulSoup(response.text,'html.parser').select_one('[data-decision="inspect_publication"]')
+    href=card.select_one('a.btn')['href'];query=parse_qs(urlsplit(href).query)
+    assert urlsplit(href).path.endswith('/issues/'+observed)
+    assert query['page_url']==[URL] and query['crawl']==[stamp(CONTROL)]
+    destination=c.get(href)
+    assert destination.status_code==200 and destination.context['focused_url']==URL
+
+
+@pytest.mark.parametrize('observed,page',[
+    ('missing_h1',URL),
+    ('title_too_short_indexable','https://atelier.example/some-other-page/'),
+])
+def test_unproven_issue_variant_or_page_returns_to_the_tracked_task(lab,observed,page):
+    from bs4 import BeautifulSoup
+    from urllib.parse import parse_qs,urlsplit
+    owner=user(lab['db']);p=project(lab['db'],owner);t=task(lab['db'],p,key='title_too_short_indexable')
+    add(lab['db'],t)
+    report={'meta':{'base_url':'https://atelier.example/'},'pages':[{'url':page,'status_code':200}],
+            'issues':{observed:{'count':1,'examples':[page]}}}
+    directory=m._runs_dir_for_user(owner.id)/p.slug/stamp(CONTROL)/'audit'
+    directory.mkdir(parents=True);(directory/'report.json').write_text(json.dumps(report))
+    response=client(owner).get(f'/projects/{p.slug}/corrections/decisions')
+    card=BeautifulSoup(response.text,'html.parser').select_one('[data-decision="inspect_publication"]')
+    href=card.select_one('a.btn')['href']
+    assert parse_qs(urlsplit(href).query)['task_id']==[t.id]
+    assert urlsplit(href).path.endswith('/corrections') and urlsplit(href).fragment=='correction-task-'+t.id
+
+
+
+def test_postgres_decision_lock_is_scoped_deterministic_and_transactional():
+    calls=[]
+    class FakeDB:
+        def get_bind(self):return SimpleNamespace(dialect=SimpleNamespace(name='postgresql'))
+        def execute(self,statement,parameters):calls.append((str(statement),parameters))
+    db=FakeDB();d.lock_project(db,'first');d.lock_project(db,'first');d.lock_project(db,'second')
+    assert calls[0]==calls[1] and calls[0]!=calls[2]
+    assert calls[0][0]=='SELECT pg_advisory_xact_lock(:key)'
+    assert isinstance(calls[0][1]['key'],int) and 'first' not in str(calls[0])
+
+
+
+def test_observation_write_waits_for_the_decision_lock(lab,monkeypatch):
+    from sqlalchemy import event
+    _,_,t=case(lab);calls=[]
+    original=d.lock_project
+    def locked(db,project_id):calls.append('locked');return original(db,project_id)
+    monkeypatch.setattr(d,'lock_project',locked)
+    def statement(connection,cursor,sql,parameters,context,executemany):
+        if sql.lstrip().startswith('INSERT INTO correction_observations'):
+            assert calls and calls[0]=='locked'
+            calls.append('observation')
+    event.listen(lab['db'].engine,'before_cursor_execute',statement)
+    try:add(lab['db'],t)
+    finally:event.remove(lab['db'].engine,'before_cursor_execute',statement)
+    assert 'observation' in calls

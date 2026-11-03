@@ -11,7 +11,7 @@
   {% if refreshed %}<p class="alert ok" role="status">{{ copy.refreshed }}</p>{% endif %}
   <section class="card decision-summary">
     <p>{{ copy.boundary }}</p>
-    <form method="post" action="/projects/{{ slug }}/correction-decisions/refresh">
+    <form method="post" action="/projects/{{ slug }}/corrections/decisions/refresh">
       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
       <button class="btn" type="submit">{{ copy.refresh }}</button>
     </form>
@@ -23,7 +23,7 @@
     <p class="decision-issue">{{ tr(item.label) }}</p>
     {% if item.page_url %}<p class="decision-url">{{ item.page_url }}</p>{% endif %}
     <p>{{ item.text }}</p>
-    {% if item.report_missing %}<p class="decision-date">{{ copy.report_missing }}</p>{% endif %}
+    {% if item.report_missing %}<p class="decision-date">{{ copy.report_missing }}</p>{% elif item.context_missing %}<p class="decision-date">{{ copy.context_missing }}</p>{% endif %}
     <p class="decision-date">{{ copy.control }} : <time datetime="{{ item.control_at }}" data-ts-datetime="{{ item.control_stamp }}">{{ item.control_label }}</time></p>
     <p><a class="btn primary" href="{{ item.href }}">{{ item.action }}</a></p>
     <details><summary>{{ copy.detail }}</summary>

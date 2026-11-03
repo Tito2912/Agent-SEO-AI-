@@ -171,6 +171,9 @@ Implémenté dans la branche `feat/noyaru-autocorrection-decisions` :
 - Les anciennes observations sans périmètre capturé restent signalées comme
   incomplètes. Une actualisation ne reconstruit pas leur périmètre à partir d'une
   ancienne note. Seul un nouveau calcul réel du moteur peut fournir cette preuve.
+- Les calculs d’un projet sont sérialisés sur PostgreSQL par un verrou de
+  transaction pris avant l’écriture de l’observation. Il ne verrouille pas les
+  lignes des tâches clients ; SQLite conserve sa sérialisation des écritures.
 - Les contrôles sont ordonnés par leur début, pas par leur arrivée. Un résultat en
   retard met à jour la décision de l'application courante ; il ne remplace pas son
   dernier résultat par un ancien. L'identité d'une application continue d'être
@@ -181,7 +184,7 @@ Implémenté dans la branche `feat/noyaru-autocorrection-decisions` :
   d'audit garde sa politique de conservation préexistante.
 - Écran privé **Corrections → Suite de vos corrections**, bilingue FR/EN, liens
   contextualisés vers le bon contrôle, la bonne page et les instructions. Lecture
-  JSON privée sous `/api/projects/{slug}/correction-decisions` ; actualisation POST
+  JSON privée sous `/api/projects/{slug}/corrections/decisions` ; actualisation POST
   protégée par CSRF, droits d'équipe et limite de fréquence.
 - GET sans écriture en base. L’écran peut relire les rapports conservés dans le
   stockage autorisé du compte. Un rapport absent renvoie à la tâche précise dans le

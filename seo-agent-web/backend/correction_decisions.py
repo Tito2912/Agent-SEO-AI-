@@ -11,7 +11,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
@@ -44,6 +44,18 @@ def scope_key(task, urls):
         return None
     scope = sorted(set(urls))
     return digest([str(task.project_id), str(task.id), str(task.issue_key), scope])
+
+
+def lock_project(db, project_id):
+    """Serialize decision transactions without locking customers' task rows.
+
+    Called before the first observation write. SQLite already serializes writes;
+    the PostgreSQL transaction lock is released on commit or rollback.
+    """
+    if db.get_bind().dialect.name == 'postgresql':
+        raw=hashlib.sha256(('noyaru-correction-decisions:'+str(project_id)).encode()).digest()
+        key=int.from_bytes(raw[:8],byteorder='big',signed=True)
+        db.execute(text('SELECT pg_advisory_xact_lock(:key)'),{'key':key})
 
 
 def _insert(db):
@@ -147,8 +159,6 @@ def evaluate(db, task, *, now=None):
 def _register(db, observation, task, scope, *, now):
     if observation.project_id != str(task.project_id) or observation.task_id != str(task.id):
         raise ValueError('Decision scope mismatch')
-    # Serialized per task. Immutable control events can arrive in a different order.
-    db.execute(select(IssueTask.id).where(IssueTask.id == task.id).with_for_update())
     application, declared, basis=application_identity(db,task,observation,scope)
     created = db.execute(_insert(db).values(
         observation_id=observation.id, project_id=str(task.project_id), task_id=str(task.id),
@@ -175,6 +185,7 @@ def _register(db, observation, task, scope, *, now):
 def record(db, task, observation, *, urls=None, now=None):
     """Same transaction as the control. No commit or external execution."""
     now = _clock(now)
+    lock_project(db,task.project_id)
     changed = _register(db, observation, task, scope_key(task, urls) if urls is not None else None, now=now)
     # Do not refresh the ORM task in place: the verification caller still needs
     # its own pending note edits. A late worker must assess the current DB task.
@@ -227,6 +238,7 @@ def project_summary(db, project_id, *, now=None):
 def refresh_project(db, project_id, *, now=None):
     """Record only currently applicable server observations; no old-note backfill."""
     now = _clock(now)
+    lock_project(db,project_id)
     count = 0
     for item in project_summary(db, project_id, now=now)['decisions']:
         task = db.get(IssueTask, item['task_id'])
