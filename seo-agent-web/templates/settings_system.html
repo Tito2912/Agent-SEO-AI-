@@ -111,7 +111,7 @@
     <p class="muted">Configuration interne de la plateforme. Accès réservé au propriétaire système.</p>
   </div>
 
-  <nav class="section-nav" aria-label="Sections du système"><a href="#secret-storage">Chiffrement</a>{% for section in sections %}<a href="#{{ section.id }}">{{ section.title }}</a>{% endfor %}<a href="/settings/operations">Vérifier les services</a></nav>
+  <nav class="section-nav" aria-label="Sections du système"><a href="#secret-storage">Chiffrement</a>{% for section in sections %}<a href="#{{ section.id }}">{{ section.title }}</a>{% endfor %}<a href="/settings/operations">Vérifier les services</a><a href="/settings/system/seo-knowledge">{{ 'SEO/GEO knowledge' if current_lang() == 'en' else 'Veille SEO/GEO' }}</a></nav>
   {% if err %}
     <section class="card" style="border-color: rgba(255, 107, 107, .35);">
       <div class="card-title-row">

@@ -12,6 +12,11 @@ def test_current_routes_helper_templates_and_translated_articles_are_inventoried
     module=runpy.run_path(str(SCRIPT))
     text=module['inventory']()
     assert '/projects/add' in text and '/api/assistant/meta' in text
+    for path in ('/settings/system/seo-knowledge', '/settings/system/seo-knowledge/refresh',
+                 '/settings/system/seo-knowledge/{key}/review', '/settings/system/seo-knowledge/{key}/withdraw',
+                 '/settings/system/seo-knowledge/{key}/pause', '/cron/seo-watch'):
+        assert '`'+path+'`' in text
+    assert 'settings_seo_knowledge.html' in text
     assert 'terms_public_en.html' in text and 'privacy_public_en.html' in text
     assert '/en/docs/lancer-un-crawl' in text
     assert '/en/ressources-seo/' in text

@@ -70,8 +70,11 @@ ECARTES = {
     # Transports d'e-mail que le code SAIT utiliser mais qui ne le sont pas : Brevo l'est.
     "api.sendgrid.com", "api.resend.com",
     # Liens affichés ou documentation, pas des appels.
-    "github.com", "app.netlify.com", "console.cloud.google.com", "developers.google.com",
+    "github.com", "app.netlify.com", "console.cloud.google.com",
     "schema.org", "www.cnil.fr",
+    # Veille de documents publics : requêtes fixes du serveur sans données clients,
+    # cookies, identifiants ni paramètres. Seule l'IP du service est transmise.
+    "developers.google.com", "blogs.bing.com",
     # Liens des pages juridiques (backend/legal.py) : l'hébergeur et le médiateur, pas des appels.
     "render.com", "www.cm2c.net",
     # Aides CMS affichées au client : aucune requête serveur ni transmission de données.

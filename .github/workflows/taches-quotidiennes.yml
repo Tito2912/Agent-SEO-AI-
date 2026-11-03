@@ -40,8 +40,8 @@ concurrency:
 jobs:
   taches:
     runs-on: ubuntu-latest
-    # Quatre appels de cinq minutes au plus, plus quatre minutes de relance chacun.
-    timeout-minutes: 40
+    # Cinq appels de cinq minutes au plus, plus quatre minutes de relance chacun.
+    timeout-minutes: 50
     steps:
       - name: Appeler les taches de fond
         env:
@@ -89,9 +89,11 @@ jobs:
           # tourne, et une tache qui n'y figure que par effet de bord finit par disparaitre
           # sans que personne ne s'en apercoive. Un passage de plus ne produit rien de plus.
           appeler POST /cron/auto-content
+          # Lecture de trois sources officielles, sans IA, email ni publication.
+          appeler POST /cron/seo-watch
 
           if [ -n "$rates" ]; then
             echo "Taches en echec :$rates"
             exit 1
           fi
-          echo "Les quatre taches ont repondu."
+          echo "Les cinq taches ont repondu."

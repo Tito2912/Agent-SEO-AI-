@@ -683,3 +683,36 @@ class AccountInvite(Base):
     invited_by_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class SeoKnowledgeSource(Base):
+    """Global public-document watch; no customer data or editable source URLs."""
+    __tablename__ = "seo_knowledge_sources"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    latest_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    approved_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    guidance_fr: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    guidance_en: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    lease_token: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+
+
+class SeoKnowledgeRevision(Base):
+    """Bounded metadata/excerpt history; original documents remain on publisher sites."""
+    __tablename__ = "seo_knowledge_revisions"
+    __table_args__ = (Index("ix_seo_knowledge_revisions_source_seen", "source_key", "first_seen_at"),)
+
+    source_key: Mapped[str] = mapped_column(String(64), ForeignKey("seo_knowledge_sources.key", ondelete="CASCADE"), primary_key=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), primary_key=True)
+    url: Mapped[str] = mapped_column(String(512), nullable=False)
+    text_chars: Mapped[int] = mapped_column(Integer, nullable=False)
+    excerpt: Mapped[str] = mapped_column(Text, nullable=False)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
