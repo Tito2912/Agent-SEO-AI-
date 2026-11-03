@@ -321,6 +321,8 @@ def execute(run_id):
             request = Request({'type':'http', 'method':'POST', 'path':'/', 'headers':[],
                                'scheme':'https', 'server':('noyaru.internal',443), 'query_string':b''})
             request.state.user = owner
+            usage_context = m._poser_contexte_ia(payeur=run.owner_id, utilisateur=run.owner_id,
+                                                slug=project.slug, fonction='autocorrection_preview')
             try:
                 with execution.bounded(PreviewPolicy(run.id)):
                     response = m.api_github_fix(request, project.slug, task.issue_key,
@@ -339,6 +341,8 @@ def execute(run_id):
                 # Preserve journal/lease state and all reservations. No retry after ambiguity.
                 m.logger.error('[autocorrection] preparation interrupted')
                 return _finish(run.id, state='review_required', reason='interrupted')
+            finally:
+                m._IA_CONTEXTE.reset(usage_context)
     except correction_guard.CorrectionBusy:
         return 'busy'
     except correction_guard.CorrectionStoreUnavailable:
@@ -367,6 +371,8 @@ def reconcile(run_id):
         run = db.get(AutocorrectionRun, run_id)
     if not run or run.state == 'queued':
         return 'missing'
+    if run.reason == 'source_changed':
+        return 'review_required'
     try:
         with correction_guard.correction_lock(m.DB, run.owner_id):
             return _reconcile(run)

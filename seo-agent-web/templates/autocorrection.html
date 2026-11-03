@@ -51,6 +51,7 @@
     <p class="preparation-issue">{{ tr(item.task.issue_label or item.task.issue_key) if item.task else '' }}</p>
     {% if item.task %}<p class="preparation-url">{{ item.task.url }}</p>{% endif %}
     <p>{{ copy.reasons.get(run.reason, copy.reasons.interrupted) }}</p>
+    {% if run.revoked_at and run.state == 'preview_ready' %}<p role="status">{{ copy.reasons.revoked }}</p>{% endif %}
     <p>{{ copy.expires }} : <time datetime="{{ run.expires_at.isoformat() }}">{{ item.expires }}</time></p>
     <p>{{ copy.credit }} : <strong>{{ item.charged }} / 1</strong></p>
     <details><summary>{{ copy.detail }}</summary><dl>

@@ -254,7 +254,7 @@ _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 # blanche du middleware de session est redirige vers la connexion, et un chemin ouvert sans
 # exemption CSRF repond 403. Dans les deux cas l'ordonnanceur echoue en silence. Un test
 # compare les deux listes pour chaque route /cron.
-_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/seo-watch",
+_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/seo-watch", "/cron/autocorrection-previews",
                       "/cron/auto-search-backlinks", "/cron/auto-post-backlinks",
                       "/cron/refresh-competitors", "/cron/verify-pull-requests",
                       "/cron/auto-content"}
@@ -12184,6 +12184,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/cron/check-backlinks",
         "/cron/autopilot",
         "/cron/seo-watch",
+        "/cron/autocorrection-previews",
         "/cron/verify-pull-requests",
         "/cron/refresh-competitors",
         "/cron/auto-search-backlinks",

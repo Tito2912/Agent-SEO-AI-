@@ -9,13 +9,14 @@ from sqlalchemy import func, select
 
 from backend import app as m, autocorrection as a, correction_execution as e, correction_guard
 from backend import correction_decisions as d, first_correction
-from backend.models import AccountMember, AuditLog, AutocorrectionRun, CorrectionOperation, IssueTask, Project
+from backend.models import AccountMember, AuditLog, AutocorrectionRun, CorrectionOperation, IssueTask, Project, UsageEvent
 from test_customer_activation import client, lab as lab, user
 from test_correction_decisions import add, application, case
 from test_correction_memory import CONTROL, NOW
 
 SOURCE = '<html><head><title></title></head><body><h1>Atelier</h1></body></html>'
 PATCHED = SOURCE.replace('<title></title>', '<title>Atelier de réparation</title>')
+NOTE_USAGE = m._noter_consommation_ia
 
 
 @pytest.fixture()
@@ -349,7 +350,10 @@ def test_real_human_draft_path_reuses_preview_and_refuses_changed_source(prepare
     path = f'/projects/{x["project"].slug}/corrections/autonomy/{run.id}/draft'
     response = submit(client(x['owner']), path, {'confirm':'true'})
     if changed:
-        assert 'error=preparation_failed' in response.headers['location'] and not writes
+        assert 'error=source_changed' in response.headers['location'] and not writes
+        assert a.reconcile(run.id) == 'review_required'
+        body = client(x['owner']).get(path.rsplit('/',2)[0]).text
+        assert f'{run.id}/draft' not in body and f'{run.id}/reconcile' not in body
     else:
         assert 'msg=draft_done' in response.headers['location']
         assert len(writes) == 3 and all('/merge' not in value[1] for value in writes)
@@ -357,6 +361,28 @@ def test_real_human_draft_path_reuses_preview_and_refuses_changed_source(prepare
             note = first_correction.note_data(db.get(IssueTask,x['task'].id).note)
             assert note['pr_number'] == 91 and not note['verification']['fusion_auto']
     assert len(x['calls']) == 1
+
+
+def test_cron_requires_secret_and_only_drains_authorized_queue_items(prepared, monkeypatch):
+    x = prepared;run = grant(x);monkeypatch.setenv('CRON_SECRET', 'local-simulated-cron')
+    c = client()
+    assert c.post('/cron/autocorrection-previews').status_code == 401
+    assert not x['calls']
+    monkeypatch.setenv('SEO_AGENT_DISABLE_SCHEDULERS','false')
+    response = c.post('/cron/autocorrection-previews', headers={'Authorization':'Bearer local-simulated-cron'})
+    assert response.status_code == 200 and response.json()['result']['examined'] == 1
+    assert read(x,run.id).state == 'preview_ready' and len(x['calls']) == 1
+
+
+def test_background_provider_usage_is_attributed_to_the_authorizing_account(prepared, monkeypatch):
+    x = prepared;run = grant(x);before = m._IA_CONTEXTE.get()
+    monkeypatch.setattr(m, '_noter_consommation_ia', NOTE_USAGE)
+    assert a.execute(run.id) == 'preview_ready'
+    assert m._IA_CONTEXTE.get() == before
+    with x['db'].session() as db:
+        events = list(db.scalars(select(UsageEvent).where(UsageEvent.metric == 'ia_cout_microdollars')))
+        assert len(events) == 1 and events[0].user_id == x['owner'].id
+        assert events[0].meta['fonction'] == 'autocorrection_preview'
 
 
 def test_operator_pause_and_scheduler_disable_do_not_consume_the_queue(prepared, monkeypatch):

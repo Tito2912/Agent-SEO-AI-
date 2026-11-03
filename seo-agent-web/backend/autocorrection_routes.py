@@ -1,4 +1,5 @@
 """Owner mandates, team-visible receipts and separate human draft confirmation."""
+import json
 from urllib.parse import quote
 
 from fastapi import APIRouter, Form, HTTPException, Request
@@ -73,7 +74,7 @@ def page(request: Request, slug: str, msg: str = '', error: str = ''):
                 current = bool(task and service.draft_current(db, row, project, task))
                 runs.append({'row':row, 'task':task, 'preview':preview, 'charged':int(charged),
                     'draft_allowed':bool(preview and current and row.state == 'preview_ready'),
-                    'recoverable':bool(preview and row.state not in {'queued','preview_ready'}),
+                    'recoverable':bool(preview and row.reason != 'source_changed' and row.state not in {'queued','preview_ready'}),
                     'expires':first_correction.timestamp(row.expires_at).strftime('%Y-%m-%d %H:%M UTC'),
                     'tracking':'/projects/'+quote(slug,safe='')+'/corrections?task_id='+quote(row.task_id,safe='')+'#correction-task-'+quote(row.task_id,safe='')})
     except SQLAlchemyError:
@@ -159,6 +160,9 @@ def draft(request: Request, slug: str, run_id: str, confirm: bool = Form(False))
                 patched_content=preview['patched_content']))
     except execution.ExecutionStopped as exc:
         return redirect(slug, error=exc.reason)
+    if response.status_code == 409 and json.loads(response.body).get('stale_preview'):
+        service._finish(run.id, state='review_required', reason='source_changed')
+        return redirect(slug, error='source_changed')
     return redirect(slug, msg='draft_done') if response.status_code == 200 else redirect(slug, error='preparation_failed')
 
 
