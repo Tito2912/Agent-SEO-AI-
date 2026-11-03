@@ -47,7 +47,9 @@ HOST: dict[str, str] = {
 # La date de chaque document : celle de sa publication (validée par le propriétaire le
 # 21/10/2026), jamais celle du jour de la visite. À changer à chaque nouvelle version du texte.
 UPDATED: dict[str, date] = {
-    "terms": date(2026, 10, 21),
+    # 03/11/2026 : Ghost et PrestaShop nommés à côté de WordPress (correction décomptée, accès
+    # confié, enregistrement après validation) : ils décomptaient déjà depuis le 02/11.
+    "terms": date(2026, 11, 3),
     # 02/11/2026 : Telegram (notifications du proprietaire) et Google Analytics (mesure d'audience
     # du site public, apres consentement), chacun nomme quand il est configure.
     "privacy": date(2026, 11, 2),
