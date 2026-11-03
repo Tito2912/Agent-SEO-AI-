@@ -100,6 +100,8 @@ try:
     from . import correction_journal
     from . import correction_memory
     from . import correction_decisions
+    from . import correction_execution
+    from . import autocorrection
     from . import seo_watch
     from . import first_correction
     from . import customer_activation
@@ -123,6 +125,8 @@ except ImportError:
     import correction_journal
     import correction_memory
     import correction_decisions
+    import correction_execution
+    import autocorrection
     import seo_watch
     import first_correction
     import customer_activation
@@ -2232,6 +2236,7 @@ def _github_api_url(path: str) -> str:
 
 
 def _github_api_get(path: str, *, token: str, params: dict[str, Any] | None = None, timeout_s: float = 30.0) -> Any:
+    correction_execution.github_read(path)
     resp = requests.get(
         _github_api_url(path),
         headers={
@@ -2252,6 +2257,7 @@ def _github_api_get(path: str, *, token: str, params: dict[str, Any] | None = No
 
 
 def _github_api_post(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
+    correction_execution.github_write(path, 'POST')
     correction_guard.ensure_active()
     correction_journal.write_intent()
     resp = requests.post(
@@ -2320,6 +2326,7 @@ def _github_graphql(query: str, variables: dict[str, Any], *, token: str,
     mutation `markPullRequestReadyForReview` le fait. Ouvrir en brouillon sans pouvoir sortir du
     brouillon donnerait une correction que le client ne peut pas relire.
     """
+    correction_execution.github_write('/graphql', 'POST')
     resp = requests.post(
         "https://api.github.com/graphql",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
@@ -2452,6 +2459,7 @@ def _controle_sitemap_de(prep: dict[str, Any] | None, patched: list[str] | None)
 
 
 def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
+    correction_execution.github_write(path, 'PUT')
     correction_guard.ensure_active()
     correction_journal.write_intent()
     resp = requests.put(
@@ -2474,6 +2482,7 @@ def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout
 
 
 def _github_api_delete(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
+    correction_execution.github_write(path, 'DELETE')
     correction_guard.ensure_active()
     correction_journal.write_intent()
     resp = requests.delete(
@@ -3951,6 +3960,8 @@ def _correction_operation(function):
                 if function.__name__ == "api_github_bulk_fix" and not values.get("body"):
                     values.pop("body", None)
                 payload = {"values": values, "github": _project_github_cfg(project)}
+                if correction_execution.identity():
+                    payload['autocorrection_run'] = correction_execution.identity()
                 key = correction_journal.request_key(payer, str(project.id), function.__name__, payload)
                 row = correction_journal.find(DB, key=key)
                 if row is None and "issue_key" in values and raw_issue_key != issue_key:
@@ -4008,7 +4019,15 @@ def _correction_operation(function):
                     if row:
                         return _recover_correction(op, user=user, slug=slug)
                     op.save(actor=str(getattr(user, "id", "") or ""))
-                    response = function(*bound.args, **bound.kwargs)
+                    try:
+                        correction_execution.bind_operation(op)
+                        response = function(*bound.args, **bound.kwargs)
+                    except correction_execution.ExecutionStopped:
+                        if correction_execution.safe_to_abandon(op):
+                            op.save(state='abandoned', release=True)
+                        else:
+                            op.save(state='blocked')
+                        raise
                     result = json.loads(response.body)
                     if 200 <= response.status_code < 300 and result.get("pr_number"):
                         correction_journal.pr_received({"number": result["pr_number"], "html_url": result["pr_url"]})
@@ -4302,6 +4321,7 @@ def _anthropic_messages_text(
         contenu = [{"type": "image", "source": {"type": "base64", "media_type": "image/webp",
                                                 "data": _b64.b64encode(i).decode("ascii")}}
                    for i in images] + [{"type": "text", "text": user_msg}]
+    correction_execution.provider_request(system=system, user_msg=user_msg, max_tokens=max_tokens, images=images)
     resp = requests.post(
         f"{base}/messages",
         headers={
@@ -4372,6 +4392,7 @@ def _openai_chat_text(
     delai = _delai_pour(max_tokens)
 
     def _appeler(corps: dict[str, Any]) -> Any:
+        correction_execution.provider_request(system=system, user_msg=user_msg, max_tokens=max_tokens, images=images)
         return requests.post(
             f"{base}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -4502,7 +4523,10 @@ def _correction_ai_json(
             logger.warning("[correction-ai] %s", msg)
             if error_sink is not None:
                 error_sink.append(msg)
+        except correction_execution.ExecutionStopped:
+            raise
         except Exception as e:
+            correction_execution.provider_failed()
             msg = f"{prov} ({model}): {e}"
             logger.warning("[correction-ai] %s", msg)
             if error_sink is not None:
@@ -5295,6 +5319,7 @@ def _openai_generate_file_patch(
     occurrences_hint: str = "",
     model_override: str = "",
 ) -> dict[str, Any]:
+    occurrences_hint += correction_execution.patch_hint()
     # #4 safety: a file that hit the 80KB read cap is (likely) truncated.
     if len(file_content) >= 79_500:
         return {"error": "file_too_large", "description": (
@@ -10647,6 +10672,7 @@ def _startup() -> None:
     else:
         _start_verification_pr()
         _start_contenu_auto()
+        autocorrection.start()
 
 
 def _shutdown() -> None:
@@ -39785,3 +39811,8 @@ try:
 except ImportError:
     from correction_decision_routes import router as correction_decision_router
 app.include_router(correction_decision_router)
+try:
+    from .autocorrection_routes import router as autocorrection_router
+except ImportError:
+    from autocorrection_routes import router as autocorrection_router
+app.include_router(autocorrection_router)

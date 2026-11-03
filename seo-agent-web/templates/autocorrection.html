@@ -1,0 +1,89 @@
+{% extends "layout.html" %}
+{% block title %}{{ copy.title }} - {{ project.site_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/autocorrection.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
+{% block content %}
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
+<div class="autocorrection">
+  <header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
+  <nav class="preparation-actions" aria-label="{{ copy.title }}">
+    <a class="btn" href="/projects/{{ slug }}/corrections/decisions">{{ copy.back }}</a>
+    <a class="btn" href="{{ base }}">{{ copy.reload }}</a>
+  </nav>
+  {% if unavailable %}<p class="alert error" role="alert">{{ copy.unavailable }}</p>
+  {% else %}
+  {% if msg %}<p class="alert ok" role="status">{{ copy[msg] }}</p>{% endif %}
+  {% if error %}<p class="alert error" role="alert">{{ error }}</p>{% endif %}
+  <section class="card preparation-scope">
+    <p>{{ copy.scope }}</p><p>{{ copy.cost }}</p><p>{{ copy.boundary }}</p>
+    {% if not owner %}<p>{{ copy.owner }}</p>{% endif %}
+    {% if paused %}<p class="alert warning" role="status">{{ copy.paused }}</p>{% endif %}
+    {% if owner %}
+    <form method="post" action="{{ base }}/pause">{{ csrf() }}
+      <input type="hidden" name="paused" value="{{ 'false' if project_paused else 'true' }}" />
+      <button class="btn" type="submit">{{ copy.resume if project_paused else copy.pause }}</button>
+    </form>
+    {% endif %}
+  </section>
+  {% if limited %}<p role="status">{{ copy.limited }}</p>{% endif %}
+  {% for item in items %}
+  <article class="card preparation-candidate" data-preparation="candidate">
+    <h2>{{ tr(item.task.issue_label or item.task.issue_key) }}</h2>
+    <p class="preparation-url">{{ item.task.url }}</p>
+    <p>{{ copy.control }} : <time datetime="{{ item.decision.control_at }}">{{ item.decision.control_at[:10] }} {{ item.decision.control_at[11:16] }} UTC</time></p>
+    {% if owner %}
+    <form method="post" action="{{ base }}/authorize">{{ csrf() }}
+      <input type="hidden" name="task_id" value="{{ item.task.id }}" />
+      <input type="hidden" name="decision_key" value="{{ item.decision.decision_key }}" />
+      <label class="preparation-check"><input type="checkbox" name="publication_checked" value="true" required /> <span>{{ copy.publication }}</span></label>
+      <label class="preparation-check"><input type="checkbox" name="consent" value="true" required /> <span>{{ copy.consent }}</span></label>
+      <button class="btn primary" type="submit">{{ copy.authorize }}</button>
+    </form>
+    {% endif %}
+  </article>
+  {% else %}
+    {% if not runs %}<section class="card" data-preparation="empty"><h2>{{ copy.empty }}</h2><p>{{ copy.empty_text }}</p></section>{% endif %}
+  {% endfor %}
+  {% if runs %}<h2>{{ copy.history }}</h2>{% endif %}
+  {% for item in runs %}{% set run = item.row %}
+  <article class="card preparation-run" data-preparation="{{ run.state }}">
+    <h3>{{ copy.states.get(run.state, copy.states.review_required) }}</h3>
+    <p class="preparation-issue">{{ tr(item.task.issue_label or item.task.issue_key) if item.task else '' }}</p>
+    {% if item.task %}<p class="preparation-url">{{ item.task.url }}</p>{% endif %}
+    <p>{{ copy.reasons.get(run.reason, copy.reasons.interrupted) }}</p>
+    <p>{{ copy.expires }} : <time datetime="{{ run.expires_at.isoformat() }}">{{ item.expires }}</time></p>
+    <p>{{ copy.credit }} : <strong>{{ item.charged }} / 1</strong></p>
+    <details><summary>{{ copy.detail }}</summary><dl>
+      <div><dt>{{ copy.reserved }}</dt><dd>{{ run.reserved_credits }} / 1</dd></div>
+      <div><dt>{{ copy.requests }}</dt><dd>{{ run.provider_calls }} / {{ run.limits.requests }}</dd></div>
+      <div><dt>{{ copy.tokens }}</dt><dd>{{ run.output_tokens }} / {{ run.limits.output_tokens }}</dd></div>
+    </dl>
+    <p class="preparation-meta">{{ copy.bounds }}</p></details>
+    <div class="preparation-actions">
+      <a class="btn" href="{{ item.tracking }}">{{ copy.tracking }}</a>
+      {% if owner and not run.revoked_at and run.state in ['queued','running'] %}
+      <form method="post" action="{{ base }}/{{ run.id }}/revoke">{{ csrf() }}<button class="btn" type="submit">{{ copy.revoke }}</button></form>
+      {% endif %}
+    </div>
+    {% if item.preview %}
+    <section class="preparation-preview" aria-label="{{ copy.preview }}">
+      <h4>{{ copy.preview }}</h4><p>{{ copy.file }} : <code>{{ item.preview.file }}</code></p>
+      <p>{{ item.preview.description }}</p>
+      <pre tabindex="0" aria-label="{{ copy.diff }}"><code>{{ item.preview.diff }}</code></pre>
+      {% if owner and item.draft_allowed %}
+      <form method="post" action="{{ base }}/{{ run.id }}/draft">{{ csrf() }}
+        <label class="preparation-check"><input type="checkbox" name="confirm" value="true" required /> <span>{{ copy.review }}</span></label>
+        <button class="btn primary" type="submit">{{ copy.draft }}</button>
+      </form>
+      {% endif %}
+    </section>
+    {% endif %}
+    {% if owner and item.recoverable %}
+    <p>{{ copy.recovery }}</p>
+    <form method="post" action="{{ base }}/{{ run.id }}/reconcile">{{ csrf() }}<button class="btn" type="submit">{{ copy.recover }}</button></form>
+    {% endif %}
+  </article>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

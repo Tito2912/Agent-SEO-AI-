@@ -21,6 +21,9 @@ def test_current_routes_helper_templates_and_translated_articles_are_inventoried
     assert '`/api/projects/{slug}/corrections/decisions`' in text
     assert '`/projects/{slug}/corrections/decisions/refresh`' in text
     assert 'correction_decisions.html' in text
+    assert '`/projects/{slug}/corrections/autonomy`' in text
+    assert '`/projects/{slug}/corrections/autonomy/authorize`' in text
+    assert 'autocorrection.html' in text
     assert 'terms_public_en.html' in text and 'privacy_public_en.html' in text
     assert '/en/docs/lancer-un-crawl' in text
     assert '/en/ressources-seo/' in text

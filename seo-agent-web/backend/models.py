@@ -608,6 +608,38 @@ class CorrectionOperation(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
+class AutocorrectionRun(Base):
+    """A one-preview owner mandate, durable queue item and bounded execution receipt."""
+    __tablename__ = "autocorrection_runs"
+    __table_args__ = (
+        UniqueConstraint("task_id", "application_key", name="uq_autocorrection_task_application"),
+        Index("ix_autocorrection_state_created", "state", "created_at"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("issue_tasks.id", ondelete="CASCADE"))
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"))
+    application_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    config_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    consent_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    lang: Mapped[str] = mapped_column(String(2), nullable=False)
+    state: Mapped[str] = mapped_column(String(24), nullable=False, default="queued")
+    reason: Mapped[str] = mapped_column(String(40), nullable=False, default="authorized")
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    limits: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    reserved_credits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    provider_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    input_chars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    operation_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("correction_operations.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class AccountMember(Base):
     """Un utilisateur qui travaille sur les projets d'un AUTRE compte.
 

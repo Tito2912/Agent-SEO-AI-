@@ -1,0 +1,28 @@
+.autocorrection { max-width: 1000px; margin-inline: auto; }
+.autocorrection .card { margin-block: 20px; min-width: 0; }
+.autocorrection p { line-height: 1.65; }
+.autocorrection .preparation-url,
+.autocorrection .preparation-meta { color: #b9c2bd; overflow-wrap: anywhere; }
+.autocorrection h2 { font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.4; }
+.autocorrection h3 { font-size: 1.2rem; line-height: 1.4; }
+.autocorrection .preparation-issue { font-weight: 600; }
+.autocorrection h2, .autocorrection h3, .autocorrection .preparation-issue,
+.autocorrection .preparation-preview p { overflow-wrap: anywhere; }
+.autocorrection .preparation-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.autocorrection .preparation-actions form { margin: 0; }
+.autocorrection .btn { min-height: 44px; padding-block: 12px; white-space: normal; max-width: 100%; }
+.autocorrection .preparation-check { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; padding-block: 12px; cursor: pointer; line-height: 1.6; font-size: 1rem; color: #dbe3de; }
+.autocorrection .preparation-check input { flex: 0 0 22px; width: 22px; height: 22px; margin-top: 2px; accent-color: #7fba98; }
+.autocorrection .preparation-check span { min-width: 0; }
+.autocorrection dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-block: 8px; }
+.autocorrection dt { flex: 1 1 240px; }
+.autocorrection dd { margin: 0; font-weight: 600; }
+.autocorrection summary { min-height: 44px; padding-block: 12px; cursor: pointer; }
+.autocorrection .preparation-preview { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 20px; }
+.autocorrection code { overflow-wrap: anywhere; }
+.autocorrection pre { overflow-x: auto; max-width: 100%; white-space: pre; padding: 16px; border: 1px solid var(--border); border-radius: 8px; }
+.autocorrection :focus-visible { outline: 3px solid var(--accent, #7fba98); outline-offset: 4px; }
+@media (max-width: 540px) {
+ .autocorrection .preparation-actions > *, .autocorrection form > button { width: 100%; }
+ .autocorrection .btn { display: inline-flex; justify-content: center; }
+}
