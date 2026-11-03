@@ -48,7 +48,7 @@ def attempt_key(task):
     return _digest([str(task.id), str(task.issue_key), task.url, task.crawl_ts, declared, receipt])
 
 
-def record_control(db, task, *, crawl_ts, result, baseline_confirmed):
+def record_control(db, task, *, crawl_ts, result, baseline_confirmed, scope_urls=None):
     """Append once to the caller's transaction; no commit and no historical backfill.
 
     Only the verification engine calls this after evaluating its real crawl report.
@@ -69,6 +69,12 @@ def record_control(db, task, *, crawl_ts, result, baseline_confirmed):
         raise RuntimeError("Unsupported correction memory database")
     # No SAVEPOINT: SQLite's legacy transaction mode can commit a released
     # savepoint before the first DML even if the caller later rolls back.
+    if scope_urls is not None:
+        if __package__:
+            from . import correction_decisions
+        else:
+            import correction_decisions
+        correction_decisions.lock_project(db,task.project_id)
     statement = insert(CorrectionObservation).values(
         project_id=str(task.project_id), task_id=str(task.id), observation_key=identity,
         attempt_key=attempt, issue_key=str(task.issue_key), baseline_ts=baseline,
@@ -77,7 +83,11 @@ def record_control(db, task, *, crawl_ts, result, baseline_confirmed):
     ).on_conflict_do_nothing(index_elements=["observation_key"])
     # Replaying a control is harmless; other integrity errors still abort the
     # caller's transaction rather than claiming the journal entry exists.
-    return db.execute(statement).rowcount == 1
+    inserted = db.execute(statement).rowcount == 1
+    if scope_urls is not None:
+        observation = db.scalar(select(CorrectionObservation).where(CorrectionObservation.observation_key == identity))
+        inserted |= correction_decisions.record(db, task, observation, urls=scope_urls)
+    return inserted
 
 
 def project_summary(db, project_id, *, now=None):

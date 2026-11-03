@@ -572,6 +572,26 @@ class CorrectionObservation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class CorrectionDecision(Base):
+    """Current decision per trusted control; revisions are recorded in the audit log."""
+    __tablename__ = "correction_decisions"
+    __table_args__ = (Index("ix_correction_decisions_project_task", "project_id", "task_id"),)
+
+    observation_id: Mapped[str] = mapped_column(String(36), ForeignKey("correction_observations.id", ondelete="CASCADE"), primary_key=True)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("issue_tasks.id", ondelete="CASCADE"), nullable=False)
+    scope_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    application_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    application_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    publication_basis: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    policy_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    decision_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    code: Mapped[str] = mapped_column(String(40), nullable=False)
+    failed_applications: Mapped[int] = mapped_column(Integer, nullable=False)
+    history_complete: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class CorrectionOperation(Base):
     __tablename__ = "correction_operations"
 

@@ -99,6 +99,7 @@ try:
     from . import correction_guard
     from . import correction_journal
     from . import correction_memory
+    from . import correction_decisions
     from . import seo_watch
     from . import first_correction
     from . import customer_activation
@@ -121,6 +122,7 @@ except ImportError:
     import correction_guard
     import correction_journal
     import correction_memory
+    import correction_decisions
     import seo_watch
     import first_correction
     import customer_activation
@@ -5649,6 +5651,7 @@ def _verify_corrections_after_crawl(
                     db, t, crawl_ts=crawl_ts, result=result,
                     baseline_confirmed=customer_activation.has_baseline_defect(
                         baseline, family, scope, _verification_url),
+                    scope_urls=scope,
                 )
                 if t.status == "in_progress" and result == "still_present" and not note_obj.get("first_correction"):
                     continue
@@ -17208,7 +17211,9 @@ async def assistant_chat(request: Request) -> JSONResponse:
         try:
             with DB.session() as db:
                 memory = correction_memory.project_summary(db, str(authorized_project.id))
+                decisions = correction_decisions.project_summary(db, str(authorized_project.id))
             system += correction_memory.assistant_context(memory)
+            system += correction_decisions.assistant_context(decisions)
         except Exception:
             logger.exception("[ASSISTANT] correction memory unavailable")
             return _assistant_json({"ok": False, "error": "Assistant temporairement indisponible."}, status_code=503)
@@ -32352,7 +32357,7 @@ def project_first_correction_update(
 
 
 @app.get("/projects/{slug}/corrections", response_class=HTMLResponse)
-def project_corrections(request: Request, slug: str) -> HTMLResponse:
+def project_corrections(request: Request, slug: str, task_id: str = "") -> HTMLResponse:
     proj_row = _db_project_or_404(request, slug)
     project_ctx = {
         "slug": proj_row.slug,
@@ -32501,6 +32506,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             "slug": slug,
             "cms_projet": cms_etat_du_projet(proj_row),
             "groups": groups,
+            "focused_task_id": task_id if any(t["id"] == task_id for group in groups.values() for t in group) else "",
             "total": total,
             "github_cfg": github_cfg,
             "current_crawl_ts": current_crawl_ts,
@@ -39774,3 +39780,8 @@ try:
 except ImportError:
     from seo_watch_routes import router as seo_watch_router
 app.include_router(seo_watch_router)
+try:
+    from .correction_decision_routes import router as correction_decision_router
+except ImportError:
+    from correction_decision_routes import router as correction_decision_router
+app.include_router(correction_decision_router)

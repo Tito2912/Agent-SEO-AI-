@@ -1,0 +1,25 @@
+.correction-decisions { max-width: 1000px; margin-inline: auto; }
+.correction-decisions .card { margin-block: 20px; min-width: 0; }
+.correction-decisions p { line-height: 1.6; }
+.correction-decisions .page-header p,
+.correction-decisions .decision-date,
+.correction-decisions .decision-url { color: #b9c2bd; }
+.correction-decisions .decision-url { overflow-wrap: anywhere; }
+.correction-decisions h2 { font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.4; }
+.correction-decisions .decision-issue { font-weight: 600; overflow-wrap: anywhere; }
+.correction-decisions .decision-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.correction-decisions .decision-summary > p { flex: 1 1 350px; margin: 0; }
+.correction-decisions .decision-summary form { margin: 0; }
+.correction-decisions .btn,
+.correction-decisions summary { min-height: 44px; padding-block: 12px; white-space: normal; }
+.correction-decisions summary { cursor: pointer; }
+.correction-decisions details { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 8px; }
+.correction-decisions dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-block: 8px; }
+.correction-decisions dt { flex: 1 1 240px; }
+.correction-decisions dd { margin: 0; font-weight: 600; }
+.correction-decisions :focus-visible { outline: 3px solid var(--accent, #7fba98); outline-offset: 4px; }
+@media (max-width: 540px) {
+ .correction-decisions .btn { display: inline-flex; justify-content: center; max-width: 100%; }
+ .correction-decisions .decision-summary form,
+ .correction-decisions .decision-summary button { width: 100%; }
+}

@@ -141,7 +141,61 @@ collecteur ne transforme pas de lui-même une nouvelle page en règle d'action.
 Les précédents résumés restent consultables dans l'historique des validations :
 revenir à un repère antérieur exige une nouvelle vérification contre la version actuelle.
 
-## Lot 3 : moteur de décisions et autocorrection bornée
+## Lot 3A : décisions après contrôle et limites de recommandation
+
+Implémenté dans la branche `feat/noyaru-autocorrection-decisions` :
+
+- Le moteur de contrôle transmet son périmètre exact au journal de décisions,
+  dans la même transaction que l'observation et le résultat de la tâche.
+- Table additive `correction_decisions`, migration `20261103_0021` depuis `0020`.
+  Une empreinte représente le périmètre ; aucune URL, note, clé ou contenu brut
+  n'est dupliqué dans cette table ou le journal de décision.
+- Cinq suites possibles : vérifier la publication avant une autre stratégie,
+  obtenir un contrôle exploitable, confirmer le défaut initial, demander une revue,
+  ou passer à la correction suivante après résolution confirmée.
+- Les compteurs portent sur des modifications déclarées distinctes avec défaut
+  encore observé et référence confirmée. La déclaration doit précéder le contrôle ;
+  une application CMS doit aussi porter l'état appliqué confirmé du même projet et
+  de la même tâche. Les brouillons, fusions GitHub et changements de statut seuls
+  ne prouvent pas la publication et ne sont pas comptés. Une restauration CMS n'est
+  pas une nouvelle tentative corrective. Un changement de référence sans nouvelle
+  déclaration ne crée pas une nouvelle application. Plusieurs contrôles d'une même
+  modification ne comptent qu'une fois ; un contrôle incomplet n'est pas un échec.
+  Une résolution confirmée
+  du même périmètre ouvre un nouveau cycle.
+- Fenêtre de 30 jours et 200 observations au maximum par tâche. Après deux
+  applications distinctes avec défaut persistant, ou avec un historique incomplet,
+  le moteur arrête de recommander une nouvelle tentative automatique.
+  Cette limite porte sur la recommandation ; ce lot n'active aucun exécuteur et
+  n'interdit pas les interventions manuelles du parcours existant.
+- Les anciennes observations sans périmètre capturé restent signalées comme
+  incomplètes. Une actualisation ne reconstruit pas leur périmètre à partir d'une
+  ancienne note. Seul un nouveau calcul réel du moteur peut fournir cette preuve.
+- Les calculs d’un projet sont sérialisés sur PostgreSQL par un verrou de
+  transaction pris avant l’écriture de l’observation. Il ne verrouille pas les
+  lignes des tâches clients ; SQLite conserve sa sérialisation des écritures.
+- Les contrôles sont ordonnés par leur début, pas par leur arrivée. Un résultat en
+  retard met à jour la décision de l'application courante ; il ne remplace pas son
+  dernier résultat par un ancien. L'identité d'une application continue d'être
+  invalidée par une nouvelle proposition, déclaration, restauration ou référence.
+- Chaque révision de décision conserve sa version de politique, l'empreinte des
+  preuves et son motif dans le journal d'audit existant. Les lignes de décision
+  disparaissent avec l'observation, la tâche, le projet ou le compte ; le journal
+  d'audit garde sa politique de conservation préexistante.
+- Écran privé **Corrections → Suite de vos corrections**, bilingue FR/EN, liens
+  contextualisés vers le bon contrôle, la bonne page et les instructions. Lecture
+  JSON privée sous `/api/projects/{slug}/corrections/decisions` ; actualisation POST
+  protégée par CSRF, droits d'équipe et limite de fréquence.
+- GET sans écriture en base. L’écran peut relire les rapports conservés dans le
+  stockage autorisé du compte. Un rapport absent renvoie à la tâche précise dans le
+  suivi, sans substituer une analyse plus récente. Le POST ne fait que calculer et
+  journaliser les décisions des
+  observations serveur applicables. Aucun accès réseau, crédit IA, nouvelle analyse,
+  modification de site, email, publication ou changement de droits.
+- L'assistant reçoit la décision et les compteurs bornés du seul projet autorisé,
+  sans URL, note ou identifiant de tâche. Une décision ne vaut pas mandat d'exécuter.
+
+## Suite du lot 3 : exécution de l'autocorrection
 
 Séparer trois objets : constat, décision et exécution. La décision porte la règle
 et ses versions, les preuves, le projet, l'action ciblée, le coût maximal et les

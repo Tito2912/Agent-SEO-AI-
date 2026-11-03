@@ -76,6 +76,7 @@
 .corr-group.collapsed .corr-col-empty { display: none !important; }
 
 /* Item (the "card") */
+.corr-card:target { outline: 2px solid var(--accent); outline-offset: 3px; scroll-margin-top: 100px; }
 .corr-card {
   border-bottom: 1px solid var(--border);
   transition: background .1s;
@@ -457,6 +458,7 @@
 {% set sev_color = {'error': '#ef4444', 'warning': '#f59e0b', 'notice': '#818cf8'} %}
 <div class="page-header">
   <h1>{{ tr("Corrections") }}</h1>
+  <p><a class="btn" href="/projects/{{ slug }}/corrections/decisions">{{ 'What happens after your corrections' if current_lang() == 'en' else 'Suite de vos corrections' }}</a></p>
   <p class="muted">{% if stats.total > 1 %}{{ tr("{n} corrections suivies", n=stats.total) }}{% else %}{{ tr("{n} correction suivie", n=stats.total) }}{% endif %} · {{ project.site_name }}</p>
   <a href="{{ help_link(request, doc_path('corrections-automatiques')) }}" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
 </div>
@@ -632,7 +634,8 @@
 {% for col in ['todo','in_progress','done','ignored'] %}
 {% set meta = col_meta[col] %}
 {% set verified_history = col == 'done' and groups[col] and not (groups[col]|rejectattr('verified')|list) %}
-{% set collapsed = not groups[col] or verified_history %}
+{% set focused_group = focused_task_id and (groups[col]|selectattr('id', 'equalto', focused_task_id)|list) %}
+{% set collapsed = (not groups[col] or verified_history) and not focused_group %}
 <div class="corr-group{% if collapsed %} collapsed{% endif %}" data-col="{{ col }}">
   <button class="corr-group-hd" type="button" aria-expanded="{{ 'false' if collapsed else 'true' }}"{% if groups[col] %} aria-controls="correction-group-{{ col }}"{% else %} disabled{% endif %}>
     <span class="corr-dot" style="background:{{ meta.color }};"></span>
@@ -649,7 +652,7 @@
     <p class="corr-col-empty" style="display:none;padding:6px 6px 8px;">{{ tr("Aucun résultat pour ce filtre.") }}</p>
     <div class="corr-col-cards" id="correction-group-{{ col }}">
     {% for task in groups[col] %}
-    <div class="corr-card"
+    <div class="corr-card" id="correction-task-{{ task.id }}" tabindex="-1"
          data-issue-key="{{ task.issue_key }}"
          data-url="{{ task.url or '' }}"
          data-status="{{ task.status }}"
