@@ -29,7 +29,7 @@ def redirect(message='', *, error=''):
     return RedirectResponse(module()._path_with_flash(PATH, msg=message, err=error), status_code=303)
 
 
-@router.get(PATH)
+@router.get('/settings/system/seo-knowledge')
 def page(request: Request, msg: str = '', err: str = ''):
     m = module();m._require_system_owner(request)
     with m.DB.session() as db:
@@ -49,14 +49,14 @@ def page(request: Request, msg: str = '', err: str = ''):
     }, headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
 
 
-@router.post(PATH+'/refresh')
+@router.post('/settings/system/seo-knowledge/refresh')
 def refresh(request: Request):
     m = module();m._require_system_owner(request)
     seo_watch.refresh_due(m.DB)
     return redirect(strings(i18n.current_lang())['refreshed'])
 
 
-@router.post(PATH+'/{key}/review')
+@router.post('/settings/system/seo-knowledge/{key}/review')
 def review(request: Request, key: str, fingerprint: str = Form(''),
            guidance_fr: str = Form(''), guidance_en: str = Form(''), confirm: str = Form('')):
     m = module();actor = m._require_system_owner(request);copy = strings(i18n.current_lang())
@@ -73,7 +73,7 @@ def review(request: Request, key: str, fingerprint: str = Form(''),
     return redirect(copy['saved'])
 
 
-@router.post(PATH+'/{key}/withdraw')
+@router.post('/settings/system/seo-knowledge/{key}/withdraw')
 def withdraw(request: Request, key: str):
     m = module();actor = m._require_system_owner(request)
     if key not in seo_watch.REGISTRY:
@@ -83,7 +83,7 @@ def withdraw(request: Request, key: str):
     return redirect(strings(i18n.current_lang())['withdrawn'])
 
 
-@router.post(PATH+'/{key}/pause')
+@router.post('/settings/system/seo-knowledge/{key}/pause')
 def pause(request: Request, key: str, paused: str = Form('1')):
     m = module();actor = m._require_system_owner(request)
     if key not in seo_watch.REGISTRY or paused not in {'0', '1'}:

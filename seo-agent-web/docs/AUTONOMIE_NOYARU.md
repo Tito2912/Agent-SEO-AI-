@@ -37,7 +37,7 @@ remplacé par une déduction à partir de l'état d'une PR ou d'un code HTTP 200
 
 ## Lot 1 : mémoire factuelle des contrôles
 
-Implémenté dans cette branche, à valider avant activation sur une instance :
+Livré par la PR #66, fusionnée et vérifiée en production le 3 novembre 2026 :
 
 - Table additive `correction_observations`, migration `20261102_0019`.
 - Enregistrement depuis le calcul serveur d'un nouveau contrôle, dans la même
@@ -81,7 +81,7 @@ de cet historique sera définie avant l'exploitation du futur SAV.
 
 ## Lot 2 : veille et base de connaissances datée
 
-Implémenté dans la branche de veille :
+Implémenté par la PR #67, avec recette locale et contrôles GitHub avant fusion :
 
 - Écran propriétaire **Système → Veille SEO/GEO**, à
   `/settings/system/seo-knowledge`, en français et en anglais.
