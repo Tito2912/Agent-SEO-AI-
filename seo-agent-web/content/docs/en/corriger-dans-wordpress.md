@@ -4,12 +4,12 @@ meta_title: "Fix in WordPress and Yoast SEO — {{app_name}} documentation"
 description: "Connect WordPress and Yoast SEO, have titles and meta descriptions written, fix every page of an issue in one batch, then verify the result."
 kind: "Documentation"
 section: "Fixing"
-order: 25
+order: 26
 updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["WordPress", "Yoast SEO", "SEO title", "meta description", "application password"]
 app_href: "/"
-related: ["verifier-une-correction", "fix-pack-sans-depot", "plans-et-quotas", "comptes-d-equipe"]
+related: ["cms-compatibles", "verifier-une-correction", "plans-et-quotas", "comptes-d-equipe"]
 faq:
   - question: "Why does WordPress refuse the connection?"
     answer: "Most often: a WordPress version older than 6.9 or a Yoast SEO version older than 28.7, an account without permission to edit Yoast metadata, or an incorrect application password. The message displayed names the cause."

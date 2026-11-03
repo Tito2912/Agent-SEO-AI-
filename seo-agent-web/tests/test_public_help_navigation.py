@@ -28,7 +28,7 @@ def test_help_paths_keep_the_language_and_choose_real_guides(lang, prefix):
             ("depannage", "verifier-une-correction", "plans-et-quotas")
             if path == "/support"
             else (
-                "corriger-dans-wordpress",
+                "cms-compatibles",
                 "fix-pack-sans-depot",
                 "corrections-automatiques",
             )

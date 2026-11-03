@@ -5,14 +5,14 @@ description: "The archive of fixes to apply on WordPress, Shopify, Webflow or an
 kind: "Documentation"
 section: "Fixing"
 order: 24
-updated_at: "2026-10-20"
+updated_at: "2026-11-03"
 audience: "All plans"
 keywords: ["fix pack", "WordPress", "Shopify", "Webflow", "without a repository"]
 app_href: "/"
 related: ["corrections-automatiques", "anomalies-et-priorites", "exports-et-rapports"]
 faq:
   - question: "Does the fix pack use up my AI fix quota?"
-    answer: "No. It's an export built from the crawl data. The fix quota only counts files written by the model in a repository."
+    answer: "No. It's an export built from the crawl data. The fix quota only counts texts written by the model: files in a repository, and titles and descriptions suggested in a connected CMS."
   - question: "Can I import the redirects CSV directly into my host?"
     answer: "With hosts that accept a rules file — Netlify, Vercel, Cloudflare — the conversion is immediate. On WordPress, a redirect plugin usually accepts a CSV import. Always check a few lines before applying in bulk."
   - question: "Does the provided robots.txt replace mine?"
@@ -82,7 +82,8 @@ The `HOW_TO_APPLY.md` file details each case. In short:
 **WordPress** — `title`, description and canonicals via your SEO plugin (Yoast, Rank Math)
 or the editor. Redirects via a dedicated plugin, which usually accepts a CSV import.
 With Yoast SEO, titles and descriptions can also be fixed directly from
-{{app_name}}: see [Fix in WordPress](/docs/corriger-dans-wordpress).
+{{app_name}}: see [Fix in WordPress](/docs/corriger-dans-wordpress). The same goes for
+Ghost and PrestaShop: see [Compatible CMSs and platforms](/docs/cms-compatibles).
 
 **Shopify** — `title` and descriptions in the admin, product by product or by import. The
 structured data lives in the theme, most often in `theme.liquid`.

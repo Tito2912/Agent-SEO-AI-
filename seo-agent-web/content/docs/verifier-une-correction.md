@@ -5,11 +5,11 @@ description: "Comment {{app_name}} confirme au crawl suivant qu'une anomalie cor
 kind: "Documentation"
 section: "Corriger"
 order: 23
-updated_at: "2026-10-20"
+updated_at: "2026-11-03"
 audience: "Solo, Pro et Business"
 keywords: ["vérification", "régression SEO", "suivi des corrections", "crawl de contrôle"]
 app_href: "/"
-related: ["corrections-automatiques", "corriger-dans-wordpress", "lire-le-rapport", "automatiser-les-audits"]
+related: ["corrections-automatiques", "cms-compatibles", "lire-le-rapport", "automatiser-les-audits"]
 faq:
   - question: "Pourquoi une correction reste-t-elle « en cours » après la fusion de la PR ?"
     answer: "Parce que la vérification a besoin d'un crawl postérieur au déploiement. Tant que le site en ligne n'a pas été réexploré, le produit n'a aucune preuve et refuse d'en inventer une."
@@ -24,7 +24,7 @@ déploiement, un cache, parfois un CDN, et l'hypothèse que le correctif était 
 
 {{app_name}} ne coche donc rien à la fusion. Il attend le crawl suivant et regarde.
 
-## Avec WordPress et Yoast SEO
+## Avec un CMS connecté (WordPress, Ghost, PrestaShop)
 
 Le suivi conserve quatre étapes : **Préparer → Relire → Appliquer → Vérifier**.
 
@@ -36,16 +36,16 @@ Le suivi conserve quatre étapes : **Préparer → Relire → Appliquer → Vér
    habituel de pages ; une analyse déjà en cours est suivie sans en lancer une seconde.
 4. Le résultat apparaît automatiquement sur cet écran : **Correction vérifiée**, **Le problème
    est encore présent**, ou un motif expliquant pourquoi le contrôle n’a pas pu conclure.
-   Si l’analyse a encore lu l’ancienne valeur alors que WordPress a enregistré la nouvelle,
+   Si l’analyse a encore lu l’ancienne valeur alors que le CMS a enregistré la nouvelle,
    l’écran affiche **Votre site affiche encore l’ancienne version** : c’est un cache à vider,
    pas un texte à réécrire.
 
-Pour plusieurs pages d’une même anomalie, **Corriger ces pages dans WordPress** regroupe la
-relecture et lance une seule analyse de contrôle pour toutes.
-→ [Corriger dans WordPress avec Yoast SEO](/docs/corriger-dans-wordpress)
+Pour plusieurs pages d’une même anomalie, **Corriger ces pages dans** (suivi du nom de votre
+CMS) regroupe la relecture et lance une seule analyse de contrôle pour toutes.
+→ [CMS et plateformes compatibles](/docs/cms-compatibles)
 
 Vous pouvez quitter le suivi et le retrouver depuis **Correction guidée → Suivre ma
-correction**, ou dans **CMS et intégrations → Vos dernières opérations WordPress**.
+correction**, ou dans **CMS et intégrations → Vos dernières opérations**.
 La section **Rétablir la valeur précédente** permet d’annuler la modification si les
 métadonnées n’ont pas changé depuis son application.
 
@@ -54,7 +54,7 @@ rapport. Le résultat précédent reste conservé pendant ce choix. Le bouton **
 valeur précédente** reste accessible depuis l’écran de réussite de la correction guidée.
 Dans **Corrections**, les anomalies restantes indiquent leur URL ; une même anomalie peut
 être résolue sur une page et subsister sur une autre. Les corrections vérifiées sont
-conservées dans l’historique, avec un lien vers leur opération WordPress.
+conservées dans l’historique, avec un lien vers leur opération dans le CMS.
 
 ## Comment ça marche
 

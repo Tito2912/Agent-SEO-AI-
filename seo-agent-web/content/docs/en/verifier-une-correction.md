@@ -5,11 +5,11 @@ description: "How {{app_name}} confirms at the next crawl that a fixed issue is 
 kind: "Documentation"
 section: "Fixing"
 order: 23
-updated_at: "2026-10-20"
+updated_at: "2026-11-03"
 audience: "Solo, Pro and Business"
 keywords: ["verification", "SEO regression", "fix tracking", "check crawl"]
 app_href: "/"
-related: ["corrections-automatiques", "corriger-dans-wordpress", "lire-le-rapport", "automatiser-les-audits"]
+related: ["corrections-automatiques", "cms-compatibles", "lire-le-rapport", "automatiser-les-audits"]
 faq:
   - question: "Why does a fix stay “in progress” after the PR is merged?"
     answer: "Because verification needs a crawl that happens after the deployment. Until the live site has been crawled again, the product has no proof and refuses to make one up."
@@ -24,7 +24,7 @@ deployment, a cache, sometimes a CDN, and the assumption that the fix was the ri
 
 So {{app_name}} doesn't tick anything off at merge time. It waits for the next crawl and looks.
 
-## With WordPress and Yoast SEO
+## With a connected CMS (WordPress, Ghost, PrestaShop)
 
 Tracking keeps four steps: **Prepare → Review → Apply → Verify**.
 
@@ -36,16 +36,16 @@ Tracking keeps four steps: **Prepare → Review → Apply → Verify**.
    page quota; an analysis already in progress is followed without starting a second one.
 4. The result appears automatically on this screen: **Fix verified**, **The issue
    is still present**, or a reason explaining why the check couldn't reach a conclusion.
-   If the analysis still read the old value even though WordPress saved the new one,
+   If the analysis still read the old value even though the CMS saved the new one,
    the screen shows **Your site still shows the old version**: that's a cache to clear,
    not a text to rewrite.
 
-For several pages of the same issue, **Fix these pages in WordPress** groups the
-review and runs a single check analysis for all of them.
-→ [Fix in WordPress with Yoast SEO](/docs/corriger-dans-wordpress)
+For several pages of the same issue, **Fix these pages in** (followed by your CMS's
+name) groups the review and runs a single check analysis for all of them.
+→ [Compatible CMSs and platforms](/docs/cms-compatibles)
 
 You can leave the tracking and come back to it from **Guided fix → Track my
-fix**, or in **CMS and integrations → Your latest WordPress operations**.
+fix**, or in **CMS and integrations → Your latest operations**.
 The **Restore the previous value** section lets you undo the change if the
 metadata hasn't changed since it was applied.
 
@@ -54,7 +54,7 @@ report. The previous result is kept while you choose. The **Restore the previous
 button remains available from the guided fix's success screen.
 In **Fixes**, the remaining issues show their URL; the same issue can
 be resolved on one page and persist on another. Verified fixes are
-kept in the history, with a link to their WordPress operation.
+kept in the history, with a link to their operation in the CMS.
 
 ## How it works
 

@@ -5,14 +5,14 @@ description: "L'archive de correctifs à appliquer sur WordPress, Shopify, Webfl
 kind: "Documentation"
 section: "Corriger"
 order: 24
-updated_at: "2026-10-20"
+updated_at: "2026-11-03"
 audience: "Tous les plans"
 keywords: ["fix pack", "WordPress", "Shopify", "Webflow", "sans dépôt"]
 app_href: "/"
 related: ["corrections-automatiques", "anomalies-et-priorites", "exports-et-rapports"]
 faq:
   - question: "Le fix-pack consomme-t-il mon quota de corrections IA ?"
-    answer: "Non. C'est un export construit à partir des données du crawl. Le quota de corrections ne compte que les fichiers écrits par le modèle dans un dépôt."
+    answer: "Non. C'est un export construit à partir des données du crawl. Le quota de corrections ne compte que les textes écrits par le modèle : les fichiers d'un dépôt, et les titres et descriptions proposés dans un CMS connecté."
   - question: "Puis-je importer le CSV de redirections directement chez mon hébergeur ?"
     answer: "Chez ceux qui acceptent un fichier de règles — Netlify, Vercel, Cloudflare — la conversion est immédiate. Sur WordPress, un plugin de redirection accepte généralement un import CSV. Vérifiez toujours quelques lignes avant d'appliquer en masse."
   - question: "Le robots.txt fourni remplace-t-il le mien ?"
@@ -82,7 +82,8 @@ Le fichier `HOW_TO_APPLY.md` détaille chaque cas. En résumé :
 **WordPress** — `title`, description et canonicals via votre extension SEO (Yoast, Rank Math)
 ou l'éditeur. Redirections via une extension dédiée, qui accepte généralement un import CSV.
 Avec Yoast SEO, les titres et descriptions peuvent aussi être corrigés directement depuis
-{{app_name}} : voir [Corriger dans WordPress](/docs/corriger-dans-wordpress).
+{{app_name}} : voir [Corriger dans WordPress](/docs/corriger-dans-wordpress). Il en va de même
+sur Ghost et PrestaShop : voir [CMS et plateformes compatibles](/docs/cms-compatibles).
 
 **Shopify** — `title` et descriptions dans l'admin, produit par produit ou par import. Les
 données structurées sont dans le thème, le plus souvent `theme.liquid`.

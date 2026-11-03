@@ -14677,7 +14677,7 @@ def docs_index_public(request: Request) -> HTMLResponse:
             request,
             sections=sections,
             first_steps=_public_help_pages(("ajouter-un-projet", "lire-le-rapport", "verifier-une-correction")),
-            correction_guides=_public_help_pages(("corriger-dans-wordpress", "fix-pack-sans-depot", "corrections-automatiques")),
+            correction_guides=_public_help_pages(("cms-compatibles", "fix-pack-sans-depot", "corrections-automatiques")),
             total_docs=sum(len(section["pages"]) for section in sections),
             canonical_url=_public_url(request, i18n.localized_path("/docs", lang)),
             meta_description=i18n.tr_current(

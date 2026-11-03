@@ -5,14 +5,14 @@ description: "What each {{app_name}} plan includes: projects, crawled pages, AI 
 kind: "Reference"
 section: "Account and billing"
 order: 50
-updated_at: "2026-10-21"
+updated_at: "2026-11-03"
 audience: "All plans"
 keywords: ["pricing", "quotas", "limits", "subscription"]
 app_href: "/billing"
 related: ["corrections-automatiques", "lancer-un-crawl", "rediger-du-contenu", "comptes-d-equipe"]
 faq:
   - question: "How is an AI fix counted?"
-    answer: "One file written by the model equals one unit — on WordPress, one title or meta description written for a page. A pull request that modifies a single template and fixes 300 URLs therefore costs one unit: the quota measures the model's work, not the number of rows in the report."
+    answer: "One file written by the model equals one unit — in a connected CMS, one title or meta description written for a page. A pull request that modifies a single template and fixes 300 URLs therefore costs one unit: the quota measures the model's work, not the number of rows in the report."
   - question: "What happens when I reach a quota?"
     answer: "The action in question is refused with a message that names the quota reached, and a link to the Subscription page. Nothing else stops: an exhausted fixes quota does not block crawls, reports or exports."
   - question: "Do quotas carry over from one month to the next?"
@@ -51,18 +51,19 @@ page.
 A fix that resolves 300 URLs by modifying a single template costs **one** unit. The quota
 measures the model's work, not the size of the problem.
 
-On WordPress, the same rule applies page by page: each title or meta description that
+In a connected CMS (WordPress, Ghost, PrestaShop), the same rule applies page by page:
+each title or meta description that
 {{app_name}} proposes counts as one unit as soon as it is prepared, before it is saved on
 your site. You still review and confirm saving it. Text you write yourself and rewrites
 that use no AI do not consume this quota.
-→ [Fix in WordPress](/docs/corriger-dans-wordpress)
+→ [Compatible CMSs and platforms](/docs/cms-compatibles)
 
 In practice, a medium-sized site uses a few dozen units in the first month —
 the one where you catch up on the backlog — and far fewer afterward, once the template
 issues are fixed.
 
 The Free plan includes {{corrections_free}} AI fixes per month, on a compatible GitHub repository
-or with WordPress and Yoast SEO,
+or in a connected CMS (WordPress with Yoast SEO, Ghost, PrestaShop),
 as well as the audit and the PDF and CSV exports. The fix pack without a repository is available from the
 Solo plan up. The limits actually available are shown in the table above.
 

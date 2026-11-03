@@ -4,12 +4,12 @@ meta_title: "Corriger dans WordPress et Yoast SEO — documentation {{app_name}}
 description: "Connecter WordPress et Yoast SEO, faire rédiger les titres et méta-descriptions, corriger toutes les pages d'une anomalie en un lot, puis vérifier le résultat."
 kind: "Documentation"
 section: "Corriger"
-order: 25
+order: 26
 updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["WordPress", "Yoast SEO", "titre SEO", "méta-description", "mot de passe d'application"]
 app_href: "/"
-related: ["verifier-une-correction", "fix-pack-sans-depot", "plans-et-quotas", "comptes-d-equipe"]
+related: ["cms-compatibles", "verifier-une-correction", "plans-et-quotas", "comptes-d-equipe"]
 faq:
   - question: "Pourquoi WordPress refuse-t-il la connexion ?"
     answer: "Le plus souvent : une version de WordPress antérieure à 6.9 ou de Yoast SEO antérieure à 28.7, un compte sans droit de modifier les métadonnées Yoast, ou un mot de passe d'application erroné. Le message affiché nomme la cause."

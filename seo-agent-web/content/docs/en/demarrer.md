@@ -5,7 +5,7 @@ description: "The full path from your first account to your first fix: create a 
 kind: "Getting started"
 section: "Getting started"
 order: 10
-updated_at: "2026-10-21"
+updated_at: "2026-11-03"
 audience: "New account"
 keywords: ["getting started", "get started", "first crawl", "onboarding"]
 app_href: "/"
@@ -88,9 +88,9 @@ You stay in control: nothing is merged without you.
 [Automatic fixes](/docs/corrections-automatiques)
 
 !!! note "No Git repository?"
-    On WordPress with Yoast SEO, {{app_name}} fixes titles and meta descriptions
-    directly: [Fix in WordPress](/docs/corriger-dans-wordpress). For everything else,
-    and on Wix, Shopify or with an inaccessible repository, the
+    On WordPress with Yoast SEO, Ghost and PrestaShop, {{app_name}} fixes titles and meta
+    descriptions directly: [Compatible CMSs and platforms](/docs/cms-compatibles). For
+    everything else, and on Shopify, Wix or with an inaccessible repository, the
     [fix-pack](/docs/fix-pack-sans-depot) exports ready-to-paste fixes, along with the
     instructions. You lose the automation, not the fixes.
 
