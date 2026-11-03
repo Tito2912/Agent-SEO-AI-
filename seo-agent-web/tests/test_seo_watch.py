@@ -179,7 +179,10 @@ def test_parser_ignores_navigation_but_detects_changes_at_the_end_and_in_links()
     assert 'ignore-all-guards' not in original['excerpt'] and len(original['excerpt'])<=700
 
 
-@pytest.mark.parametrize('body',[b'<html>Enable JavaScript</html>',b'<div class="devsite-article-body">Too short</div>',b'X'*(w.MAX_BYTES+1)])
+# Des identifiants courts : pytest met l'identifiant dans PYTEST_CURRENT_TEST, et Windows refuse
+# une variable d'environnement de plus de 32 767 caractères (le document trop gros en ferait un).
+@pytest.mark.parametrize('body',[b'<html>Enable JavaScript</html>',b'<div class="devsite-article-body">Too short</div>',b'X'*(w.MAX_BYTES+1)],
+                         ids=['coquille-js','trop-court','trop-gros'])
 def test_empty_shells_and_oversized_documents_are_not_successful_reads(body):
     with pytest.raises(w.WatchError):w.parse_document(w.SOURCES[0],body)
 
