@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+{% block title %}{{ copy.title }} - {{ project.site_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-decisions.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
+{% block content %}
+<div class="correction-decisions">
+  <header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
+  <p><a class="btn" href="/projects/{{ slug }}/corrections">{{ copy.back }}</a></p>
+  {% if error %}<div class="alert error" role="alert">{{ copy.unavailable }}</div>
+  {% else %}
+  {% if refreshed %}<p class="alert ok" role="status">{{ copy.refreshed }}</p>{% endif %}
+  <section class="card decision-summary">
+    <p>{{ copy.boundary }}</p>
+    <form method="post" action="/projects/{{ slug }}/correction-decisions/refresh">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <button class="btn" type="submit">{{ copy.refresh }}</button>
+    </form>
+  </section>
+  {% if summary.truncated %}<p class="alert warning" role="status">{{ copy.limited }}</p>{% endif %}
+  {% for item in items %}
+  <article class="card decision-card" data-decision="{{ item.code }}">
+    <h2>{{ item.title }}</h2>
+    <p class="decision-issue">{{ tr(item.label) }}</p>
+    {% if item.page_url %}<p class="decision-url">{{ item.page_url }}</p>{% endif %}
+    <p>{{ item.text }}</p>
+    {% if item.report_missing %}<p class="decision-date">{{ copy.report_missing }}</p>{% endif %}
+    <p class="decision-date">{{ copy.control }} : <time datetime="{{ item.control_at }}" data-ts-datetime="{{ item.control_stamp }}">{{ item.control_label }}</time></p>
+    <p><a class="btn primary" href="{{ item.href }}">{{ item.action }}</a></p>
+    <details><summary>{{ copy.detail }}</summary>
+      <dl>
+        <div><dt>{{ copy.count }}</dt><dd>{{ item.failed_applications }}</dd></div>
+        <div><dt>{{ copy.threshold }}</dt><dd>{{ item.max_failed_applications }}</dd></div>
+        <div><dt>{{ copy.days }}</dt><dd>{{ item.window_days }}</dd></div>
+      </dl>
+      <p>{{ copy.count_help }}</p>
+      {% if not item.history_complete %}<p>{{ copy.history_missing }}</p>{% endif %}
+      {% if not item.recorded %}<p>{{ copy.fresh }}</p>{% endif %}
+    </details>
+  </article>
+  {% else %}
+  <section class="card" data-decision="empty"><h2>{{ copy.empty }}</h2><p>{{ copy.empty_text }}</p>
+    <a class="btn primary" href="/projects/{{ slug }}/first-correction">{{ copy.start }}</a>
+  </section>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

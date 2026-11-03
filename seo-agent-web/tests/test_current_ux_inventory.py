@@ -17,6 +17,10 @@ def test_current_routes_helper_templates_and_translated_articles_are_inventoried
                  '/settings/system/seo-knowledge/{key}/pause', '/cron/seo-watch'):
         assert '`'+path+'`' in text
     assert 'settings_seo_knowledge.html' in text
+    assert '`/projects/{slug}/correction-decisions`' in text
+    assert '`/api/projects/{slug}/correction-decisions`' in text
+    assert '`/projects/{slug}/correction-decisions/refresh`' in text
+    assert 'correction_decisions.html' in text
     assert 'terms_public_en.html' in text and 'privacy_public_en.html' in text
     assert '/en/docs/lancer-un-crawl' in text
     assert '/en/ressources-seo/' in text
