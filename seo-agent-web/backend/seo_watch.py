@@ -26,6 +26,8 @@ except ImportError:
 
 MAX_BYTES = 1_000_000
 FRESH_DAYS = 7
+# Daily scheduler jitter (including preceding tasks) must not skip a whole day.
+SUCCESS_RECHECK_HOURS = 20
 LEASE_MINUTES = 5
 REVIEWED_AT = datetime(2026, 11, 2, 22, 24, 53, tzinfo=timezone.utc)
 
@@ -213,7 +215,7 @@ def refresh_source(database, key, *, clock=None, fetcher=None):
             SeoKnowledgeSource.key == key, SeoKnowledgeSource.lease_token == token,
             SeoKnowledgeSource.lease_until > finished,
         ).values(lease_token=None, lease_until=None, error_code=error,
-                 next_check_at=finished+timedelta(hours=1 if error else 24),
+                 next_check_at=finished+timedelta(hours=1 if error else SUCCESS_RECHECK_HOURS),
                  **({} if error else {'checked_at': finished, 'latest_hash': reading['fingerprint']}))).rowcount
         if not fenced:
             db.rollback()

@@ -90,8 +90,9 @@ Implémenté dans la branche de veille :
   [Google et la recherche générative](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide),
   [Bing AI Performance](https://blogs.bing.com/webmaster/2026/2/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview/).
 - Consultation planifiée une fois par jour via le workflow existant, à 03:00 UTC ;
-  chaque source décide si une lecture est due. Une lecture réussie diffère la suivante
-  de 24 heures. Après une erreur, une nouvelle tentative devient éligible après une
+  chaque source décide si une lecture est due. Une lecture réussie rend la suivante
+  éligible après 20 heures : cette marge absorbe les écarts du cron quotidien et la
+  durée des autres tâches, pour éviter de sauter un jour. Après une erreur, une nouvelle tentative devient éligible après une
   heure ; elle aura lieu au prochain appel du cron ou à une demande du propriétaire.
 - Collecteur HTTPS sans identifiants ni proxy d'environnement, limité aux adresses
   compilées. Résolution publique et connexion à l'IP validée avec certificat vérifié

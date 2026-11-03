@@ -82,7 +82,7 @@ def test_repeated_calls_are_bounded_and_unchanged_articles_do_not_duplicate_vers
     calls=[]
     def fetch(source):calls.append(source.key);return reading(source)
     assert refresh(lab['db'],fetcher=fetch)=='checked'
-    assert refresh(lab['db'],at=NOW+timedelta(hours=23),fetcher=fetch)=='not_due'
+    assert refresh(lab['db'],at=NOW+timedelta(hours=19),fetcher=fetch)=='not_due'
     assert refresh(lab['db'],at=NOW+timedelta(days=1),fetcher=fetch)=='checked'
     assert len(calls)==2
     with lab['db'].session() as db:assert db.scalar(select(func.count()).select_from(Revision))==1
@@ -283,3 +283,15 @@ def test_repeated_resume_does_not_cancel_an_already_running_read(lab):
         with lab['db'].session() as db:w.pause(db,KEY,paused=False,actor=lab['admin']);db.commit()
         return reading(source)
     assert refresh(lab['db'],fetcher=fetch)=='checked'
+
+
+@pytest.mark.parametrize('jitter_hours', [-1, 0, 1])
+def test_daily_schedule_does_not_skip_a_day_when_previous_fetch_finishes_later(lab, jitter_hours):
+    clock=[NOW];calls=[]
+    def fetch(source):
+        calls.append(source.key);clock[0]+=timedelta(seconds=2)
+        return reading(source)
+    assert w.refresh_source(lab['db'],KEY,clock=lambda:clock[0],fetcher=fetch)=='checked'
+    clock[0]=NOW+timedelta(days=1,hours=jitter_hours)
+    assert w.refresh_source(lab['db'],KEY,clock=lambda:clock[0],fetcher=fetch)=='checked'
+    assert calls==[KEY,KEY]
