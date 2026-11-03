@@ -1,4 +1,4 @@
-.seo-watch { max-width: 1080px; margin-inline: auto; }
+.seo-watch { --muted: #b9c2bd; max-width: 1080px; margin-inline: auto; }
 .seo-watch .card { margin-block: 20px; padding: clamp(16px, 3vw, 28px); }
 .seo-watch h2 { font-size: 1.25rem; margin: 0; }
 .seo-watch .card-title-row { gap: 16px; flex-wrap: wrap; }
@@ -20,3 +20,5 @@
 .seo-watch .watch-history li { padding-block: 12px; overflow-wrap: anywhere; }
 .seo-watch :is(button, a, textarea, input, summary):focus-visible { outline: 3px solid #a4d4b7; outline-offset: 4px; }
 @media (max-width: 600px) { .seo-watch .watch-dates { grid-template-columns: 1fr; } .seo-watch .btn { white-space: normal; text-align: center; } }
+
+.seo-watch .muted, .seo-watch dt { color: #b9c2bd; }
