@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% block title %}{{ copy.title }} - {{ project.site_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/autocorrection.css?v=2" />{% endblock %}
+{% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
+{% block content %}
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
+<div class="autocorrection publication">
+<header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
+<nav class="preparation-actions" aria-label="{{ copy.title }}"><a class="btn" href="/projects/{{ slug }}/corrections/autonomy">{{ copy.back }}</a><a class="btn" href="{{ base }}">{{ copy.reload }}</a></nav>
+{% if unavailable %}<p class="alert error" role="alert">{{ copy.unavailable }}</p>{% else %}
+{% if msg %}<p class="alert ok" role="status">{{ msg }}</p>{% endif %}{% if error %}<p class="alert error" role="alert">{{ error }}</p>{% endif %}
+<section class="card"><p>{{ copy.scope }}</p><p>{{ copy.requirements }}</p><p>{{ copy.limit }}</p>{% if not owner %}<p>{{ copy.owner }}</p>{% endif %}{% if paused %}<p class="alert warning" role="status">{{ copy.reasons.paused }}</p>{% endif %}</section>
+{% if limited %}<p role="status">{{ copy.limited }}</p>{% endif %}
+{% for item in candidates %}
+<article class="card" data-publication="candidate"><h2>{{ tr(item.task.issue_label or item.task.issue_key) }}</h2><p class="preparation-url">{{ item.task.url }}</p><p><code>{{ item.preview.file }}</code></p>
+<p>{{ item.preview.description }}</p><pre tabindex="0" aria-label="{{ copy.diff }}"><code>{{ item.preview.diff }}</code></pre>
+{% if owner and not paused %}<form method="post" action="{{ base }}/authorize">{{ csrf() }}
+<input type="hidden" name="run_id" value="{{ item.run.id }}" /><input type="hidden" name="approved_key" value="{{ item.key }}" />
+<label class="publication-field">{{ copy.pages }}<input type="number" name="pages_budget" min="1" max="300" value="100" required /></label>
+<label class="publication-field">{{ copy.environment }}<input name="environment" value="production" minlength="1" maxlength="64" pattern="[A-Za-z0-9_. \-]+" required /></label>
+<label class="preparation-check"><input type="checkbox" name="approved" value="true" required /><span>{{ copy.review }}</span></label>
+<label class="preparation-check"><input type="checkbox" name="consent" value="true" required /><span>{{ copy.consent }}</span></label>
+<button class="btn primary" type="submit">{{ copy.authorize }}</button></form>{% endif %}</article>
+{% else %}{% if not history %}<section class="card" data-publication="empty"><h2>{{ copy.empty }}</h2><p>{{ copy.empty_text }}</p></section>{% endif %}{% endfor %}
+{% if history %}<h2>{{ copy.history }}</h2>{% endif %}
+{% for item in history %}{% set row = item.row %}<article class="card" data-publication="{{ row.phase }}">
+<h3>{{ copy.states.get(row.phase,copy.states.review_required) }}</h3>{% if item.task %}<p>{{ tr(item.task.issue_label or item.task.issue_key) }}</p><p class="preparation-url">{{ item.task.url }}</p>{% endif %}
+<p>{{ copy.reasons.get(row.reason,copy.fallback) }}</p>{% if row.revoked_at %}<p role="status">{{ copy.stopped }}</p>{% endif %}
+<p>{{ copy.expires }} : <time datetime="{{ row.expires_at.isoformat() }}">{{ item.expires }}</time></p><p>{{ copy.budget }} : {{ row.pages_budget }} {{ copy.pages_unit }}</p>
+<div class="preparation-actions">{% if item.pr_url %}<a class="btn" href="{{ item.pr_url }}" target="_blank" rel="noopener noreferrer">{{ copy.pr }}</a>{% endif %}
+{% if row.job_id %}<a class="btn" href="/jobs/{{ row.job_id }}">{{ copy.job }}</a>{% endif %}<a class="btn" href="/projects/{{ slug }}/corrections?task_id={{ row.task_id }}#correction-task-{{ row.task_id }}">{{ copy.tracking }}</a>
+{% if owner and not row.revoked_at and row.phase not in terminal %}<form method="post" action="{{ base }}/{{ row.id }}/revoke">{{ csrf() }}<button class="btn" type="submit">{{ copy.revoke }}</button></form>{% endif %}</div>
+<details><summary>{{ copy.details }}</summary><p>{{ copy.requests }} : {{ row.reads }} / 240 · {{ row.writes }} / 5</p>{% if row.receipt.get('merge_sha') %}<p>Commit : <code>{{ row.receipt.merge_sha }}</code></p>{% endif %}{% if row.receipt.get('deployed_at') %}<p>{{ copy.states.deployment_confirmed }} : {{ row.receipt.deployed_at }}</p>{% endif %}</details></article>{% endfor %}
+{% endif %}</div>{% endblock %}

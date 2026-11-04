@@ -102,6 +102,8 @@ try:
     from . import correction_decisions
     from . import correction_execution
     from . import autocorrection
+    from . import correction_publication
+    from . import publication_control
     from . import seo_watch
     from . import first_correction
     from . import customer_activation
@@ -127,6 +129,8 @@ except ImportError:
     import correction_decisions
     import correction_execution
     import autocorrection
+    import correction_publication
+    import publication_control
     import seo_watch
     import first_correction
     import customer_activation
@@ -254,7 +258,7 @@ _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 # blanche du middleware de session est redirige vers la connexion, et un chemin ouvert sans
 # exemption CSRF repond 403. Dans les deux cas l'ordonnanceur echoue en silence. Un test
 # compare les deux listes pour chaque route /cron.
-_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/seo-watch", "/cron/autocorrection-previews",
+_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/seo-watch", "/cron/autocorrection-previews", "/cron/correction-publications",
                       "/cron/auto-search-backlinks", "/cron/auto-post-backlinks",
                       "/cron/refresh-competitors", "/cron/verify-pull-requests",
                       "/cron/auto-content"}
@@ -2257,7 +2261,7 @@ def _github_api_get(path: str, *, token: str, params: dict[str, Any] | None = No
 
 
 def _github_api_post(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
-    correction_execution.github_write(path, 'POST')
+    correction_execution.github_write(path, 'POST', json_body)
     correction_guard.ensure_active()
     correction_journal.write_intent()
     resp = requests.post(
@@ -2326,7 +2330,8 @@ def _github_graphql(query: str, variables: dict[str, Any], *, token: str,
     mutation `markPullRequestReadyForReview` le fait. Ouvrir en brouillon sans pouvoir sortir du
     brouillon donnerait une correction que le client ne peut pas relire.
     """
-    correction_execution.github_write('/graphql', 'POST')
+    correction_execution.github_graphql(query, variables)
+    correction_guard.ensure_active()
     resp = requests.post(
         "https://api.github.com/graphql",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
@@ -2447,6 +2452,8 @@ def _bloc_verification(pr_data: Any, *, fusion_auto: bool,
     }
     if controle_sitemap:
         bloc["controle_sitemap"] = controle_sitemap
+    if publication_id := correction_execution.publication_id():
+        bloc.update(etat='autocorrection', fusion_auto=False, publication_id=publication_id)
     return bloc
 
 
@@ -2459,7 +2466,7 @@ def _controle_sitemap_de(prep: dict[str, Any] | None, patched: list[str] | None)
 
 
 def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
-    correction_execution.github_write(path, 'PUT')
+    correction_execution.github_write(path, 'PUT', json_body)
     correction_guard.ensure_active()
     correction_journal.write_intent()
     resp = requests.put(
@@ -2482,7 +2489,7 @@ def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout
 
 
 def _github_api_delete(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
-    correction_execution.github_write(path, 'DELETE')
+    correction_execution.github_write(path, 'DELETE', json_body)
     correction_guard.ensure_active()
     correction_journal.write_intent()
     resp = requests.delete(
@@ -8296,6 +8303,16 @@ def _save_job(job: Job) -> None:
                 db.commit()
                 return
 
+            # A publication stop/settlement may arrive while the worker holds an older Job.
+            if isinstance(row.result, dict) and row.result.get('publication_control'):
+                if row.status == 'cancel_requested' and job.status in {'queued', 'running'}:
+                    job.status = 'cancel_requested'
+                if row.result.get('publication_settled'):
+                    result = {**result, 'publication_control':row.result['publication_control'],
+                              'quota_reserved_pages':0, 'publication_settled':True,
+                              'quota_period':row.result.get('quota_period')}
+                    job.result = result
+
             # Update existing row.
             if owner_id:
                 row.owner_user_id = owner_id
@@ -9030,6 +9047,9 @@ def _finalize_crawl_billing_after_stale(job: Job, *, actual_pages_crawled: int |
 
     When a server crashes/restarts mid-run, the finally block may never run. This keeps quotas consistent.
     """
+    if (job.result or {}).get('publication_control'):
+        publication_control.settle(job, actual=actual_pages_crawled)
+        return
     try:
         result = job.result if isinstance(job.result, dict) else {}
         if not isinstance(result, dict):
@@ -10190,6 +10210,9 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         _mark_job_active(job_id, False)
         return
     initial_result = dict(job.result) if isinstance(job.result, dict) else {}
+    if not publication_control.guard_start(job):
+        _mark_job_active(job_id, False)
+        return
     reserved_pages = 0
     override_max_pages: int | None = None
     skip_billing = bool(initial_result.get("skip_billing") or False)
@@ -10233,11 +10256,16 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
             meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
             base_url = str(meta.get("base_url") or "").strip()
 
+    if initial_result.get('publication_control'):
+        base_url = str(proj.base_url or '') if proj else ''
     if not base_url:
         job.status = "failed"
         job.returncode = 2
         job.stderr = f"Impossible de déterminer base_url pour le projet: {slug}"
         job.finished_at = time.time()
+        if initial_result.get('publication_control'):
+            publication_control.settle(job, actual=0)
+            _mark_job_active(job_id, False)
         _save_job(job)
         return
 
@@ -10247,10 +10275,14 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         job.returncode = 2
         job.stderr = f"Refus crawl target: {validation_err}"
         job.finished_at = time.time()
+        if initial_result.get('publication_control'):
+            publication_control.settle(job, actual=0)
+            _mark_job_active(job_id, False)
         _save_job(job)
         return
 
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    timestamp = (datetime.now(timezone.utc) if initial_result.get('publication_control')
+                 else datetime.now()).strftime("%Y%m%d-%H%M%S")
     site_dir = runs_dir / slug / timestamp
     audit_dir = site_dir / "audit"
     audit_dir.mkdir(parents=True, exist_ok=True)
@@ -10279,6 +10311,13 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     crawl_cfg, gsc_cfg, bing_cfg = _effective_project_crawl_settings(
         slug, config_path=config_path, project_settings=project_settings
     )
+    if initial_result.get('publication_control'):
+        for key in ('publication_control','quota_period','quota_reserved_pages','skip_billing','publication_settled'):
+            if key in initial_result:
+                job.result[key] = initial_result[key]
+    if not publication_control.worker_settings(job, base_url, crawl_cfg, gsc_cfg, bing_cfg):
+        _mark_job_active(job_id, False)
+        return
 
     run_meta["settings"] = {"crawl": crawl_cfg, "gsc_api": gsc_cfg, "bing": bing_cfg}
     (site_dir / "run.json").write_text(json.dumps(run_meta, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -10522,6 +10561,10 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                 "report_md": str((audit_dir / "report.md").resolve()),
                 "report_json": str((audit_dir / "report.json").resolve()),
             }
+        if initial_result.get('publication_control'):
+            for key in ('publication_control','quota_period','quota_reserved_pages','skip_billing','publication_settled'):
+                if key in initial_result:
+                    job.result[key] = initial_result[key]
         job.finished_at = time.time()
         if job.status != "canceled":
             job.status = "done" if returncode == 0 else "failed"
@@ -10579,7 +10622,9 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         except Exception as e:
             logger.error("[S3] pagespeed cache sync error: %s: %s", type(e).__name__, e)
         try:
-            if (not skip_billing) and reserved_pages > 0:
+            if initial_result.get('publication_control'):
+                publication_control.settle(job, actual=actual_pages_crawled)
+            elif (not skip_billing) and reserved_pages > 0:
                 if job.status == "done" and isinstance(actual_pages_crawled, int) and actual_pages_crawled >= 0:
                     delta = int(actual_pages_crawled) - int(reserved_pages)
                     if delta != 0:
@@ -10673,6 +10718,7 @@ def _startup() -> None:
         _start_verification_pr()
         _start_contenu_auto()
         autocorrection.start()
+        correction_publication.start()
 
 
 def _shutdown() -> None:
@@ -12184,7 +12230,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/cron/check-backlinks",
         "/cron/autopilot",
         "/cron/seo-watch",
-        "/cron/autocorrection-previews",
+        "/cron/autocorrection-previews", "/cron/correction-publications",
         "/cron/verify-pull-requests",
         "/cron/refresh-competitors",
         "/cron/auto-search-backlinks",
@@ -38890,6 +38936,9 @@ def job_detail(request: Request, job_id: str, return_to: str = "") -> HTMLRespon
 
 def _cancel_queued_job(job: Job) -> None:
     """Cancels a queued job and refunds any reserved quota."""
+    if (job.result or {}).get('publication_control'):
+        publication_control.cancel(str(job.result['publication_control']))
+        return
     result = job.result if isinstance(job.result, dict) else {}
     owner_id = str(result.get("user_id") or "").strip()
     try:
@@ -39517,6 +39566,8 @@ def _reprendre_une_verification(tache: Any) -> str:
     except Exception:
         return "illisible"
     verif = note.get("verification") if isinstance(note.get("verification"), dict) else None
+    if verif and verif.get('publication_id'):
+        return 'autocorrection'
     if not verif or str(verif.get("etat") or "") != "en_attente":
         return "sans_objet"
 
@@ -39817,3 +39868,9 @@ try:
 except ImportError:
     from autocorrection_routes import router as autocorrection_router
 app.include_router(autocorrection_router)
+
+try:
+    from .publication_routes import router as publication_router
+except ImportError:
+    from publication_routes import router as publication_router
+app.include_router(publication_router)

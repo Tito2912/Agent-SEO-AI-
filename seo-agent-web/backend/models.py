@@ -640,6 +640,41 @@ class AutocorrectionRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class CorrectionPublication(Base):
+    """Owner approval of one exact preview, one merge and one bounded control."""
+    __tablename__ = "correction_publications"
+    __table_args__ = (Index("ix_correction_publications_phase_due", "phase", "next_check_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    run_id: Mapped[str] = mapped_column(String(36), ForeignKey("autocorrection_runs.id", ondelete="CASCADE"), unique=True, nullable=False)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("issue_tasks.id", ondelete="CASCADE"))
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"))
+    application_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    applied_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    config_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    preview_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    analysis_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    lang: Mapped[str] = mapped_column(String(2), nullable=False)
+    environment: Mapped[str] = mapped_column(String(64), nullable=False)
+    pages_budget: Mapped[int] = mapped_column(Integer, nullable=False)
+    reserved_pages: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    control_settled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    job_issued: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    reads: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    writes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    phase: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[str] = mapped_column(String(40), nullable=False)
+    receipt: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    operation_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("correction_operations.id", ondelete="SET NULL"), nullable=True)
+    job_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
+    observation_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("correction_observations.id", ondelete="SET NULL"), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    next_check_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class AccountMember(Base):
     """Un utilisateur qui travaille sur les projets d'un AUTRE compte.
 

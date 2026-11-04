@@ -48,9 +48,26 @@ def github_read(path):
         policy.github_read(path)
 
 
-def github_write(path, method):
+def github_write(path, method, body=None):
     if policy := current():
-        policy.github_write(path, method)
+        handler = getattr(policy, 'github_write_intent', None)
+        if handler:
+            handler(path, method, body)
+        else:
+            policy.github_write(path, method)
+
+
+def github_graphql(query, variables):
+    if policy := current():
+        handler = getattr(policy, 'github_graphql', None)
+        if handler:
+            handler(query, variables)
+        else:
+            policy.github_write('/graphql', 'POST')
+
+
+def publication_id():
+    return getattr(current(), 'publication_id', None)
 
 
 def provider_request(*, system, user_msg, max_tokens, images=None):

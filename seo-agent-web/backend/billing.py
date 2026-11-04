@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import os
 from datetime import UTC, datetime, timedelta
@@ -8,7 +9,7 @@ from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -441,12 +442,12 @@ def _period_key(dt: datetime | None = None) -> str:
 
 
 def usage_add(db: Session, *, user_id: str, metric: str, amount: int,
-              meta: dict[str, Any] | None = None, commit: bool = True) -> None:
+              meta: dict[str, Any] | None = None, commit: bool = True, period: str | None = None) -> None:
     uid = (user_id or "").strip()
     m = (metric or "").strip()
     if not uid or not m or not isinstance(amount, int) or amount == 0:
         return
-    ev = UsageEvent(user_id=uid, period=_period_key(), metric=m, amount=int(amount), meta=meta or {})
+    ev = UsageEvent(user_id=uid, period=period or _period_key(), metric=m, amount=int(amount), meta=meta or {})
     db.add(ev)
     if commit:
         db.commit()
@@ -773,6 +774,18 @@ def remaining_quota(db: Session, *, user_id: str, metric: str) -> int | None:
 
 
 def ensure_within_quota(db: Session, *, user_id: str, metric: str, planned_amount: int) -> tuple[bool, int | None]:
+    if metric == 'pages_crawled_month' and int(planned_amount) > 0:
+        # All page reservations share this short transaction lock, including the
+        # existing manual/batch routes. Release occurs at their ledger commit.
+        dialect = db.get_bind().dialect.name
+        if dialect == 'postgresql':
+            digest = hashlib.sha256(('noyaru-page-quota:'+str(user_id)).encode()).digest()
+            db.execute(text('SELECT pg_advisory_xact_lock(:key)'),
+                       {'key':int.from_bytes(digest[:8], 'big', signed=True)})
+        elif dialect == 'sqlite':
+            connection = db.connection()
+            if not connection.connection.driver_connection.in_transaction:
+                connection.exec_driver_sql('BEGIN IMMEDIATE')
     remaining = remaining_quota(db, user_id=user_id, metric=metric)
     if remaining is None:
         return True, None
