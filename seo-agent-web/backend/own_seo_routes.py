@@ -31,7 +31,7 @@ def throttle(request):
     if isinstance(retry,int):raise HTTPException(429,'too_many_requests',headers={'Retry-After':str(retry)})
 
 
-@router.get(PATH)
+@router.get('/settings/system/own-seo')
 def page(request:Request,msg:str='',err:str='',observation:str=''):
     m=service.module();user=owner(request);copy=strings(i18n.current_lang())
     state={};briefs=[];projects=[];unavailable=False
@@ -52,7 +52,7 @@ def page(request:Request,msg:str='',err:str='',observation:str=''):
         headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
 
 
-@router.post(PATH+'/bind')
+@router.post('/settings/system/own-seo/bind')
 def bind(request:Request,project_id:str=Form(''),token:str=Form(''),confirm:bool=Form(False)):
     user=owner(request);throttle(request)
     try:service.bind(user.id,project_id,token,confirm=confirm)
@@ -61,7 +61,7 @@ def bind(request:Request,project_id:str=Form(''),token:str=Form(''),confirm:bool
     return redirect(msg='bound')
 
 
-@router.post(PATH+'/pause')
+@router.post('/settings/system/own-seo/pause')
 def pause(request:Request,token:str=Form(''),paused:bool=Form(True)):
     user=owner(request)
     try:service.pause(user.id,token,paused)
@@ -70,7 +70,7 @@ def pause(request:Request,token:str=Form(''),paused:bool=Form(True)):
     return redirect()
 
 
-@router.post(PATH+'/prepare')
+@router.post('/settings/system/own-seo/prepare')
 def prepare(request:Request,token:str=Form(''),candidate_key:str=Form('')):
     user=owner(request);throttle(request)
     try:brief=service.prepare(user.id,token,candidate_key,i18n.current_lang())
@@ -79,7 +79,7 @@ def prepare(request:Request,token:str=Form(''),candidate_key:str=Form('')):
     return redirect(msg='prepared',brief=brief)
 
 
-@router.post(PATH+'/briefs/{brief_id}/review')
+@router.post('/settings/system/own-seo/briefs/{brief_id}/review')
 def review(request:Request,brief_id:str,token:str=Form(''),confirm:bool=Form(False),status:str=Form('reviewed')):
     user=owner(request);throttle(request)
     try:service.review(user.id,brief_id,token,confirm=confirm,status=status)
@@ -90,7 +90,7 @@ def review(request:Request,brief_id:str,token:str=Form(''),confirm:bool=Form(Fal
     return redirect(msg='reviewed',brief=brief_id)
 
 
-@router.get(PATH+'/briefs/{brief_id}/download')
+@router.get('/settings/system/own-seo/briefs/{brief_id}/download')
 def download(request:Request,brief_id:str):
     user=owner(request)
     with service.module().DB.session() as db:
