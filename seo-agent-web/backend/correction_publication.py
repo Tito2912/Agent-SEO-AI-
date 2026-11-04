@@ -649,12 +649,12 @@ def _check_and_merge(pub):
     if value.get("state") != "open":
         raise execution.ExecutionStopped("pr_closed")
     _validate_code(m, pub, project, owner, repo, token, value)
-    if not _checks(m, owner, repo, pub.receipt["head"], token, required):
-        _update(pub.id, "waiting_checks", "waiting_checks")
-        return
     if value.get("draft") is True:
         _update(pub.id, "marking_ready", "marking_ready")
         m._pr_marquer_prete(node_id=pub.receipt["node_id"], token=token)
+        _update(pub.id, "waiting_checks", "waiting_checks")
+        return
+    if not _checks(m, owner, repo, pub.receipt["head"], token, required):
         _update(pub.id, "waiting_checks", "waiting_checks")
         return
     if value.get("mergeable") is not True or value.get("mergeable_state") != "clean":

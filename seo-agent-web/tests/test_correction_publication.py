@@ -143,6 +143,7 @@ def test_changed_source_or_unprotected_branch_never_writes(publication,change,re
 @pytest.mark.parametrize('change,reason',[('head','pr_changed'),('base','base_changed'),('checks','checks_failed')])
 def test_changed_commit_base_or_failed_checks_stop_before_merge(publication,change,reason):
     x=publication;assert step(x)=='waiting_checks'
+    if change=='checks':assert step(x)=='waiting_checks'
     x['remote'][change]='failure' if change=='checks' else 'd'*40
     assert step(x)=='review_required' and stored(x).reason==reason
     assert not any(r[1].endswith('/merge') for r in x['remote']['transports'])
@@ -352,7 +353,7 @@ def test_cron_requires_bearer_secret_without_session_or_csrf(publication,monkeyp
 
 @pytest.mark.parametrize('mode,expected',[('partial','review_required'),('wrong_sha','review_required'),('neutral','waiting_checks'),('no_required','waiting_checks')])
 def test_incomplete_or_non_successful_required_checks_cannot_merge(publication,monkeypatch,mode,expected):
-    x=publication;assert step(x)=='waiting_checks'
+    x=publication;assert step(x)=='waiting_checks';assert step(x)=='waiting_checks'
     original=m.requests.get
     def changed(url,**kwargs):
         response=original(url,**kwargs)
@@ -479,3 +480,16 @@ def test_cancellation_after_month_change_adjusts_the_original_reservation(public
         assert len(events)==2 and sum(v.amount for v in events)==0
         assert {v.period for v in events}=={'2026-10'}
         assert db.get(JobRecord,jid).status=='canceled'
+
+
+def test_draft_is_made_ready_before_checks_that_only_start_on_ready_for_review(publication,monkeypatch):
+    x=publication;original=m.requests.get
+    def checks(url,**kwargs):
+        if url.endswith('/check-runs') and x['remote']['draft']:
+            return SimpleNamespace(status_code=200,json=lambda:{'total_count':0,'check_runs':[]})
+        return original(url,**kwargs)
+    monkeypatch.setattr(m.requests,'get',checks)
+    merge(x)
+    writes=[r for r in x['remote']['transports'] if r[0]!='GET']
+    assert [r[1] for r in writes][-2:]==['/graphql','/repos/fixture/site/pulls/91/merge']
+    assert stored(x).writes==5

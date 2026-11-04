@@ -288,10 +288,11 @@ Séquence durable :
 3. Relecture des protections du dépôt : au moins un contrôle obligatoire, branche
    à jour imposée et protections appliquées aux administrateurs. Noyaru ne modifie
    pas ces protections. Les règles GitHub supplémentaires continuent de s'appliquer.
-   Résultats complets des check-runs et statuts ; un contrôle obligatoire neutre ou
+   Après validation du code, sortie du brouillon pour permettre le démarrage de la CI.
+   Puis résultats complets des check-runs et statuts ; un contrôle obligatoire neutre ou
    ignoré ne vaut pas réussite. Une liste partielle, un échec, un fichier/commit ou
    une base changés arrêtent le mandat. Une attente reste bornée par durée/requêtes.
-4. Passage prêt à relire puis fusion squash avec le SHA de tête relu dans le corps
+4. Fusion squash avec le SHA de tête relu dans le corps
    de la requête. Aucune fusion forcée. La branche strictement protégée traite les
    changements de base entre la lecture et la fusion ; une réponse inconnue se
    réconcilie en lecture, sans rejouer l'écriture. Une écriture incertaine sans reçu
