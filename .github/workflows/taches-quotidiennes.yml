@@ -40,8 +40,8 @@ concurrency:
 jobs:
   taches:
     runs-on: ubuntu-latest
-    # Cinq appels de cinq minutes au plus, plus quatre minutes de relance chacun.
-    timeout-minutes: 50
+    # Six appels de cinq minutes au plus, plus quatre minutes de relance chacun.
+    timeout-minutes: 60
     steps:
       - name: Appeler les taches de fond
         env:
@@ -91,9 +91,11 @@ jobs:
           appeler POST /cron/auto-content
           # Lecture de trois sources officielles, sans IA, email ni publication.
           appeler POST /cron/seo-watch
+          # Une seule demande de rédaction propre, déjà autorisée ; aucune sélection de brief.
+          appeler POST /cron/own-seo-writing
 
           if [ -n "$rates" ]; then
             echo "Taches en echec :$rates"
             exit 1
           fi
-          echo "Les cinq taches ont repondu."
+          echo "Les six taches ont repondu."

@@ -29,6 +29,11 @@ def test_current_routes_helper_templates_and_translated_articles_are_inventoried
                  '/settings/system/own-seo/briefs/{brief_id}/review','/settings/system/own-seo/briefs/{brief_id}/download'):
         assert '`'+path+'`' in text
     assert 'settings_own_seo.html' in text
+    for path in ('/settings/system/own-seo/writing','/settings/system/own-seo/writing/authorize',
+                 '/settings/system/own-seo/writing/{draft_id}/resume','/settings/system/own-seo/writing/{draft_id}/review',
+                 '/settings/system/own-seo/writing/{draft_id}/cancel','/settings/system/own-seo/writing/{draft_id}/download','/cron/own-seo-writing'):
+        assert '`'+path+'`' in text
+    assert 'settings_own_writing.html' in text
     assert 'terms_public_en.html' in text and 'privacy_public_en.html' in text
     assert '/en/docs/lancer-un-crawl' in text
     assert '/en/ressources-seo/' in text

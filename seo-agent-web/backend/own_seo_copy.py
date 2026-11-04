@@ -6,7 +6,7 @@ def strings(lang):
     return dict(title=t('Référencement de Noyaru','Noyaru search visibility'),
         intro=t('Les constats de Noyaru, les pages à améliorer et les sujets à préparer, dans un espace réservé à son propriétaire.','Noyaru evidence, pages to improve and topics to prepare, in a workspace reserved for its owner.'),
         scope=t('Cet espace utilise uniquement le projet Noyaru que vous liez ci-dessous. Il prépare des briefs, sans appel IA, nouvelle analyse ni publication.','This workspace uses only the Noyaru project you link below. It prepares briefs, without AI calls, new analyses or publication.'),
-        back=t('Système','System'),watch=t('Veille SEO/GEO','SEO/GEO knowledge'),blog=t('Ressources publiées','Published resources'),
+        back=t('Système','System'),watch=t('Veille SEO/GEO','SEO/GEO knowledge'),blog=t('Ressources publiées','Published resources'),writing=t('Rédaction sourcée','Sourced writing'),
         project=t('Ouvrir le projet Noyaru','Open the Noyaru project'),connections=t('Connexions du projet','Project connections'),
         reload=t('Actualiser les constats','Refresh evidence'),binding=t('1. Choisir le projet Noyaru','1. Choose the Noyaru project'),
         bind_info=t('Seul un projet qui vous appartient et dont l’adresse est exactement https://noyaru.com/ peut être lié. Les projets clients et les partages d’équipe sont exclus.','Only a project you own at exactly https://noyaru.com/ can be linked. Client projects and team shares are excluded.'),

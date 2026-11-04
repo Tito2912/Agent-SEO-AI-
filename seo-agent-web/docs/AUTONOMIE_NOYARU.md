@@ -350,10 +350,34 @@ Le défaut de sélection Bing est corrigé dans le web et le crawler ; les propr
 sans réécrire les preuves originales. Les données clients restent hors de cet espace.
 
 Audit, règles de périmètre, limites et validation détaillés dans
-[REFERENCEMENT_NOYARU.md](REFERENCEMENT_NOYARU.md). Le lot 4B reste à livrer : rédaction
-sourcée sous mandat/budget, contrôle factuel et visuel, publication du blog puis
-observation des résultats. Une proposition de contenu ne prétend pas prouver un
+[REFERENCEMENT_NOYARU.md](REFERENCEMENT_NOYARU.md). Le lot 4B se poursuit ci-dessous :
+rédaction sourcée privée en 4B1, puis publication du blog et observation des
+résultats en 4B2. Une proposition de contenu ne prétend pas prouver un
 manque éditorial ni un gain futur ; les citations IA sont distinctes des positions.
+
+## Lot 4B1 : rédaction sourcée privée
+
+Depuis `main` `b8a83b0`, le parcours de rédaction du propre référencement est séparé
+des transports clients. Écran propriétaire `/settings/system/own-seo/writing` :
+brief actuel relu → résumés officiels validés et faits produit publics → autorisation
+pour ce dossier → brouillon privé avec références par paragraphe → relecture des
+affirmations → export daté. Aucun droit de publication ou d'écriture GitHub.
+
+Chaque autorisation expire après 24 heures et permet une seule requête de texte ;
+deux requêtes au plus sur 24 heures glissantes par propriétaire, administrateur inclus,
+entrée bornée, sortie de 3 600 tokens au plus. Ce n'est pas un plafond monétaire.
+Une opération durable et un bail empêchent le double appel après double clic ou
+redémarrage ; une requête déjà partie n'est pas répétée. Les reprises de la tâche
+quotidienne traitent au plus une opération explicitement autorisée, jamais un nouveau
+sujet. La pause, les droits, le brief et les sources sont revérifiés avant l'appel
+et avant d'en conserver le résultat. Les textes rejetés ou incertains ne déclenchent
+aucun nouvel essai automatique.
+
+Les contrôles de structure et d'identifiants de sources ne certifient pas les faits.
+La relecture explicite porte sur une empreinte précise et exige des preuves encore
+actuelles ; les exports historiques affichent leurs limites. Audit, comportement
+et validations : [REDACTION_SOURCEE_NOYARU.md](REDACTION_SOURCEE_NOYARU.md).
+La publication native du blog et l'observation des résultats restent le lot 4B2.
 
 ## Lot 5 : SAV email
 

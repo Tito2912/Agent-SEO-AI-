@@ -6,7 +6,7 @@
 {% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
 <div class="own-seo">
 <header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
-<nav class="own-actions" aria-label="{{ copy.title }}"><a class="btn" href="/settings/system">{{ copy.back }}</a><a class="btn" href="/settings/system/seo-knowledge">{{ copy.watch }}</a><a class="btn" href="{{ base }}">{{ copy.reload }}</a></nav>
+<nav class="own-actions" aria-label="{{ copy.title }}"><a class="btn" href="/settings/system">{{ copy.back }}</a><a class="btn" href="/settings/system/seo-knowledge">{{ copy.watch }}</a><a class="btn" href="/settings/system/own-seo/writing">{{ copy.writing }}</a><a class="btn" href="{{ base }}">{{ copy.reload }}</a></nav>
 {% if unavailable %}<p class="alert error" role="alert">{{ copy.unavailable }}</p>{% else %}
 {% if msg %}<p class="alert ok" role="status">{{ msg }}</p>{% endif %}{% if err %}<p class="alert error" role="alert">{{ err }}</p>{% endif %}
 <section class="card"><p>{{ copy.scope }}</p></section>
@@ -35,7 +35,7 @@
 {% if briefs %}<h2>{{ copy.history }}</h2>{% endif %}
 {% for item in briefs %}{% set brief = item.row %}<article class="card" id="brief-{{ brief.id }}" data-own-brief="{{ brief.status }}"><p>{{ copy.kinds[brief.kind] }} · {{ brief.lang|upper }} · {{ copy.statuses[brief.status] }}</p><h3>{{ brief.title }}</h3>{% if not item.current %}<p class="alert warning" role="status">{{ copy.stale }}</p>{% endif %}
 <details id="brief-evidence-{{ brief.id }}" {{ 'open' if observation == brief.id else '' }}><summary>{{ copy.detail }}</summary><pre tabindex="0"><code>{{ item.text }}</code></pre></details>
-<div class="own-actions">{% if brief.kind != 'guide' %}<a class="btn" href="{{ item.observation_link }}">{{ copy.observation }}</a>{% endif %}<a class="btn" href="{{ base }}/briefs/{{ brief.id }}/download">{{ copy.download }}</a>{% if item.current and brief.status == 'reviewed' and brief.kind != 'page' %}<a class="btn" href="{{ item.content_link }}">{{ copy.content }}</a>{% endif %}</div>
+<div class="own-actions">{% if brief.kind != 'guide' %}<a class="btn" href="{{ item.observation_link }}">{{ copy.observation }}</a>{% endif %}<a class="btn" href="{{ base }}/briefs/{{ brief.id }}/download">{{ copy.download }}</a>{% if item.current and brief.status == 'reviewed' and brief.kind != 'page' %}<a class="btn primary" href="/settings/system/own-seo/writing?brief={{ brief.id }}">{{ copy.writing }}</a><a class="btn" href="{{ item.content_link }}">{{ copy.content }}</a>{% endif %}</div>
 {% if item.current and brief.status != 'reviewed' and not state.workspace.paused %}<form method="post" action="{{ base }}/briefs/{{ brief.id }}/review">{{ csrf() }}<input type="hidden" name="token" value="{{ state.workspace.token }}" />
 <label class="own-check"><input type="checkbox" name="confirm" value="true" required /><span>{{ copy.review_consent }}</span></label><button class="btn primary" type="submit">{{ copy.review }}</button></form>{% endif %}
 {% if brief.status != 'discarded' %}<form class="own-discard" method="post" action="{{ base }}/briefs/{{ brief.id }}/review">{{ csrf() }}<input type="hidden" name="token" value="{{ state.workspace.token }}" /><input type="hidden" name="status" value="discarded" /><button class="btn" type="submit">{{ copy.discard }}</button></form>{% endif %}
