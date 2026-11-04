@@ -707,7 +707,8 @@ def _deployment(pub):
         if latest.get("state") in {"failure", "error", "inactive"}:
             raise execution.ExecutionStopped("deployment_failed")
         if latest.get("state") != "success":
-            continue
+            _update(pub.id, "waiting_deployment", "waiting_deployment")
+            return
         url = urlsplit(str(latest.get("environment_url") or ""))
         when = first_correction.timestamp(latest.get("created_at"))
         if (url.scheme, url.hostname, url.port) != (

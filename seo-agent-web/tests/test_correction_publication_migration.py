@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import inspect
 
 from backend.db import Database
-from backend.models import AutocorrectionRun, CorrectionObservation, IssueTask, Project, User
+from backend.models import AutocorrectionRun, CorrectionPublication, CorrectionObservation, IssueTask, Project, User
 from backend import correction_memory as memory
 from test_correction_memory import BASE, CONTROL, URL, stamp
 
@@ -39,14 +39,21 @@ def test_publication_upgrade_downgrade_retains_preview_and_controls(tmp_path, mo
     assert {tuple(v['column_names']) for v in schema.get_unique_constraints('correction_publications')} == {('run_id',)}
     assert {tuple(v['column_names']) for v in schema.get_unique_constraints('autocorrection_runs')} == {('task_id','application_key')}
     with database.session() as db:
-        db.add(AutocorrectionRun(project_id=ids[1],task_id=ids[2],owner_id=ids[0],application_key='a'*64,
+        run = AutocorrectionRun(project_id=ids[1],task_id=ids[2],owner_id=ids[0],application_key='a'*64,
             decision_key='b'*64,config_key='c'*64,policy_version=1,consent_version=1,lang='fr',
             state='queued',reason='authorized',expires_at=CONTROL,limits={'credits':1},reserved_credits=0,
-            provider_calls=0,input_chars=0,output_tokens=0))
+            provider_calls=0,input_chars=0,output_tokens=0)
+        db.add(run);db.flush()
+        db.add(CorrectionPublication(run_id=run.id,project_id=ids[1],task_id=ids[2],owner_id=ids[0],
+            application_key='a'*64,config_key='b'*64,preview_key='c'*64,analysis_key='d'*64,
+            version=1,lang='fr',environment='production',pages_budget=100,phase='queued',
+            reason='authorized',receipt={},expires_at=CONTROL,next_check_at=CONTROL))
         db.commit()
     migrate('downgrade', '20261103_0022')
     assert not inspect(database.engine).has_table('correction_publications')
     assert inspect(database.engine).has_table('autocorrection_runs')
+    with database.session() as db:
+        assert db.query(AutocorrectionRun).count() == 1
     with database.session() as db:
         assert db.get(User,ids[0]).email == 'mandate-migration@example.invalid'
         assert db.get(Project,ids[1]).slug == 'preserved'

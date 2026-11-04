@@ -409,3 +409,17 @@ def test_old_worker_snapshot_cannot_erase_stop_or_settlement(publication,monkeyp
     c.settle(stale,actual=1)
     with x['db'].session() as db:
         assert sum(db.scalars(select(UsageEvent.amount).where(UsageEvent.metric=='pages_crawled_month')))==1
+
+
+def test_newer_pending_deployment_cannot_fall_back_to_old_success(publication,monkeypatch):
+    x=publication;merge(x);x['remote']['deployed']=True;original=m.requests.get
+    def get(url,**kwargs):
+        if url.endswith('/deployments'):
+            rows=[dict(id=value,sha=MERGE,environment='production',production_environment=True,transient_environment=False) for value in (8,10)]
+            return SimpleNamespace(status_code=200,json=lambda:rows)
+        if url.endswith('/deployments/10/statuses'):
+            return SimpleNamespace(status_code=200,json=lambda:[{'id':11,'state':'in_progress'}])
+        return original(url,**kwargs)
+    monkeypatch.setattr(m.requests,'get',get)
+    assert step(x)=='waiting_deployment' and not stored(x).job_issued
+    assert not any(r[1].endswith('/deployments/8/statuses') for r in x['remote']['transports'])
