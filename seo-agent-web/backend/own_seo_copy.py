@@ -24,7 +24,7 @@ def strings(lang):
             'current':t('La dernière analyse exploitable date de moins de sept jours.','The latest usable analysis is less than seven days old.')},
         technical=t('Priorités techniques','Technical priorities'),none_technical=t('Aucune priorité technique à afficher dans ce relevé. Cela ne prouve pas que tout le site est sans défaut.','No technical priority to show in this evidence. This does not prove the whole site has no issues.'),
         open_issue=t('Voir les pages concernées','View affected pages'),crawl=t('Analyse utilisée','Analysis used'),
-        performance=t('Retrouver le signal dans Visibilité','Open the signal in Performance'),
+        observation=t('Voir le constat enregistré','View saved observation'),
         source=t('Source','Source'),range=t('Période observée','Observed period'),gsc='Google Search Console',bing='Bing',
         usable=t('Propriété et période confirmées','Property and period confirmed'),excluded=t('Données absentes ou périmètre non confirmé : exclues','Missing data or unconfirmed scope: excluded'),
         plan=t('3. Préparer les prochains contenus','3. Prepare the next content'),

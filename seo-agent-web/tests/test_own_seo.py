@@ -4,6 +4,7 @@ import json
 import threading
 
 import pytest
+from bs4 import BeautifulSoup
 from sqlalchemy import func,select
 from backend import app as m,own_seo as s,seo_watch as w
 from backend.models import OwnSeoBrief,OwnSeoWorkspace,Project,AuditLog,UsageEvent
@@ -185,6 +186,39 @@ def test_native_form_review_export_and_context_preserving_content_link(own,lang,
     exported=browser.get(PATH+'/briefs/'+bid+'/download')
     assert exported.status_code==200 and 'attachment;' in exported.headers['content-disposition']
     assert ('not a publishable article' if lang=='en' else 'pas un article publiable') in exported.text
+
+
+@pytest.mark.parametrize('lang',['fr','en'])
+@pytest.mark.parametrize('kind',['research','page'])
+@pytest.mark.parametrize('source',['gsc_api','bing'])
+def test_observation_link_opens_saved_dates_and_metrics_after_new_report(own,lang,kind,source):
+    x=own;token=bind(x)
+    def older(data):
+        for name in ('gsc_api','bing'):
+            node=data['meta'][name]
+            node['start_date']=(NOW-timedelta(days=36)).date().isoformat()
+            node['end_date']=(NOW-timedelta(days=9)).date().isoformat()
+            if name==source:
+                for dim in ('queries','pages'):node[dim]['top'][0]['impressions']=800
+    change_report(x,older)
+    item=next(row for row in view(x,lang)['candidates'] if row['kind']==kind)
+    assert item['evidence']['source']==source
+    bid=s.prepare(x['owner'].id,token,item['key'],lang)
+    change_report(x,lambda data:data['meta'].update(report()['meta']))
+    browser=client(x['owner'])
+    page=BeautifulSoup(browser.get(PATH,headers={'Accept-Language':lang}).text,'html.parser')
+    link=page.select_one('a[href*="observation='+bid+'"]')
+    assert link and '/performance' not in link['href']
+    response=browser.get(link['href'],headers={'Accept-Language':lang})
+    assert response.status_code==200
+    saved=BeautifulSoup(response.text,'html.parser').find('details',id='brief-evidence-'+bid)
+    assert saved.has_attr('open')
+    evidence=json.loads(saved.get_text().split('```json\n')[1].split('\n```')[0])
+    assert evidence==item['evidence']
+    assert evidence['start']==(NOW-timedelta(days=36)).date().isoformat()
+    assert evidence['end']==(NOW-timedelta(days=9)).date().isoformat()
+    assert evidence['impressions']==800
+    assert client(user(x['db'])).get(link['href']).status_code==403
 
 
 def test_csrf_missing_consent_and_nonowner_access_are_denied(own):

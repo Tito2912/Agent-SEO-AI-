@@ -32,7 +32,7 @@ def throttle(request):
 
 
 @router.get(PATH)
-def page(request:Request,msg:str='',err:str=''):
+def page(request:Request,msg:str='',err:str='',observation:str=''):
     m=service.module();user=owner(request);copy=strings(i18n.current_lang())
     state={};briefs=[];projects=[];unavailable=False
     try:
@@ -42,17 +42,12 @@ def page(request:Request,msg:str='',err:str=''):
             for item in briefs:
                 item['text']=service.export(item['row'])
                 item['content_link']='/projects/'+state['project'].slug+'/content?'+urlencode({'sujet':item['row'].title})
-                evidence=item['row'].evidence
-                item['performance_link']='/projects/'+state['project'].slug+'/performance?'+urlencode({
-                    'source':'gsc' if evidence.get('source')=='gsc_api' else 'bing','dim':'page' if evidence.get('page') else 'query',
-                    'q':evidence.get('page') or evidence.get('query') or '',
-                    'days':min(365,max(1,(service.first_correction.timestamp(evidence['end'])-service.first_correction.timestamp(evidence['start'])).days+1))
-                    if evidence.get('start') and evidence.get('end') else 28})
+                item['observation_link']=PATH+'?'+urlencode({'observation':item['row'].id})+'#brief-evidence-'+item['row'].id
             projects=[p for p in db.scalars(select(Project).where(Project.owner_user_id==user.id).order_by(Project.created_at)) if service.is_target(p.base_url)]
     except SQLAlchemyError:
         m.logger.error('[own-seo] workspace unavailable');unavailable=True
     return m.templates.TemplateResponse('settings_own_seo.html',{'request':request,'project':None,'copy':copy,'state':state,
-        'briefs':briefs,'projects':projects,'base':PATH,'unavailable':unavailable,'msg':copy['messages'].get(msg,''),
+        'briefs':briefs,'projects':projects,'base':PATH,'observation':observation,'unavailable':unavailable,'msg':copy['messages'].get(msg,''),
         'err':copy['errors'].get(err,copy['unavailable']) if err else ''},status_code=503 if unavailable else 200,
         headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
 

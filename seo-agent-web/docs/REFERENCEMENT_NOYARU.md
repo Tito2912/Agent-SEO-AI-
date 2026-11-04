@@ -74,8 +74,10 @@ réalisé par la page de préparation.
 ## Brief, relecture et suite du parcours
 
 1. Relier le projet Noyaru, puis consulter ses priorités techniques et ses sources.
-   Les liens vers anomalies et statistiques conservent le projet, la page/recherche
-   concernée, la source et la période utile.
+   Les anomalies gardent leur analyse. Le lien « Voir le constat enregistré » ouvre
+   les preuves du brief : projet, page/recherche, source, dates et mesures exactes.
+   Il ne relance pas les statistiques en direct sur une période glissante ; un
+   relevé plus récent ne remplace pas l'observation utilisée pour le brief.
 2. Préparer un brief local à partir d'une proposition reconstruite côté serveur.
    Le formulaire transmet uniquement son empreinte et la liaison ; aucun relevé ou
    texte de client fourni par un champ caché n'est accepté. Les doubles clics et
