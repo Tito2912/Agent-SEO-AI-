@@ -49,8 +49,8 @@ HOST: dict[str, str] = {
 UPDATED: dict[str, date] = {
     # 03/11/2026 : Ghost et PrestaShop nommés à côté de WordPress (correction décomptée, accès
     # confié, enregistrement après validation) : ils décomptaient déjà depuis le 02/11.
-    # 04/11/2026 : Wix connecté (correction décomptée, accès confié : clé API, enregistrement
-    # après validation) ; la confidentialité nomme sa clé et Wix parmi les prestataires.
+    # 04/11/2026 : Wix puis Webflow connectés (correction décomptée, accès confié : clé API, jeton
+    # de site, enregistrement après validation) ; la confidentialité les nomme parmi les prestataires.
     "terms": date(2026, 11, 4),
     # 02/11/2026 : Telegram (notifications du proprietaire) et Google Analytics (mesure d'audience
     # du site public, apres consentement), chacun nomme quand il est configure.
