@@ -13,7 +13,7 @@ _DOC_SCREENS = {
     "anomalies-et-priorites": "/issues", "lancer-un-crawl": "/settings/crawl",
     "automatiser-les-audits": "/settings/crawl",
     "corrections-automatiques": "/corrections", "cms-compatibles": "/cms",
-    "corriger-dans-wordpress": "/cms", "corriger-dans-ghost": "/cms", "corriger-dans-prestashop": "/cms",
+    "corriger-dans-wordpress": "/cms", "corriger-dans-ghost": "/cms", "corriger-dans-prestashop": "/cms", "corriger-dans-wix": "/cms",
     "verifier-une-correction": "/first-correction", "rediger-du-contenu": "/content",
     "analyser-les-concurrents": "/competitors", "backlinks": "/backlinks",
     "opportunites-de-mots-cles": "/keywords/opportunities",

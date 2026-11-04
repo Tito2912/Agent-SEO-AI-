@@ -5,7 +5,7 @@ description: "Comment {{app_name}} confirme au crawl suivant qu'une anomalie cor
 kind: "Documentation"
 section: "Corriger"
 order: 23
-updated_at: "2026-11-03"
+updated_at: "2026-11-04"
 audience: "Solo, Pro et Business"
 keywords: ["vérification", "régression SEO", "suivi des corrections", "crawl de contrôle"]
 app_href: "/"
@@ -24,7 +24,7 @@ déploiement, un cache, parfois un CDN, et l'hypothèse que le correctif était 
 
 {{app_name}} ne coche donc rien à la fusion. Il attend le crawl suivant et regarde.
 
-## Avec un CMS connecté (WordPress, Ghost, PrestaShop)
+## Avec un CMS connecté (WordPress, Ghost, PrestaShop, Wix)
 
 Le suivi conserve quatre étapes : **Préparer → Relire → Appliquer → Vérifier**.
 

@@ -1,0 +1,11 @@
+{#- La connexion Wix (04/11/2026) : une clé API du compte Wix et l'identifiant du site. Tout part
+    vers l'API de Wix, jamais vers l'adresse du site. -#}
+<p class="muted small">{{ tr("Noyaru modifie le titre SEO et la méta-description des pages et des fiches produit publiées, dans la langue principale du site, après votre validation de chaque aperçu. La disponibilité est vérifiée à la connexion.") }}</p>
+<details class="cms-help"><summary>{{ tr("Où trouver la clé API et l’identifiant du site ?") }}</summary><p>{{ tr("Dans votre compte Wix, ouvrez la page des clés API (manage.wix.com/account/api-keys) et générez une clé limitée à ce site, avec la seule permission « Manage SEO Settings ». L’identifiant du site figure dans l’adresse de son tableau de bord : manage.wix.com/dashboard/identifiant/… Supprimer la clé retire l’accès de Noyaru.") }}</p></details>
+<form method="post" action="/projects/{{ slug }}/cms/wix/connect" class="cms-form">
+  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+  <label>{{ tr("Identifiant du site Wix") }}<input type="text" name="site_id" placeholder="1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" required maxlength="36" autocomplete="off" spellcheck="false" /><span class="muted small">{{ tr("Le site publié à l’adresse de ce projet ({url}).", url=project.base_url) }}</span></label>
+  <label>{{ tr("Clé API Wix") }}<input type="password" name="cle" required maxlength="4000" autocomplete="off" /></label>
+  <button class="btn primary" type="submit">{{ tr("Vérifier et connecter Wix") }}</button>
+  <p class="muted small">{{ tr("La connexion vérifie l’accès. Chaque correction demande ensuite votre validation.") }}</p>
+</form>

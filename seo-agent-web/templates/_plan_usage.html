@@ -1,7 +1,7 @@
 {# Shared definitions: home, public pricing and the authenticated subscription screen. #}
 {% macro count(n) -%}{{ '{:,}'.format(n).replace(',', ' ' if current_lang() == 'fr' else ',') }}{%- endmacro %}
 {% macro correction_definition() -%}
-{{ tr("Une correction IA correspond à un fichier modifié par le modèle dans GitHub ou à un titre ou une méta-description proposé pour une page dans WordPress, Ghost ou PrestaShop.") }}
+{{ tr("Une correction IA correspond à un fichier modifié par le modèle dans GitHub ou à un titre ou une méta-description proposé pour une page dans WordPress, Ghost, PrestaShop ou Wix.") }}
 {%- endmacro %}
 {% macro correction_details() -%}
 {{ tr("Dans un CMS connecté, elle est décomptée dès la préparation du texte, avant son enregistrement. Un texte saisi manuellement et les réécritures sans IA ne consomment pas ce quota.") }}
