@@ -51,7 +51,7 @@ page.
 A fix that resolves 300 URLs by modifying a single template costs **one** unit. The quota
 measures the model's work, not the size of the problem.
 
-In a connected CMS (WordPress, Ghost, PrestaShop, Wix), the same rule applies page by page:
+In a connected CMS (WordPress, Ghost, PrestaShop, Wix, Webflow), the same rule applies page by page:
 each title or meta description that
 {{app_name}} proposes counts as one unit as soon as it is prepared, before it is saved on
 your site. You still review and confirm saving it. Text you write yourself and rewrites
@@ -63,7 +63,7 @@ the one where you catch up on the backlog — and far fewer afterward, once the 
 issues are fixed.
 
 The Free plan includes {{corrections_free}} AI fixes per month, on a compatible GitHub repository
-or in a connected CMS (WordPress with Yoast SEO, Ghost, PrestaShop, Wix),
+or in a connected CMS (WordPress with Yoast SEO, Ghost, PrestaShop, Wix, Webflow),
 as well as the audit and the PDF and CSV exports. The fix pack without a repository is available from the
 Solo plan up. The limits actually available are shown in the table above.
 

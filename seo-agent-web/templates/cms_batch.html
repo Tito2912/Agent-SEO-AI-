@@ -88,6 +88,7 @@
       {% if poll %}
         <p role="status">{{ tr("L’analyse de contrôle est en cours. Cette page s’actualise toute seule.") }}</p>
       {% elif enregistrees | rejectattr('verification.state', 'in', ['verified', 'superseded']) | list %}
+        {% if cx.publication %}<p class="cms-publication" role="note">{{ tr(cx.publication) }}</p>{% endif %}
         <form method="post" action="/projects/{{ slug }}/cms/{{ cx.nom }}/issues/{{ issue_key }}/verify">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <button class="btn {% if not apercus %}primary{% endif %}" type="submit" data-busy-label="{{ tr('Lancement de la vérification…') }}">{{ tr("Lancer une analyse de contrôle") }}</button>

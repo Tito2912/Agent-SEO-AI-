@@ -1,0 +1,10 @@
+{#- La connexion Webflow (04/11/2026) : un jeton de site. Noyaru enregistre sans jamais publier :
+    le client publie lui-même (décision du propriétaire). -#}
+<p class="muted small">{{ tr("Noyaru modifie le titre SEO et la méta-description des pages statiques, après votre validation de chaque aperçu. Il ne publie jamais votre site : chaque modification attend votre prochaine publication dans Webflow. La disponibilité est vérifiée à la connexion.") }}</p>
+<details class="cms-help"><summary>{{ tr("Où trouver le jeton de site ?") }}</summary><p>{{ tr("Dans Webflow, ouvrez les réglages du site (Site settings), puis Apps & integrations → API access, et générez un jeton nommé « Noyaru » avec les droits Pages en lecture et écriture et Sites en lecture seule, sans aucun autre droit. Supprimer ce jeton retire l’accès de Noyaru.") }}</p></details>
+<form method="post" action="/projects/{{ slug }}/cms/webflow/connect" class="cms-form">
+  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+  <label>{{ tr("Jeton de site Webflow") }}<input type="password" name="jeton" required maxlength="256" autocomplete="off" /><span class="muted small">{{ tr("Le site publié à l’adresse de ce projet ({url}).", url=project.base_url) }}</span></label>
+  <button class="btn primary" type="submit">{{ tr("Vérifier et connecter Webflow") }}</button>
+  <p class="muted small">{{ tr("La connexion vérifie l’accès. Chaque correction demande ensuite votre validation.") }}</p>
+</form>

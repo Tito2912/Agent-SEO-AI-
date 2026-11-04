@@ -1,7 +1,7 @@
 ---
 title: "CMS et plateformes compatibles"
 meta_title: "CMS et plateformes compatibles — documentation {{app_name}}"
-description: "Ce que {{app_name}} corrige sur votre plateforme : WordPress, Ghost, PrestaShop, Wix connectés ; Shopify, Webflow, Squarespace, Systeme.io guidés ; code sur GitHub."
+description: "Ce que {{app_name}} corrige sur votre plateforme : WordPress, Ghost, PrestaShop, Wix, Webflow connectés ; Shopify, Squarespace, Systeme.io guidés ; code sur GitHub."
 kind: "Documentation"
 section: "Corriger"
 order: 25
@@ -31,7 +31,8 @@ l'autre, c'est la façon de **corriger**. {{app_name}} connaît trois cas.
 | Ghost | rédige et enregistre les titres SEO et méta-descriptions des articles et pages | Ghost 5, une clé Admin API |
 | PrestaShop | rédige et enregistre les titres SEO et méta-descriptions des produits et catégories | PrestaShop 8, une clé Webservice |
 | Wix | rédige et enregistre les titres SEO et méta-descriptions des pages et fiches produit | un site publié, une clé API avec la permission SEO |
-| Shopify, Webflow, Squarespace, Systeme.io, WordPress avec Rank Math | indique, pour chaque anomalie, où faire le changement dans votre outil | rien à connecter |
+| Webflow | rédige et enregistre les titres SEO et méta-descriptions des pages statiques, mis en ligne à votre publication | un site publié, un jeton de site (Pages en écriture) |
+| Shopify, Squarespace, Systeme.io, WordPress avec Rank Math | indique, pour chaque anomalie, où faire le changement dans votre outil | rien à connecter |
 
 → [Connecter GitHub](/docs/connecter-github)
 
@@ -39,14 +40,14 @@ l'autre, c'est la façon de **corriger**. {{app_name}} connaît trois cas.
 
 Dans le projet, ouvrez **CMS et intégrations**, répondez à **Sur quelle plateforme est votre
 site ?**, puis choisissez **Enregistrer ma plateforme**. Ce choix adapte les instructions de
-correction de chaque anomalie. Pour WordPress, Ghost, PrestaShop et Wix, la carte de connexion
+correction de chaque anomalie. Pour WordPress, Ghost, PrestaShop, Wix et Webflow, la carte de connexion
 s'affiche sur le même écran.
 
 Un projet a une seule plateforme : en choisir une autre retire la connexion existante.
 
 ## Les CMS connectés
 
-Sur WordPress, Ghost, PrestaShop et Wix, la connexion couvre le **titre SEO** et la
+Sur WordPress, Ghost, PrestaShop, Wix et Webflow, la connexion couvre le **titre SEO** et la
 **méta-description**. Le parcours est le même partout :
 
 - {{app_name}} propose un texte, dans la langue de la page et dans la bonne longueur ; vous
@@ -62,10 +63,11 @@ Chaque CMS a ses prérequis et son périmètre :
 - [Corriger dans Ghost](/docs/corriger-dans-ghost)
 - [Corriger dans PrestaShop](/docs/corriger-dans-prestashop)
 - [Corriger dans Wix](/docs/corriger-dans-wix)
+- [Corriger dans Webflow](/docs/corriger-dans-webflow)
 
 ## Les plateformes guidées
 
-Sur Shopify, Webflow, Squarespace et Systeme.io, {{app_name}} n'écrit pas sur votre site.
+Sur Shopify, Squarespace et Systeme.io, {{app_name}} n'écrit pas sur votre site.
 Chaque anomalie affiche les étapes à suivre dans votre outil, l'écran à ouvrir et le champ à
 remplir, puis la nouvelle analyse contrôle le résultat. Il en va de même sur WordPress avec
 Rank Math : la connexion passe par Yoast SEO, et pour les articles de blog Wix, que Wix ne

@@ -51,7 +51,7 @@ page.
 Une correction qui règle 300 URLs en modifiant un seul gabarit coûte **une** unité. Le quota
 mesure le travail du modèle, pas la taille du problème.
 
-Dans un CMS connecté (WordPress, Ghost, PrestaShop, Wix), la même règle s'applique page par page :
+Dans un CMS connecté (WordPress, Ghost, PrestaShop, Wix, Webflow), la même règle s'applique page par page :
 chaque titre ou méta-description que
 {{app_name}} propose compte pour une unité dès la préparation, avant son enregistrement sur
 votre site. Vous relisez et confirmez toujours cet enregistrement. Un texte que vous écrivez
@@ -63,7 +63,7 @@ celui où l'on rattrape le retard — puis nettement moins ensuite, une fois les
 gabarit réglées.
 
 Le plan Free inclut {{corrections_free}} corrections IA par mois, sur un dépôt GitHub compatible
-ou dans un CMS connecté (WordPress avec Yoast SEO, Ghost, PrestaShop, Wix),
+ou dans un CMS connecté (WordPress avec Yoast SEO, Ghost, PrestaShop, Wix, Webflow),
 ainsi que l'audit et les exports PDF et CSV. Le fix-pack sans dépôt est disponible dès le plan
 Solo. Les limites réellement disponibles figurent dans le tableau ci-dessus.
 

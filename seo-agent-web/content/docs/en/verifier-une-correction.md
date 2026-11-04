@@ -24,7 +24,7 @@ deployment, a cache, sometimes a CDN, and the assumption that the fix was the ri
 
 So {{app_name}} doesn't tick anything off at merge time. It waits for the next crawl and looks.
 
-## With a connected CMS (WordPress, Ghost, PrestaShop, Wix)
+## With a connected CMS (WordPress, Ghost, PrestaShop, Wix, Webflow)
 
 Tracking keeps four steps: **Prepare → Review → Apply → Verify**.
 

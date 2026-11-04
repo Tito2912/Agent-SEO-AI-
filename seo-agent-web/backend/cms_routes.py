@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 try:
-    from . import cms_guidance, correction_guard, first_correction, ghost_cms, prestashop_cms, wix_cms, wordpress_cms as wp
+    from . import cms_guidance, correction_guard, first_correction, ghost_cms, prestashop_cms, webflow_cms, wix_cms, wordpress_cms as wp
     from .cms_commun import CmsError, fingerprint, same_connection
     from .i18n import JSONResponse
     from .models import AuditLog, CmsChange, IssueTask, JobRecord, Project
@@ -28,6 +28,7 @@ except ImportError:
     import first_correction
     import ghost_cms
     import prestashop_cms
+    import webflow_cms
     import wix_cms
     import wordpress_cms as wp
     from cms_commun import CmsError, fingerprint, same_connection
@@ -37,7 +38,8 @@ except ImportError:
 router = APIRouter()
 
 # Les connecteurs, par nom d'adresse. Un CMS absent d'ici n'a que des instructions (cms_guidance).
-CONNECTEURS = {cx.nom: cx for cx in (wp.CONNECTEUR, ghost_cms.CONNECTEUR, prestashop_cms.CONNECTEUR, wix_cms.CONNECTEUR)}
+CONNECTEURS = {cx.nom: cx for cx in (wp.CONNECTEUR, ghost_cms.CONNECTEUR, prestashop_cms.CONNECTEUR, wix_cms.CONNECTEUR,
+                                     webflow_cms.CONNECTEUR)}
 
 
 def app_module():

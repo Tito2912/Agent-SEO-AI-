@@ -83,7 +83,7 @@ Le fichier `HOW_TO_APPLY.md` détaille chaque cas. En résumé :
 ou l'éditeur. Redirections via une extension dédiée, qui accepte généralement un import CSV.
 Avec Yoast SEO, les titres et descriptions peuvent aussi être corrigés directement depuis
 {{app_name}} : voir [Corriger dans WordPress](/docs/corriger-dans-wordpress). Il en va de même
-sur Ghost, PrestaShop et Wix : voir [CMS et plateformes compatibles](/docs/cms-compatibles).
+sur Ghost, PrestaShop, Wix et Webflow : voir [CMS et plateformes compatibles](/docs/cms-compatibles).
 
 **Shopify** — `title` et descriptions dans l'admin, produit par produit ou par import. Les
 données structurées sont dans le thème, le plus souvent `theme.liquid`.

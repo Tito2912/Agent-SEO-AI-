@@ -24,7 +24,7 @@ déploiement, un cache, parfois un CDN, et l'hypothèse que le correctif était 
 
 {{app_name}} ne coche donc rien à la fusion. Il attend le crawl suivant et regarde.
 
-## Avec un CMS connecté (WordPress, Ghost, PrestaShop, Wix)
+## Avec un CMS connecté (WordPress, Ghost, PrestaShop, Wix, Webflow)
 
 Le suivi conserve quatre étapes : **Préparer → Relire → Appliquer → Vérifier**.
 

@@ -140,7 +140,7 @@ section[id] { scroll-margin-top: 112px; }
         <a class="btn" href="#compatibilite">{{ tr("Vérifier la compatibilité") }}</a>
       </div>
       <p class="hero-note">{{ tr("Compte gratuit requis · Sans carte bancaire") }}<br>{{ tr("Aucune connexion GitHub nécessaire pour l'audit.") }}</p>
-      {% if gratuit and gratuit.corrections %}<p class="hero-note">{{ tr("{n} corrections IA par mois incluses, sur un dépôt compatible ou dans WordPress (Yoast SEO), Ghost, PrestaShop et Wix.", n=gratuit.corrections) }}</p>{% endif %}
+      {% if gratuit and gratuit.corrections %}<p class="hero-note">{{ tr("{n} corrections IA par mois incluses, sur un dépôt compatible ou dans WordPress (Yoast SEO), Ghost, PrestaShop, Wix et Webflow.", n=gratuit.corrections) }}</p>{% endif %}
     </div>
 
     <div class="hero-apercu">
@@ -159,7 +159,7 @@ section[id] { scroll-margin-top: 112px; }
     <div class="compat-cas">
       <div>
         <h3>{{ tr("Site géré avec un CMS") }}</h3>
-        <p>{{ tr("Avec WordPress (Yoast SEO), Ghost, PrestaShop et Wix, {app_name} rédige et enregistre les titres SEO et méta-descriptions, après votre relecture de chaque texte. Sur Shopify, Webflow, Squarespace et Systeme.io, des instructions pas à pas indiquent où faire chaque changement dans votre outil, et la nouvelle analyse contrôle le résultat. Pour les autres changements, dès le plan Solo, une archive avec les données de l'audit et un mode d'emploi facilite le travail.", app_name=app_name) }}</p>
+        <p>{{ tr("Avec WordPress (Yoast SEO), Ghost, PrestaShop, Wix et Webflow, {app_name} rédige et enregistre les titres SEO et méta-descriptions, après votre relecture de chaque texte. Sur Shopify, Squarespace et Systeme.io, des instructions pas à pas indiquent où faire chaque changement dans votre outil, et la nouvelle analyse contrôle le résultat. Pour les autres changements, dès le plan Solo, une archive avec les données de l'audit et un mode d'emploi facilite le travail.", app_name=app_name) }}</p>
         <a href="{{ campaign_link(request, '/docs/cms-compatibles') }}">{{ tr("Voir les CMS compatibles") }}</a>
         <a href="{{ campaign_link(request, '/docs/fix-pack-sans-depot') }}">{{ tr("Voir comment corriger sans dépôt GitHub") }}</a>
       </div>
@@ -199,7 +199,7 @@ section[id] { scroll-margin-top: 112px; }
       <div class="etape">
         <div class="etape-num">03</div>
         <h3>{{ tr("Passez aux corrections") }}</h3>
-        <p>{{ tr("Relisez les modifications proposées sur votre dépôt compatible ou dans votre CMS (WordPress, Ghost, PrestaShop, Wix), ou transmettez le rapport à votre prestataire pour une intervention dans votre outil.") }}</p>
+        <p>{{ tr("Relisez les modifications proposées sur votre dépôt compatible ou dans votre CMS (WordPress, Ghost, PrestaShop, Wix, Webflow), ou transmettez le rapport à votre prestataire pour une intervention dans votre outil.") }}</p>
       </div>
     </div>
   </section>
@@ -238,7 +238,7 @@ section[id] { scroll-margin-top: 112px; }
         </div>
         <div class="fonction">
           <h4>{{ tr("Sans dépôt, dans votre CMS") }}</h4>
-          <p>{{ tr("Sur WordPress avec Yoast SEO, Ghost, PrestaShop et Wix, faites rédiger les titres et méta-descriptions de toutes les pages d'une anomalie, relisez-les sur un seul écran, puis enregistrez-les sur votre site. Pour le reste, dès le plan Solo, une archive de données et de modèles se transmet à votre prestataire.") }}</p>
+          <p>{{ tr("Sur WordPress avec Yoast SEO, Ghost, PrestaShop, Wix et Webflow, faites rédiger les titres et méta-descriptions de toutes les pages d'une anomalie, relisez-les sur un seul écran, puis enregistrez-les sur votre site. Pour le reste, dès le plan Solo, une archive de données et de modèles se transmet à votre prestataire.") }}</p>
         </div>
       </div>
 
@@ -318,19 +318,19 @@ section[id] { scroll-margin-top: 112px; }
     <div class="faq">
       <details>
         <summary>{{ tr("Faut-il savoir coder ou connecter GitHub ?") }}</summary>
-        <p>{{ tr("Pour lancer l'audit et lire les rapports, un compte gratuit et l'adresse de votre site suffisent. Les corrections dans le code nécessitent un dépôt GitHub compatible et une personne capable de relire les changements. Vous pouvez confier cette étape à votre développeur. Sur WordPress avec Yoast SEO, Ghost, PrestaShop et Wix, les titres et méta-descriptions se corrigent sans dépôt ni code : vous relisez chaque texte avant son enregistrement.") }}</p>
+        <p>{{ tr("Pour lancer l'audit et lire les rapports, un compte gratuit et l'adresse de votre site suffisent. Les corrections dans le code nécessitent un dépôt GitHub compatible et une personne capable de relire les changements. Vous pouvez confier cette étape à votre développeur. Sur WordPress avec Yoast SEO, Ghost, PrestaShop, Wix et Webflow, les titres et méta-descriptions se corrigent sans dépôt ni code : vous relisez chaque texte avant son enregistrement.") }}</p>
       </details>
       <details>
         <summary>{{ tr("Mon site sera-t-il modifié pendant l'audit ?") }}</summary>
-        <p>{{ tr("L'audit consulte les pages accessibles. Dans le parcours de correction par pull request, les changements attendent votre validation ou celle de votre prestataire avant d'être intégrés au site. Dans WordPress, Ghost, PrestaShop et Wix, rien n'est enregistré avant que vous ayez validé l'aperçu.") }}</p>
+        <p>{{ tr("L'audit consulte les pages accessibles. Dans le parcours de correction par pull request, les changements attendent votre validation ou celle de votre prestataire avant d'être intégrés au site. Dans WordPress, Ghost, PrestaShop, Wix et Webflow, rien n'est enregistré avant que vous ayez validé l'aperçu.") }}</p>
       </details>
       <details>
         <summary>{{ tr("Que comprend le plan gratuit ?") }}</summary>
-        <p>{% if gratuit %}{% if gratuit.sites != 1 %}{{ tr("{n} sites suivis", n=gratuit.sites) }}{% else %}{{ tr("{n} site suivi", n=gratuit.sites) }}{% endif %}, {{ tr("{n} pages analysées par mois", n=gratuit.pages) }}{% if gratuit.corrections %} {{ tr("et {n} corrections IA par mois, sur un dépôt compatible ou dans WordPress (Yoast SEO), Ghost, PrestaShop et Wix", n=gratuit.corrections) }}{% endif %}. {% endif %}{{ tr("Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo.") }} {{ tr_html('Consultez le <a href="{url}">comparatif complet</a> pour les autres limites.', url=campaign_link(request, '/pricing#comparatif')) }}</p>
+        <p>{% if gratuit %}{% if gratuit.sites != 1 %}{{ tr("{n} sites suivis", n=gratuit.sites) }}{% else %}{{ tr("{n} site suivi", n=gratuit.sites) }}{% endif %}, {{ tr("{n} pages analysées par mois", n=gratuit.pages) }}{% if gratuit.corrections %} {{ tr("et {n} corrections IA par mois, sur un dépôt compatible ou dans WordPress (Yoast SEO), Ghost, PrestaShop, Wix et Webflow", n=gratuit.corrections) }}{% endif %}. {% endif %}{{ tr("Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo.") }} {{ tr_html('Consultez le <a href="{url}">comparatif complet</a> pour les autres limites.', url=campaign_link(request, '/pricing#comparatif')) }}</p>
       </details>
       <details>
         <summary>{{ tr("Comment sont comptées les pages et les corrections ?") }}</summary>
-        <p>{{ tr("Chaque analyse consomme des pages du quota mensuel. Le nombre de pages possible est limité par vos réglages, le plafond par analyse et le quota mensuel restant : le plus petit s'applique. Une correction IA correspond à un fichier écrit par le modèle, même si ce fichier sert à plusieurs pages ; dans WordPress, Ghost, PrestaShop ou Wix, à un titre ou une méta-description rédigé pour une page.") }} <a href="{{ campaign_link(request, '/docs/plans-et-quotas') }}">{{ tr("Lire le détail des quotas") }}</a>.</p>
+        <p>{{ tr("Chaque analyse consomme des pages du quota mensuel. Le nombre de pages possible est limité par vos réglages, le plafond par analyse et le quota mensuel restant : le plus petit s'applique. Une correction IA correspond à un fichier écrit par le modèle, même si ce fichier sert à plusieurs pages ; dans WordPress, Ghost, PrestaShop, Wix ou Webflow, à un titre ou une méta-description rédigé pour une page.") }} <a href="{{ campaign_link(request, '/docs/plans-et-quotas') }}">{{ tr("Lire le détail des quotas") }}</a>.</p>
       </details>
       <details>
         <summary>{{ tr("Puis-je travailler avec mon prestataire ?") }}</summary>

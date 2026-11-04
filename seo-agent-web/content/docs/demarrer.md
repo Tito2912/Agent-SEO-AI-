@@ -88,7 +88,7 @@ Vous gardez la main : rien n'est fusionné sans vous.
 [Corrections automatiques](/docs/corrections-automatiques)
 
 !!! note "Pas de dépôt Git ?"
-    Sur WordPress avec Yoast SEO, Ghost, PrestaShop et Wix, {{app_name}} corrige les titres et
+    Sur WordPress avec Yoast SEO, Ghost, PrestaShop, Wix et Webflow, {{app_name}} corrige les titres et
     méta-descriptions directement : [CMS et plateformes compatibles](/docs/cms-compatibles).
     Pour le reste, et sous Shopify ou avec un dépôt inaccessible, le
     [fix-pack](/docs/fix-pack-sans-depot) exporte les correctifs prêts à coller, avec le

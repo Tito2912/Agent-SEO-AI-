@@ -88,7 +88,7 @@ You stay in control: nothing is merged without you.
 [Automatic fixes](/docs/corrections-automatiques)
 
 !!! note "No Git repository?"
-    On WordPress with Yoast SEO, Ghost, PrestaShop and Wix, {{app_name}} fixes titles and meta
+    On WordPress with Yoast SEO, Ghost, PrestaShop, Wix and Webflow, {{app_name}} fixes titles and meta
     descriptions directly: [Compatible CMSs and platforms](/docs/cms-compatibles). For
     everything else, and on Shopify or with an inaccessible repository, the
     [fix-pack](/docs/fix-pack-sans-depot) exports ready-to-paste fixes, along with the
