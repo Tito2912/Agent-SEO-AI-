@@ -258,25 +258,81 @@ publication, mandats par type d'écriture, contrôle et reprise après résultat
 Les scénarios peuplés se testent localement avec transports simulés ; une recette
 réelle consommant un crédit nécessite un mandat propre au compte/projet choisi.
 
-## Suite du lot 3 : application et contrôle autonomes
+## Lot 3C : publication GitHub et contrôle sous mandat distinct
 
-Séparer trois objets : constat, décision et exécution. La décision porte la règle
-et ses versions, les preuves, le projet, l'action ciblée, le coût maximal et les
-autorisations nécessaires. L'exécution réutilise les verrous, journaux, quotas et
-vérifications existants ; pas de second chemin d'écriture qui les contournerait.
+Implémentation du 4 novembre 2026, depuis `main` `447139c`. Ce pilote nécessite un
+nouvel accord du propriétaire sur l'aperçu exact, distinct du mandat de préparation.
+Écran FR/EN : `/projects/{slug}/corrections/autonomy/publications`, lié depuis les
+préparations. Les membres autorisés peuvent lire le suivi ; seul le propriétaire
+peut autoriser et révoquer. Les GET ne créent aucun mandat et ne démarrent aucune
+analyse. La migration additive `20261103_0023` n'active aucun ancien aperçu.
 
-- Diagnostic automatique des défauts persistants : publication réellement reçue,
-  contenu source, URL cible, périmètre de l'analyse, puis stratégie alternative.
-- Compter des applications distinctes, pas des contrôles répétés. Un changement
-  sans résultat connu n'est pas relancé aveuglément.
-- Maximum de tentatives et budget explicitement configurés, délais croissants pour
-  les erreurs transitoires, arrêt et dossier de reprise après épuisement.
-- Résultat externe inconnu après interruption : réconciliation en lecture avant
-  toute nouvelle écriture, jamais effacement d'un verrou pour « réessayer ».
-- Correction du code de Noyaru : reproduction, test pertinent, branche/PR et CI.
-  Pas d'automodification du service en cours d'exécution.
-- Une restauration exige une preuve de compatibilité de la version courante ; ne
-  pas écraser une modification plus récente pour revenir à une ancienne version.
+Périmètre : un aperçu enregistré pour un titre ou une description, une page, un
+fichier, une branche, une PR, une fusion et un contrôle. Aucun nouvel appel IA,
+crédit IA, connecteur CMS, email, réglage de dépôt ou retour arrière automatique.
+Le propriétaire relit le diff et accepte séparément la publication puis le contrôle.
+La version du mandat, le fichier/code approuvé, la cible, le propriétaire, les
+réglages d'analyse et l'application d'origine sont conservés par empreinte.
+Un défaut résolu, une cible, un code ou des droits changés arrêtent la publication.
+
+Séquence durable :
+
+1. Accord valable 24 heures, au plus 240 lectures et 5 écritures GitHub. Chaque
+   requête réserve sa place avant transport, sous le verrou partagé du compte.
+   Une pause globale/projet suspend la suite ; un arrêt bloque les requêtes suivantes.
+2. Création du brouillon par le chemin GitHub existant, avec son journal et le
+   contrôle du fichier source inchangé. Les écritures permises sont limitées au
+   fichier/code approuvé et à la branche/PR de cette opération. Les PR gérées sont
+   exclues du vérificateur automatique historique.
+3. Relecture des protections du dépôt : au moins un contrôle obligatoire, branche
+   à jour imposée et protections appliquées aux administrateurs. Noyaru ne modifie
+   pas ces protections. Les règles GitHub supplémentaires continuent de s'appliquer.
+   Résultats complets des check-runs et statuts ; un contrôle obligatoire neutre ou
+   ignoré ne vaut pas réussite. Une liste partielle, un échec, un fichier/commit ou
+   une base changés arrêtent le mandat. Une attente reste bornée par durée/requêtes.
+4. Passage prêt à relire puis fusion squash avec le SHA de tête relu dans le corps
+   de la requête. Aucune fusion forcée. La branche strictement protégée traite les
+   changements de base entre la lecture et la fusion ; une réponse inconnue se
+   réconcilie en lecture, sans rejouer l'écriture. Une écriture incertaine sans reçu
+   récupérable demande une relecture et conserve le journal pour diagnostic.
+5. La fusion seule ne lance aucun crawl. Noyaru attend un Deployment GitHub pour le
+   commit fusionné et l'environnement choisi, marqué production/non temporaire,
+   avec son dernier statut réussi et l'origine exacte du site. Une version remplacée,
+   un mauvais domaine ou un statut d'échec arrêtent la suite. Ce reçu est celui de
+   l'intégration de déploiement du client ; ce pilote exige cette intégration.
+6. Une fois le déploiement confirmé : déclaration de l'application, réservation du
+   quota et création d'un seul job dans la même transaction. Budget de 1 à 300 pages,
+   limité par les réglages courants, le plan et le solde du compte. Le verrou de quota
+   est partagé avec les réservations manuelles existantes. La date UTC du contrôle
+   suit la déclaration, indépendamment du fuseau du worker. La cible vient du projet,
+   même si un ancien fichier d'analyse contient une autre adresse.
+7. Le worker revérifie droits, cible, réglages, budget et absence de réexécution.
+   Un arrêt annule et rembourse un job en attente ; un job lancé reçoit l'annulation
+   existante. Une ancienne copie du job ne peut retirer cette demande ni annuler un
+   reçu de facturation. L'usage connu est ajusté une seule fois dans la période de la
+   réservation. Un usage inconnu conserve la réserve pour rapprochement.
+8. « Correction vérifiée » exige l'observation de contrôle réellement enregistrée par
+   le vérificateur existant pour ce job, cette tâche et cette nouvelle application,
+   avec défaut résolu et référence confirmée. Analyse terminée, fusion et déploiement
+   ne suffisent pas. Un résultat incomplet ou un défaut persistant demande relecture ;
+   aucun second crawl ni nouvelle correction IA ne part sous le même mandat.
+
+Validation : tests du protocole avec transports simulés, worker réel avec rapport
+local et vérificateur existant, concurrence de quotas, migration aller/retour,
+formulaires et 40 cas Chromium FR/EN à 1440/1024/768/390/360 px. Les tests locaux
+n'envoient ni code à GitHub, ni requête IA, ni crawl sur un site client.
+La recette de production de cette livraison reste en lecture seule : aucune
+publication ni consommation de pages réelles n'est implicitement autorisée.
+
+Références primaires consultées pour le protocole GitHub :
+[SHA de fusion](https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#merge-a-pull-request),
+[protections strictes](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches),
+[statuts de déploiement](https://docs.github.com/en/rest/deployments/statuses?apiVersion=2022-11-28).
+
+Les familles CMS, la restauration et la modification des stratégies/prompts restent
+à étendre avec leurs propres mandats et évaluations. Le moteur ne réécrit pas le
+code du service en cours d'exécution. Le référencement propre/blog, le SAV email
+et les réseaux sociaux restent les lots suivants décrits ci-dessous.
 
 ## Lot 4 : référencement propre et blog Noyaru
 

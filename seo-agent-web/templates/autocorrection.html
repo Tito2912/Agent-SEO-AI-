@@ -8,6 +8,7 @@
   <header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
   <nav class="preparation-actions" aria-label="{{ copy.title }}">
     <a class="btn" href="/projects/{{ slug }}/corrections/decisions">{{ copy.back }}</a>
+    <a class="btn" href="{{ base }}/publications">{{ "Publish and verify" if current_lang() == "en" else "Publier et vérifier" }}</a>
     <a class="btn" href="{{ base }}">{{ copy.reload }}</a>
   </nav>
   {% if unavailable %}<p class="alert error" role="alert">{{ copy.unavailable }}</p>
