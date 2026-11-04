@@ -11,6 +11,7 @@ from sqlalchemy import select
 try:
     from . import (
         autocorrection as preparation,
+        correction_execution as execution,
         billing,
         correction_decisions as decisions,
         correction_memory as memory,
@@ -26,6 +27,7 @@ try:
     )
 except ImportError:
     import autocorrection as preparation
+    import correction_execution as execution
     import billing
     import correction_decisions as decisions
     import correction_memory as memory
@@ -44,7 +46,7 @@ def options(project):
     m = preparation.module()
     path = m._resolve_config_path(str(m.DEFAULT_CONFIG))
     if not m._config_path_allowed(path):
-        raise ValueError("control_config")
+        raise execution.ExecutionStopped("target_changed")
     crawl, gsc, bing = m._effective_project_crawl_settings(
         project.slug,
         config_path=path if path.exists() else None,
@@ -119,7 +121,7 @@ def enqueue(publication_id):
             or preparation.config_key(project) != pub.config_key
             or analysis_key(project) != pub.analysis_key
         ):
-            raise ValueError("control_config")
+            raise execution.ExecutionStopped("target_changed")
         if db.scalar(
             select(JobRecord.id)
             .where(
@@ -132,7 +134,7 @@ def enqueue(publication_id):
         ):
             return None
         if memory.attempt_key(task) != pub.receipt.get("proposal_key"):
-            raise ValueError("application_changed")
+            raise execution.ExecutionStopped("application_changed")
         path, crawl, _, _ = options(project)
         requested = max(1, int(crawl.get("max_pages") or 300))
         plan = billing.crawl_config_for_plan(
@@ -143,6 +145,7 @@ def enqueue(publication_id):
             pub.pages_budget,
             max(1, int(plan.get("max_pages_per_crawl") or 300)),
         )
+        quota_period = billing._period_key()
         if not owner.is_admin:
             ok, remaining = billing.ensure_within_quota(
                 db,
@@ -153,7 +156,9 @@ def enqueue(publication_id):
             if not ok and isinstance(remaining, int) and remaining > 0:
                 planned = min(planned, remaining)
             elif not ok:
-                raise ValueError("quota")
+                raise execution.ExecutionStopped("quota")
+        if quota_period != billing._period_key():
+            raise execution.ExecutionStopped("quota_period_changed")
         # Control declarations follow the real deployment receipt, never the merge alone.
         decisions.lock_project(db, project.id)
         note = first_correction.note_data(task.note)
@@ -178,7 +183,7 @@ def enqueue(publication_id):
             "override_max_pages": planned,
             "quota_reserved_pages": planned,
             "publication_control": str(pub.id),
-            "quota_period": billing._period_key(now),
+            "quota_period": quota_period,
             "job_timeout_s": int(plan.get("job_timeout_s") or 1800),
             "max_pagespeed_urls": max(1, int(plan.get("max_pagespeed_urls") or 1)),
         }
@@ -190,6 +195,7 @@ def enqueue(publication_id):
                 user_id=pub.owner_id,
                 metric="pages_crawled_month",
                 amount=planned,
+                period=quota_period,
                 meta={
                     "kind": "crawl_reserve",
                     "job_id": job_id,
@@ -226,7 +232,7 @@ def enqueue(publication_id):
         pub.job_id = job_id
         pub.job_issued = True
         pub.reserved_pages = planned
-        pub.receipt = {**pub.receipt, "quota_period": billing._period_key(now)}
+        pub.receipt = {**pub.receipt, "quota_period": quota_period}
         pub.phase = "waiting_control"
         pub.reason = "control_queued"
         db.commit()

@@ -5,6 +5,7 @@ Every external write has a durable intent. Unknown writes are read back, not rep
 """
 
 import base64
+import hashlib
 from datetime import timedelta
 import re
 import threading
@@ -271,6 +272,16 @@ class Policy:
                 raise execution.ExecutionStopped("operation_mismatch")
             pub.operation_id = row.id
             db.commit()
+
+    def preview_source_matches(self, *, project, file, patched, original):
+        m = preparation.module()
+        with m.DB.session() as db:
+            pub = db.get(CorrectionPublication, self.publication_id)
+            target, _, run, preview = _scope(db, pub)
+            source = db.get(CorrectionOperation, run.operation_id) if run.operation_id else None
+            return bool(source and str(project) == target.id
+                and file == preview['file'] and patched == preview['patched_content']
+                and hashlib.sha256(original.encode()).hexdigest() == source.data.get('preview_source'))
 
     def safe_to_abandon(self):
         return True  # No AI permission; the shared journal still checks write intents.

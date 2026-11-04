@@ -12,9 +12,11 @@ from contextlib import contextmanager
 from sqlalchemy import select
 
 try:
+    from . import correction_execution
     from .correction_guard import CorrectionStoreUnavailable, ensure_active
     from .models import CorrectionOperation
 except ImportError:
+    import correction_execution
     from correction_guard import CorrectionStoreUnavailable, ensure_active
     from models import CorrectionOperation
 
@@ -143,6 +145,9 @@ def preview(body, *, original=None):
 
 
 def unchanged_preview_source(database, *, project, file, patched, original):
+    policy = correction_execution.current()
+    if checker := getattr(policy, "preview_source_matches", None):
+        return checker(project=project, file=file, patched=patched, original=original)
     try:
         with database.session() as db:
             rows = db.scalars(select(CorrectionOperation).where(

@@ -31,6 +31,7 @@ def strings(lang):
         'deployment_target':t('Le reçu de déploiement ne vise pas l’adresse de ce site.','The deployment receipt does not target this site.'),
         'deployment_failed':t('Le déploiement a échoué ou est inactif. Aucun contrôle SEO supplémentaire n’est lancé.','The deployment failed or is inactive. No further SEO check is started.'),
         'deployment_superseded':t('Une autre version a remplacé le commit fusionné. Votre relecture est nécessaire.','Another version replaced the merged commit. Your review is needed.'),
+        'quota_period_changed':t('Le mois de quota a changé pendant la préparation. Relisez le suivi avant de poursuivre.','The quota month changed during preparation. Review tracking before continuing.'),
         'quota':t('Le quota de pages disponible ne permet pas ce contrôle.','The available page quota does not allow this check.'),
         'defect_present':t('Le contrôle observe encore le problème. Noyaru s’arrête pour votre relecture.','The check still observes the issue. Noyaru stops for your review.'),
         'control_inconclusive':t('Ce contrôle ne permet pas de confirmer la correction.','This check cannot confirm the correction.'),

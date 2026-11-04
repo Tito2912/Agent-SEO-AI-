@@ -435,3 +435,47 @@ def test_history_link_keeps_original_repository_after_project_settings_change(pu
     assert response.status_code==200
     assert 'https://github.com/fixture/site/pull/91' in response.text
     assert 'https://github.com/fixture/other/pull/91' not in response.text
+
+
+def test_another_preview_cannot_replace_the_approved_previews_source_receipt(publication):
+    import hashlib
+    from backend.models import CorrectionOperation
+    x=publication
+    changed=SOURCE+'<!-- new legitimate customer work -->'
+    with x['db'].session() as db:
+        original=db.get(CorrectionOperation,db.get(AutocorrectionRun,x['run'].id).operation_id)
+        db.add(CorrectionOperation(payer_id=x['owner'].id,project_id=x['project'].id,action='api_github_fix',
+            state='completed',charged=True,data={'preview':original.data['preview'],
+            'preview_source':hashlib.sha256(changed.encode()).hexdigest()},created_at=NOW+timedelta(seconds=1)))
+        db.commit()
+    x['remote']['source']=changed
+    assert step(x)=='review_required' and stored(x).reason=='source_changed'
+    assert not [r for r in x['remote']['transports'] if r[0]!='GET']
+
+
+def test_month_change_during_quota_check_aborts_without_reservation(publication,monkeypatch):
+    x=publication;merge(x);x['remote']['deployed']=True;assert step(x)=='deployment_confirmed'
+    original=c.billing.ensure_within_quota
+    monkeypatch.setattr(c.billing,'_period_key',lambda dt=None:'2026-10')
+    def quota(*args,**kwargs):
+        result=original(*args,**kwargs)
+        monkeypatch.setattr(c.billing,'_period_key',lambda dt=None:'2026-11')
+        return result
+    monkeypatch.setattr(c.billing,'ensure_within_quota',quota)
+    with pytest.raises(e.ExecutionStopped,match='quota_period_changed'):c.enqueue(x['pub'].id)
+    with x['db'].session() as db:
+        assert not list(db.scalars(select(UsageEvent).where(UsageEvent.metric=='pages_crawled_month')))
+        assert db.scalar(select(func.count()).select_from(JobRecord))==0
+
+
+def test_cancellation_after_month_change_adjusts_the_original_reservation(publication,monkeypatch):
+    x=publication
+    monkeypatch.setattr(c.billing,'_period_key',lambda dt=None:'2026-10')
+    jid=deploy(x,monkeypatch)
+    monkeypatch.setattr(c.billing,'_period_key',lambda dt=None:'2026-11')
+    p.revoke(x['pub'].id,x['owner'].id)
+    with x['db'].session() as db:
+        events=list(db.scalars(select(UsageEvent).where(UsageEvent.metric=='pages_crawled_month')))
+        assert len(events)==2 and sum(v.amount for v in events)==0
+        assert {v.period for v in events}=={'2026-10'}
+        assert db.get(JobRecord,jid).status=='canceled'

@@ -442,12 +442,12 @@ def _period_key(dt: datetime | None = None) -> str:
 
 
 def usage_add(db: Session, *, user_id: str, metric: str, amount: int,
-              meta: dict[str, Any] | None = None, commit: bool = True) -> None:
+              meta: dict[str, Any] | None = None, commit: bool = True, period: str | None = None) -> None:
     uid = (user_id or "").strip()
     m = (metric or "").strip()
     if not uid or not m or not isinstance(amount, int) or amount == 0:
         return
-    ev = UsageEvent(user_id=uid, period=_period_key(), metric=m, amount=int(amount), meta=meta or {})
+    ev = UsageEvent(user_id=uid, period=period or _period_key(), metric=m, amount=int(amount), meta=meta or {})
     db.add(ev)
     if commit:
         db.commit()

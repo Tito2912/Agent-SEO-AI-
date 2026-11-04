@@ -281,7 +281,8 @@ Séquence durable :
    requête réserve sa place avant transport, sous le verrou partagé du compte.
    Une pause globale/projet suspend la suite ; un arrêt bloque les requêtes suivantes.
 2. Création du brouillon par le chemin GitHub existant, avec son journal et le
-   contrôle du fichier source inchangé. Les écritures permises sont limitées au
+   contrôle du fichier source inchangé, lié au reçu de cet aperçu précis. Un autre
+   aperçu du même fichier ne peut remplacer ce reçu. Les écritures permises sont limitées au
    fichier/code approuvé et à la branche/PR de cette opération. Les PR gérées sont
    exclues du vérificateur automatique historique.
 3. Relecture des protections du dépôt : au moins un contrôle obligatoire, branche
