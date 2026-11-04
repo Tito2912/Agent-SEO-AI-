@@ -423,3 +423,15 @@ def test_newer_pending_deployment_cannot_fall_back_to_old_success(publication,mo
     monkeypatch.setattr(m.requests,'get',get)
     assert step(x)=='waiting_deployment' and not stored(x).job_issued
     assert not any(r[1].endswith('/deployments/8/statuses') for r in x['remote']['transports'])
+
+
+def test_history_link_keeps_original_repository_after_project_settings_change(publication):
+    x=publication;assert step(x)=='waiting_checks'
+    with x['db'].session() as db:
+        project=db.get(Project,x['project'].id)
+        project.settings={**project.settings,'github_repo':'fixture/other'}
+        db.commit()
+    response=client(x['owner']).get(f'/projects/{x["project"].slug}/corrections/autonomy/publications')
+    assert response.status_code==200
+    assert 'https://github.com/fixture/site/pull/91' in response.text
+    assert 'https://github.com/fixture/other/pull/91' not in response.text

@@ -605,6 +605,7 @@ def _capture(pub_id):
         node_id=pr["node_id"],
         base=remote["base_sha"],
         base_branch=remote["base"],
+        repository=remote["owner"]+"/"+remote["repo"],
         branch=op.data["branch"],
         proposal_key=memory.attempt_key(task),
     )

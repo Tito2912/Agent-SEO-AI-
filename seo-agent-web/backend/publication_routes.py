@@ -60,8 +60,10 @@ def page(request: Request, slug: str, msg: str = '', error: str = ''):
                 receipt = row.receipt or {}
                 pr_url = ''
                 if type(receipt.get('number')) is int and receipt['number'] > 0:
-                    owner,repo = m._github_repo_parts(m._project_github_cfg(project)['repo'])
-                    pr_url = 'https://github.com/'+quote(owner,safe='')+'/'+quote(repo,safe='')+'/pull/'+str(receipt['number'])
+                    parts = m._github_repo_parts(str(receipt.get('repository') or ''))
+                    if parts:
+                        owner,repo = parts
+                        pr_url = 'https://github.com/'+quote(owner,safe='')+'/'+quote(repo,safe='')+'/pull/'+str(receipt['number'])
                 history.append({'row':row,'task':task,'pr_url':pr_url,
                     'expires':row.expires_at.strftime('%Y-%m-%d %H:%M UTC')})
     except SQLAlchemyError:
