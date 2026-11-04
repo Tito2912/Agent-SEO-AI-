@@ -803,3 +803,32 @@ class SeoKnowledgeRevision(Base):
     text_chars: Mapped[int] = mapped_column(Integer, nullable=False)
     excerpt: Mapped[str] = mapped_column(Text, nullable=False)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class OwnSeoWorkspace(Base):
+    """A single explicit binding to the system owner's Noyaru project."""
+    __tablename__ = 'own_seo_workspace'
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    owner_id: Mapped[str | None] = mapped_column(String(36), ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    project_id: Mapped[str | None] = mapped_column(String(36), ForeignKey('projects.id', ondelete='SET NULL'), nullable=True)
+    token: Mapped[str] = mapped_column(String(32), nullable=False)
+    paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class OwnSeoBrief(Base):
+    """Evidence for an editorial brief; never a publication or an AI mandate."""
+    __tablename__ = 'own_seo_briefs'
+    __table_args__ = (UniqueConstraint('workspace_token','candidate_key',name='uq_own_seo_brief_candidate'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey('projects.id', ondelete='CASCADE'), index=True, nullable=False)
+    workspace_token: Mapped[str] = mapped_column(String(32), nullable=False)
+    candidate_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    lang: Mapped[str] = mapped_column(String(2), nullable=False)
+    kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default='prepared')
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

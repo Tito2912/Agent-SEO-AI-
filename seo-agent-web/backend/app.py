@@ -39867,3 +39867,9 @@ try:
 except ImportError:
     from publication_routes import router as publication_router
 app.include_router(publication_router)
+
+try:
+    from .own_seo_routes import router as own_seo_router
+except ImportError:
+    from own_seo_routes import router as own_seo_router
+app.include_router(own_seo_router)
