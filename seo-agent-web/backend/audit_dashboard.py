@@ -10,8 +10,10 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 try:
+    from . import search_scope
     from . import object_store as object_store  # type: ignore
 except ImportError:
+    import search_scope
     import object_store  # type: ignore
 
 
@@ -1034,7 +1036,7 @@ def load_run_json(runs_dir: Path, slug: str, timestamp: str) -> dict[str, Any]:
 
 def load_report_json(runs_dir: Path, slug: str, timestamp: str) -> dict[str, Any] | None:
     report_path = runs_dir / slug / timestamp / "audit" / "report.json"
-    return _read_json(report_path)
+    return search_scope.safe_report(_read_json(report_path))
 
 
 def report_path(runs_dir: Path, slug: str, timestamp: str) -> Path:

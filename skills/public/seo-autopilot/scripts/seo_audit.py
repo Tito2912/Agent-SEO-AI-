@@ -2312,6 +2312,23 @@ def _bing_call(
     return data
 
 
+def _bing_same_property(base_url, site_url):
+    try:
+        values = []
+        for value in (base_url, site_url):
+            raw = str(value or '').strip()
+            if any(ord(c)<33 for c in raw):return False
+            url = urlsplit(raw)
+            if (url.scheme not in {'http','https'} or not url.hostname or url.username or url.password
+                    or url.query or url.fragment or url.port not in (None,80,443)):
+                return False
+            values.append((url.scheme,url.hostname.lower(),url.port or (443 if url.scheme == 'https' else 80),url.path.rstrip('/') or '/'))
+        return values[0] == values[1]
+    except ValueError:
+        return False
+
+
+
 def _bing_pick_site_url(
     *,
     base_url: str,
@@ -2340,28 +2357,8 @@ def _bing_pick_site_url(
         blob = json.dumps(payload, ensure_ascii=False)
         sites = [s for s in re.findall(r"https?://[^\\s\"\\\\]+", blob) if s.startswith(("http://", "https://"))]
 
-    cand = _bing_site_candidates(base_url, None)
-    host = (urlsplit(base_url).hostname or "").strip().lower()
-    host_no_www = host[4:] if host.startswith("www.") else host
-
-    def score(u: str) -> tuple[int, int]:
-        root = _root_url(u).rstrip("/").lower()
-        s = 0
-        if root in {c.rstrip('/').lower() for c in cand}:
-            s += 3
-        h = (urlsplit(u).hostname or "").lower()
-        if h == host:
-            s += 2
-        if host_no_www and h == host_no_www:
-            s += 2
-        if u.endswith("/"):
-            s += 1
-        return s, len(u)
-
-    best = None
-    if sites:
-        best = sorted(sites, key=lambda u: (-score(u)[0], score(u)[1]))[0]
-    return best, sites, None
+    matching = [site for site in sites if _bing_same_property(base_url,site)]
+    return (matching[0] if matching else None), sites, None if matching else 'site_not_found'
 
 
 def _bing_normalize_items(rows: list[dict[str, Any]], *, dim: str) -> list[dict[str, Any]]:
@@ -2422,6 +2419,9 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
     if not config.bing_enabled:
         return {"enabled": False, "reason": "disabled_in_config"}
 
+    if config.bing_site_url and not _bing_same_property(config.base_url,config.bing_site_url):
+        return {'enabled':True,'ok':False,'reason':'site_mismatch'}
+
     api_key = (config.bing_api_key or os.environ.get("BING_WEBMASTER_API_KEY") or "").strip().strip('"').strip("'")
     access_token = (config.bing_access_token or os.environ.get("BING_WEBMASTER_ACCESS_TOKEN") or "").strip().strip('"').strip("'")
     if not api_key and not access_token:
@@ -2449,8 +2449,9 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
             api_key=api_key,
             access_token=access_token,
         )
-        if auto_site_url:
-            candidates = [auto_site_url, *[c for c in candidates if c != auto_site_url]]
+        if not auto_site_url:
+            return {'enabled':True,'ok':False,'reason':'site_not_found'}
+        candidates = [auto_site_url]
 
     for site_url in candidates:
         try:

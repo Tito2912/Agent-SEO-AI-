@@ -111,6 +111,7 @@ try:
     from . import customer_country
     from . import first_audit
     from . import plan_usage
+    from . import search_scope
     from . import search_results
     from . import cms_guidance
     from . import help_navigation
@@ -138,6 +139,7 @@ except ImportError:
     import customer_country
     import first_audit
     import plan_usage
+    import search_scope
     import search_results
     import cms_guidance
     import help_navigation
@@ -7292,26 +7294,9 @@ def _bing_pick_site_url(
         blob = json.dumps(payload, ensure_ascii=False)
         sites = [site for site in re.findall(r"https?://[^\s\"\\\\]+", blob) if site.startswith(("http://", "https://"))]
 
-    candidates = {candidate.rstrip("/").lower() for candidate in _bing_site_candidates(base_url, configured)}
-    host = (urlsplit(base_url).hostname or "").strip().lower()
-    host_no_www = host[4:] if host.startswith("www.") else host
-
-    def score(site_url: str) -> tuple[int, int]:
-        root = _root_url(site_url).rstrip("/").lower()
-        site_host = (urlsplit(site_url).hostname or "").lower()
-        points = 0
-        if root in candidates:
-            points += 3
-        if site_host == host:
-            points += 2
-        if host_no_www and site_host == host_no_www:
-            points += 2
-        if site_url.endswith("/"):
-            points += 1
-        return points, len(site_url)
-
-    best = sorted(sites, key=lambda site: (-score(site)[0], score(site)[1]))[0] if sites else None
-    return best, sites, None
+    matching = [site for site in sites if search_scope.same_property(base_url,site)]
+    best = next((site for site in matching if site == configured),matching[0] if matching else None)
+    return best, sites, None if best else 'site_not_found'
 
 
 def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, Any], days: int,
@@ -7319,6 +7304,10 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
     enabled = bool(bing_cfg.get("enabled")) if "enabled" in bing_cfg else False
     if not enabled:
         return {"ok": False, "enabled": False, "reason": "disabled"}
+
+    configured = str(bing_cfg.get('site_url') or '').strip()
+    if configured and not search_scope.same_property(base_url,configured):
+        return {'ok':False,'enabled':True,'source':'bing','reason':'site_mismatch'}
 
     auth = _effective_bing_connection(user_id=str(user_id), slug=slug)
     token = str(auth.get("token") or "").strip()
@@ -7609,6 +7598,10 @@ def _fetch_bing_live_items(
     enabled = bool(bing_cfg.get("enabled")) if "enabled" in bing_cfg else False
     if not enabled:
         return {"ok": False, "enabled": False, "source": "bing", "reason": "disabled"}
+
+    configured = str(bing_cfg.get('site_url') or '').strip()
+    if configured and not search_scope.same_property(base_url,configured):
+        return {'ok':False,'enabled':True,'source':'bing','reason':'site_mismatch'}
 
     auth = _effective_bing_connection(user_id=str(user_id), slug=slug)
     token = str(auth.get("token") or "").strip()
@@ -39874,3 +39867,9 @@ try:
 except ImportError:
     from publication_routes import router as publication_router
 app.include_router(publication_router)
+
+try:
+    from .own_seo_routes import router as own_seo_router
+except ImportError:
+    from own_seo_routes import router as own_seo_router
+app.include_router(own_seo_router)

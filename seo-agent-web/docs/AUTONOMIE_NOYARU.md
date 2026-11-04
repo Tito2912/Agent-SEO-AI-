@@ -336,21 +336,24 @@ Les familles CMS, la restauration et la modification des stratégies/prompts res
 code du service en cours d'exécution. Le référencement propre/blog, le SAV email
 et les réseaux sociaux restent les lots suivants décrits ci-dessous.
 
-## Lot 4 : référencement propre et blog Noyaru
+## Lot 4A : référencement propre et briefs éditoriaux
 
-Créer ou sélectionner un projet du compte propriétaire, exclusivement lié à
-`https://noyaru.com`, après vérification des droits. Les données des clients ne
-servent ni de contenu marketing ni de mémoire globale sans un dispositif distinct.
+Implémentation du 4 novembre 2026 : espace propriétaire à
+`/settings/system/own-seo`, liaison explicite au seul projet détenu par le propriétaire
+pour `https://noyaru.com/`, priorités techniques, propositions depuis les relevés
+Google/Bing et idée de guide depuis des sources actuelles/validées. Briefs durables,
+relecture, export Markdown et passage dans Contenu avec le sujet prérempli.
+Aucun appel IA, nouvelle analyse, publication ni activation par migration.
 
-Cycle : audit technique → opportunités Search Console/Bing → recherche sourcée →
-brouillon éditorial → contrôle factuel et visuel → publication autorisée → indexation
-et suivi. Réutiliser les reçus pour les défauts techniques ; les effets éditoriaux
-se mesurent sur des périodes adaptées et ne sont pas déclarés « vérifiés » par un crawl.
+Le défaut de sélection Bing est corrigé dans le web et le crawler ; les propriétés
+étrangères/non confirmées des rapports enregistrés sont aussi exclues à la lecture,
+sans réécrire les preuves originales. Les données clients restent hors de cet espace.
 
-Avant le pilote, traiter le constat antérieur de sélection Bing lorsqu'aucun site
-de la connexion ne correspond au projet : refuser la substitution par un autre
-domaine du même compte. Valider aussi les données mises en cache, pas seulement
-les nouveaux appels. Ce correctif n'est pas livré dans le lot 1.
+Audit, règles de périmètre, limites et validation détaillés dans
+[REFERENCEMENT_NOYARU.md](REFERENCEMENT_NOYARU.md). Le lot 4B reste à livrer : rédaction
+sourcée sous mandat/budget, contrôle factuel et visuel, publication du blog puis
+observation des résultats. Une proposition de contenu ne prétend pas prouver un
+manque éditorial ni un gain futur ; les citations IA sont distinctes des positions.
 
 ## Lot 5 : SAV email
 
