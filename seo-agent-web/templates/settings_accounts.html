@@ -303,6 +303,16 @@
     </details>
   </section>
 
+  {% if dpa_version %}
+  {# L'ACCORD DE TRAITEMENT DES DONNEES (05/11/2026, backend/dpa.py) : absent tant que
+     legal.DPA_VERSION vaut None, c'est-a-dire tant qu'un juriste ne l'a pas valide. #}
+  <section class="card setting-card" id="dpa">
+    <h2 class="setting-title">{{ tr("Accord de traitement des données") }}</h2>
+    <p class="muted small">{{ tr("Pour les clients professionnels : l’accord qui encadre les données personnelles que Noyaru traite pour votre compte (article 28 du RGPD).") }}</p>
+    <a class="btn" href="/settings/dpa">{{ tr("Consulter et accepter l’accord") }}</a>
+  </section>
+  {% endif %}
+
   {# TOUTES SES DONNEES (05/11/2026, backend/export_compte.py) : la restitution du DPA et la
      portabilite du RGPD, sans passer par une demande ecrite. #}
   <section class="card setting-card" id="mes-donnees">
@@ -315,7 +325,10 @@
     <p class="muted small setting-note" style="margin-top:0;">
       {{ tr("Votre compte, vos projets et tout ce qui en dépend (analyses, anomalies, corrections, contenus, mots-clés, concurrents, connexions, abonnement), en JSON et en CSV, avec les fichiers de vos analyses. Vos mots de passe, jetons et clés n’en font pas partie. À télécharger avant de supprimer votre compte si vous voulez les garder.") }}
     </p>
-    <a class="btn" href="/settings/account/export.zip" download>{{ tr("Télécharger toutes mes données") }}</a>
+    {# Sans l'attribut download : il cachait la preparation (rien ne bouge pendant une minute) et
+       telechargeait la page d'erreur au lieu de l'afficher (05/11/2026). #}
+    <a class="btn" href="/settings/account/export.zip">{{ tr("Télécharger toutes mes données") }}</a>
+    <p class="muted small">{{ tr("La préparation peut prendre jusqu’à une minute ; le téléchargement démarre ensuite.") }}</p>
   </section>
 
   <section class="card setting-card" id="danger-zone">

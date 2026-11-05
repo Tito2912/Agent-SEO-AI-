@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ tr("Accord de traitement des données") }} - Noyaru{% endblock %}
+
+{% block crumbs %}
+  <span class="crumb-current">{{ tr("Paramètres") }}</span>
+  <span class="crumb-sep">/</span>
+  <a href="/settings/accounts">{{ tr("Mon compte") }}</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">{{ tr("Accord de traitement des données") }}</span>
+{% endblock %}
+
+{% block content %}
+  {# L'ACCEPTATION EN LIGNE DU DPA (article 1, 05/11/2026, backend/dpa.py) : une personne
+     habilitee, qui le declare ; l'organisation identifiee ; la version exacte gardee. #}
+  <div class="page-header">
+    <h1>{{ tr("Accord de traitement des données") }}</h1>
+    <p class="muted">{{ tr("Pour les clients professionnels : l’accord qui encadre les données personnelles que Noyaru traite pour votre compte (article 28 du RGPD).") }}</p>
+  </div>
+
+  {% if err %}
+    <div class="alert error" role="alert"><span class="badge error">{{ tr("erreur") }}</span><p class="muted small">{{ tr(err) }}</p></div>
+  {% elif msg %}
+    <div class="alert ok" role="status"><span class="badge ok">ok</span><p class="muted small">{{ tr(msg) }}</p></div>
+  {% endif %}
+
+  <section class="card setting-card" id="dpa-etat">
+    {% if acceptation and a_jour %}
+      <h2 class="setting-title">{{ tr("Accord accepté") }}</h2>
+      <p class="muted">{{ tr_html("Version <strong>{version}</strong>, acceptée le {date} par {signataire} ({fonction}) pour <strong>{organisation}</strong>.", version=acceptation.version, date=acceptation.accepte_le.strftime("%d/%m/%Y %H:%M UTC"), signataire=acceptation.signataire, fonction=acceptation.fonction, organisation=acceptation.organisation) }}</p>
+    {% elif membre %}
+      <h2 class="setting-title">{{ tr("Accord à accepter par le titulaire du compte") }}</h2>
+      <p class="muted">{{ tr("Vous travaillez sur les sites d’un autre compte : c’est son titulaire qui accepte l’accord pour son organisation.") }}</p>
+    {% else %}
+      {% if acceptation %}
+        <h2 class="setting-title">{{ tr("Nouvelle version à accepter") }}</h2>
+        <p class="muted">{{ tr_html("Vous aviez accepté la version {ancienne}. La version <strong>{version}</strong> modifie l’accord : elle s’applique après votre nouvelle acceptation ; d’ici là, la version précédente reste en vigueur.", ancienne=acceptation.version, version=version) }}</p>
+      {% else %}
+        <h2 class="setting-title">{{ tr_html("Accepter l’accord (version {version})", version=version) }}</h2>
+      {% endif %}
+      <form method="post" action="/settings/dpa" class="setting-form">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <label>{{ tr("Dénomination de votre organisation") }}
+          <input name="organisation" type="text" required minlength="2" maxlength="200" autocomplete="organization" /></label>
+        <label>{{ tr("Numéro d’immatriculation (SIREN, RCS…)") }} <span class="muted small">{{ tr("(s’il existe)") }}</span>
+          <input name="immatriculation" type="text" maxlength="40" /></label>
+        <label>{{ tr("Votre nom") }}
+          <input name="signataire" type="text" required minlength="2" maxlength="120" autocomplete="name" /></label>
+        <label>{{ tr("Votre fonction dans l’organisation") }}
+          <input name="fonction" type="text" required minlength="2" maxlength="120" autocomplete="organization-title" /></label>
+        <label class="checkbox-line">
+          <input name="habilite" type="checkbox" value="oui" required />
+          <span>{{ tr_html("Je déclare être habilité(e) à engager l’organisation indiquée ci-dessus, et j’accepte au nom de celle-ci l’accord de traitement des données ci-dessous (version {version}).", version=version) }}</span>
+        </label>
+        <div class="modal-actions between"><span></span>
+          <button class="btn primary" type="submit">{{ tr("Accepter l’accord") }}</button></div>
+      </form>
+    {% endif %}
+  </section>
+
+  <section class="card legal-text" id="dpa-texte" aria-label="{{ tr("Texte de l’accord") }}">
+    {{ texte|safe }}
+  </section>
+{% endblock %}

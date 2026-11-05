@@ -24,7 +24,10 @@ import decimal
 import io
 import json
 import re
+import shutil
+import time
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -42,8 +45,10 @@ CHIFFRE = "enc:"
 MASQUE = "[secret retiré]"
 # Des tables entières de secrets, ou sans lien avec un compte.
 TABLES_EXCLUES = {"password_reset_tokens", "email_verification_tokens", "rate_limit_buckets"}
-# Les fichiers d'analyse, les plus récents d'abord, jusqu'à ce plafond ; le reste est listé.
+# Les fichiers d'analyse, les plus récents d'abord, jusqu'à ce plafond et dans ce délai ; le
+# reste est listé dans le manifeste (et remis sur demande).
 PLAFOND_ANALYSES = 300 * 1024 * 1024
+DELAI_ANALYSES_S = 60.0
 
 
 def nettoyer(valeur: Any) -> Any:
@@ -103,9 +108,21 @@ def _csv(lignes: list[dict[str, Any]]) -> str:
     return tampon.getvalue()
 
 
-def fichiers_d_analyse(dossiers: Iterable[Path], racine: Path) -> list[tuple[Path, str]]:
-    """(fichier, nom dans le ZIP), les plus récents d'abord."""
-    vus: list[tuple[float, Path, str]] = []
+@dataclass
+class Fichier:
+    """Un fichier d'analyse, sur le disque ou dans S3 : il ne s'ouvre que s'il entre dans l'export.
+
+    Premier passage en production (05/11/2026) : l'export ramenait TOUTES les analyses du compte
+    depuis S3 sur le disque du site avant d'en garder 300 Mo ; sur un compte chargé, la requête
+    tournait encore sans fin. Désormais, seuls les fichiers retenus sont lus, en flux."""
+    nom: str
+    taille: int
+    date: float
+    ouvrir: Callable[[], Any]
+
+
+def fichiers_locaux(dossiers: Iterable[Path], racine: Path) -> list[Fichier]:
+    trouves: list[Fichier] = []
     for dossier in dossiers:
         if not dossier.is_dir():
             continue
@@ -115,9 +132,10 @@ def fichiers_d_analyse(dossiers: Iterable[Path], racine: Path) -> list[tuple[Pat
                     relatif = chemin.resolve().relative_to(racine.resolve()).as_posix()
                 except ValueError:
                     continue
-                vus.append((chemin.stat().st_mtime, chemin, "analyses/" + relatif))
-    vus.sort(key=lambda v: v[0], reverse=True)
-    return [(chemin, nom) for _, chemin, nom in vus]
+                etat = chemin.stat()
+                trouves.append(Fichier("analyses/" + relatif, etat.st_size, etat.st_mtime,
+                                       lambda chemin=chemin: chemin.open("rb")))
+    return trouves
 
 
 LISEZMOI = """Toutes les données de votre compte Noyaru
@@ -150,27 +168,41 @@ Questions: contact@noyaru.com.
 """
 
 
-def construire(session: Any, user: Any, destination: Path, *, dossiers_analyses: Iterable[Path], racine_analyses: Path,
-               plafond: int = PLAFOND_ANALYSES, langue: str = "fr",
-               maintenant: Callable[[], dt.datetime] | None = None) -> dict[str, Any]:
+def construire(session: Any, user: Any, destination: Path, *, fichiers: Iterable[Fichier],
+               plafond: int = PLAFOND_ANALYSES, delai_s: float = DELAI_ANALYSES_S, langue: str = "fr",
+               maintenant: Callable[[], dt.datetime] | None = None,
+               horloge: Callable[[], float] = time.monotonic) -> dict[str, Any]:
     """Écrit le ZIP dans `destination` ; rend le manifeste."""
     instant = (maintenant or (lambda: dt.datetime.now(dt.timezone.utc)))()
     donnees = lignes_du_compte(session, str(user.id))
     manifeste: dict[str, Any] = {"genere_le": instant.isoformat(), "compte": str(user.id),
                                  "tables": {t: len(l) for t, l in donnees.items()},
-                                 "analyses": {"fichiers": 0, "octets": 0, "laisses_de_cote": []}}
+                                 "analyses": {"fichiers": 0, "octets": 0, "laisses_de_cote": [],
+                                              "delai_atteint": False}}
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for table, lignes in donnees.items():
             archive.writestr("donnees/%s.json" % table, json.dumps(lignes, ensure_ascii=False, indent=2))
             archive.writestr("donnees/%s.csv" % table, _csv(lignes))
-        total = 0
-        for chemin, nom in fichiers_d_analyse(dossiers_analyses, racine_analyses):
-            taille = chemin.stat().st_size
-            if total + taille > plafond:
-                manifeste["analyses"]["laisses_de_cote"].append(nom)
+        # Le plus récent d'abord ; un même nom (disque et S3) ne part qu'une fois.
+        retenus: dict[str, Fichier] = {}
+        for fichier in sorted(fichiers, key=lambda f: f.date, reverse=True):
+            retenus.setdefault(fichier.nom, fichier)
+        total, debut = 0, horloge()
+        for fichier in retenus.values():
+            if total + fichier.taille > plafond:
+                manifeste["analyses"]["laisses_de_cote"].append(fichier.nom)
                 continue
-            archive.write(chemin, nom)
-            total += taille
+            if horloge() - debut > delai_s:
+                manifeste["analyses"]["delai_atteint"] = True
+                manifeste["analyses"]["laisses_de_cote"].append(fichier.nom)
+                continue
+            try:
+                with fichier.ouvrir() as source, archive.open(fichier.nom, "w") as cible:
+                    shutil.copyfileobj(source, cible, 1024 * 1024)
+            except Exception:  # noqa: BLE001 — un fichier illisible n'empêche pas l'export
+                manifeste["analyses"]["laisses_de_cote"].append(fichier.nom)
+                continue
+            total += fichier.taille
             manifeste["analyses"]["fichiers"] += 1
         manifeste["analyses"]["octets"] = total
         archive.writestr("manifeste.json", json.dumps(manifeste, ensure_ascii=False, indent=2))

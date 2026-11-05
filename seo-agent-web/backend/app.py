@@ -32,7 +32,7 @@ import csv
 
 logger = logging.getLogger("seo_agent")
 from collections import Counter, deque
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager, closing, contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
@@ -125,6 +125,7 @@ try:
     from . import telegram
     from . import sentry_filtre
     from . import export_compte
+    from . import dpa
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -155,6 +156,7 @@ except ImportError:
     import telegram  # type: ignore
     import sentry_filtre  # type: ignore
     import export_compte  # type: ignore
+    import dpa  # type: ignore
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -8798,19 +8800,33 @@ def _cleanup_old_runs() -> None:
         logger.info("[RETENTION] removed runs: %s", removed)
 
 
+def _purger_preuves_dpa() -> None:
+    """Les preuves d'acceptation du DPA, cinq ans apres la fin de l'accord (backend/dpa.py). Ne
+    leve jamais : une exception ici arreterait le fil de retention pour de bon."""
+    try:
+        with DB.session() as db:
+            effacees = dpa.purger(db, datetime.now(timezone.utc))
+        if effacees:
+            logger.info("[RETENTION] preuves DPA effacees : %s", effacees)
+    except Exception as e:
+        logger.error("[RETENTION] preuves DPA : %s: %s", type(e).__name__, e)
+
+
 def _retention_loop() -> None:
     # Run quickly on boot, then every few hours.
     while not _WORKER_STOP.is_set():
         _cleanup_old_jobs()
         _cleanup_old_runs()
+        _purger_preuves_dpa()
         _WORKER_STOP.wait(float(os.getenv("SEO_AGENT_RETENTION_EVERY_SECONDS", "21600")))  # 6h
 
 
 def _start_retention() -> None:
     global _RETENTION_STARTED
+    # Le fil tourne aussi des que le DPA est publie : ses preuves s'effacent apres cinq ans.
     if _retention_cutoff_s(days_env="SEO_AGENT_JOBS_RETENTION_DAYS") is None and _retention_cutoff_s(
         days_env="SEO_AGENT_RUNS_RETENTION_DAYS"
-    ) is None:
+    ) is None and not dpa.version():
         return
     with _RETENTION_STARTED_GUARD:
         if _RETENTION_STARTED:
@@ -15815,6 +15831,8 @@ def settings_accounts(
             "is_admin": bool(getattr(user, "is_admin", False)),
             "can_access_system_settings": _user_can_access_system_settings(user),
             "signup_attribution": signup_attribution.own_status(DB, user.id),
+            # L'accord de traitement des donnees : visible seulement une fois publie (backend/dpa.py).
+            "dpa_version": dpa.version(),
             "github_oauth": {
                 **github_oauth,
                 # Renseigne UNIQUEMENT pour un membre : sur les projets de cet hote, c'est
@@ -15966,6 +15984,10 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
                 )
             if email:
                 db.execute(update(AuditLog).where(AuditLog.actor_email == email).values(actor_email=None))
+            # Les preuves d'acceptation du DPA SURVIVENT au compte : l'accord prend fin aujourd'hui,
+            # elles sont gardees cinq ans (DPA article 1, backend/dpa.py).
+            if uid:
+                dpa.terminer(db, uid, datetime.now(timezone.utc))
 
             row = db.get(User, uid) if uid else None
             if row is not None:
@@ -16060,24 +16082,52 @@ def settings_account_export(request: Request) -> Response:
         return RedirectResponse(url=_path_with_flash(
             back, err=f"Trop d’exports en peu de temps. Réessaie dans {_format_retry_after(retry)}."), status_code=303)
 
+    # Un export a la fois par compte : un second clic pendant la preparation ne relance rien.
+    with _EXPORTS_GARDE:
+        if uid in _EXPORTS_EN_COURS:
+            return RedirectResponse(url=_path_with_flash(
+                back, msg="Votre export est déjà en préparation : le téléchargement va démarrer."), status_code=303)
+        _EXPORTS_EN_COURS.add(uid)
+    try:
+        return _preparer_export(request, user, uid, back)
+    finally:
+        with _EXPORTS_GARDE:
+            _EXPORTS_EN_COURS.discard(uid)
+
+
+_EXPORTS_GARDE = threading.Lock()
+_EXPORTS_EN_COURS: set[str] = set()
+
+
+def _fichiers_d_analyse_du_compte(uid: str) -> list[Any]:
+    """Les analyses du compte, sur le disque et dans S3, SANS rien telecharger : l'export ne lit
+    que ce qui entre dans son plafond (05/11/2026, le premier passage ramenait tout de S3)."""
     with DB.session() as db:
         slugs = [str(p.slug) for p in db.scalars(select(Project).where(Project.owner_user_id == uid)) if p.slug]
     dossiers = [(DEFAULT_RUNS_DIR / uid).resolve()]
     dossiers += [(DEFAULT_RUNS_DIR / _safe_storage_segment(s, "project")).resolve() for s in slugs]
+    fichiers = export_compte.fichiers_locaux(dossiers, DEFAULT_RUNS_DIR)
     if object_store.s3_enabled():
-        # Les analyses du worker vivent dans S3 : on les ramene avant de les mettre dans le ZIP.
+        # Le worker n'a pas de disque : ses analyses vivent dans S3.
         for dossier in dossiers:
             try:
-                object_store.restore_runs_tree(DEFAULT_RUNS_DIR, dossier)
+                for objet in object_store.list_runs_objects(DEFAULT_RUNS_DIR, dossier):
+                    fichiers.append(export_compte.Fichier(
+                        "analyses/" + objet["relative"], objet["size"], objet["modified"],
+                        lambda key=objet["key"]: closing(object_store.open_runs_object(key))))
             except Exception as e:
-                logger.warning("[EXPORT] analyses non ramenees de S3 : %s", type(e).__name__)
+                logger.warning("[EXPORT] analyses de S3 non listees : %s", type(e).__name__)
+    return fichiers
 
+
+def _preparer_export(request: Request, user: Any, uid: str, back: str) -> Response:
+    fichiers = _fichiers_d_analyse_du_compte(uid)
     descripteur, chemin = tempfile.mkstemp(prefix="noyaru-export-", suffix=".zip")
     os.close(descripteur)
     try:
         with DB.session() as db:
-            manifeste = export_compte.construire(db, user, Path(chemin), dossiers_analyses=dossiers,
-                                                 racine_analyses=DEFAULT_RUNS_DIR, langue=i18n.current_lang())
+            manifeste = export_compte.construire(db, user, Path(chemin), fichiers=fichiers,
+                                                 langue=i18n.current_lang())
     except Exception as e:
         os.unlink(chemin)
         logger.error("[EXPORT] echec pour %s : %s: %s", uid, type(e).__name__, e)
@@ -16094,6 +16144,69 @@ def settings_account_export(request: Request) -> Response:
                            background=BackgroundTask(os.unlink, chemin))
     reponse.headers["Cache-Control"] = "no-store"
     return reponse
+
+
+def _membre_d_un_autre_compte(user_id: str) -> bool:
+    with DB.session() as db:
+        return db.scalar(select(AccountMember.id).where(AccountMember.member_user_id == str(user_id))) is not None
+
+
+@app.get("/settings/dpa", response_class=HTMLResponse)
+def settings_dpa(request: Request, msg: str | None = None, err: str | None = None) -> HTMLResponse:
+    """L'accord de traitement des donnees, et son acceptation en ligne (DPA article 1, 05/11/2026).
+
+    N'existe pas tant que `legal.DPA_VERSION` vaut None : le texte attend un juriste."""
+    if not dpa.version():
+        raise HTTPException(status_code=404, detail="not_found")
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    langue = i18n.current_lang()
+    with DB.session() as db:
+        acceptation = dpa.en_vigueur(db, str(user.id))
+        if acceptation is not None:
+            db.expunge(acceptation)
+    resp = templates.TemplateResponse("settings_dpa.html", {
+        "request": request, "project": None, "msg": str(msg or "").strip(), "err": str(err or "").strip(),
+        "version": dpa.version(), "texte": dpa.html(langue), "acceptation": acceptation,
+        "a_jour": dpa.a_jour(acceptation), "membre": _membre_d_un_autre_compte(str(user.id))})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/settings/dpa")
+def settings_dpa_accepter(
+    request: Request,
+    organisation: str = Form(default=""),
+    immatriculation: str = Form(default=""),
+    signataire: str = Form(default=""),
+    fonction: str = Form(default=""),
+    habilite: str = Form(default=""),
+) -> RedirectResponse:
+    if not dpa.version():
+        raise HTTPException(status_code=404, detail="not_found")
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    back = "/settings/dpa"
+    if _membre_d_un_autre_compte(str(user.id)):
+        return RedirectResponse(url=_path_with_flash(
+            back, err="Seul le titulaire du compte peut accepter l’accord pour son organisation."), status_code=303)
+    valeurs, erreur = dpa.lire_formulaire({"organisation": organisation, "immatriculation": immatriculation,
+                                           "signataire": signataire, "fonction": fonction, "habilite": habilite})
+    if erreur:
+        return RedirectResponse(url=_path_with_flash(back, err=erreur), status_code=303)
+    langue = i18n.current_lang()
+    with DB.session() as db:
+        if dpa.a_jour(dpa.en_vigueur(db, str(user.id))):
+            return RedirectResponse(url=_path_with_flash(back, msg="Cette version de l’accord est déjà acceptée."),
+                                    status_code=303)
+        acceptation = dpa.accepter(db, user, valeurs, langue=langue, ip=_request_client_ip(request) or "",
+                                   user_agent=request.headers.get("user-agent", ""))
+        preuve = {"version": acceptation.version, "langue": acceptation.langue,
+                  "texte_sha256": acceptation.texte_sha256, "acceptation": acceptation.id}
+    _audit_log(request, action="dpa.accept", status="ok", user=user, meta=preuve)
+    return RedirectResponse(url=_path_with_flash(back, msg="Accord de traitement des données accepté."), status_code=303)
 
 
 @app.post("/settings/account/password")

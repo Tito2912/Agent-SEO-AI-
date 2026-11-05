@@ -34,9 +34,13 @@ Client d'une nouvelle version avant son entrée en vigueur. Une version qui modi
 obligations des parties ne s'applique qu'après une nouvelle acceptation expresse ; d'ici là, la
 version précédemment acceptée reste applicable, sauf modification imposée par le droit applicable.
 
-**À METTRE EN ŒUVRE** : ce mécanisme n'existe pas encore dans le service. Ni la case,
-ni l'identification de l'organisation, ni la conservation des preuves ci-dessus ne sont en place.
-Tant qu'il n'est pas construit et vérifié, aucune acceptation en ligne n'est possible.
+**Mise en œuvre (05/11/2026)** : « Mon compte → Accord de traitement des données ». La personne
+indique la dénomination de l'organisation, son immatriculation lorsqu'elle existe, son nom et sa
+fonction, et coche la déclaration de pouvoir. La preuve conservée comprend ces éléments, le compte
+et son adresse e-mail, la date et l'heure, la version, l'empreinte SHA-256 du texte exact accepté
+et sa langue, l'adresse IP et le navigateur ; elle survit à la suppression du compte et s'efface
+cinq ans après la fin de l'accord. Cette page reste masquée tant que le présent texte n'est pas
+validé.
 
 ## 2. Objet et durée
 

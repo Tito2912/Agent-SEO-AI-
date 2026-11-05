@@ -66,6 +66,12 @@ UPDATED: dict[str, date] = {
 # dans le journal d'audit avec chaque activation : à changer quand ce texte change.
 AUTO_MODE_WARNING_VERSION = "2026-10-21"
 
+# L'accord de traitement des données (DPA) proposé aux clients professionnels (backend/dpa.py) :
+# None tant qu'un juriste ne l'a pas validé (docs/legal/LEGAL-VALIDATION-REQUIRED.md), et alors
+# RIEN n'apparaît. Ensuite, la version publiée (« 1.0 ») : la page « Mon compte → Accord de
+# traitement des données » s'ouvre, et toute nouvelle version demande une nouvelle acceptation.
+DPA_VERSION: str | None = None
+
 _MOIS = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre",
          "octobre", "novembre", "décembre")
 _MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September",

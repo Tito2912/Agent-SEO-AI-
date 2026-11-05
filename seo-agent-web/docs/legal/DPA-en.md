@@ -34,9 +34,13 @@ Customer of a new version before it takes effect. A version that changes the rig
 of the parties only applies after a new express acceptance; until then, the version previously
 accepted remains applicable, unless the change is required by applicable law.
 
-**TO BE IMPLEMENTED**: this mechanism does not yet exist in the service. Neither the
-checkbox, nor the identification of the organisation, nor the keeping of the evidence above is in
-place. Until it has been built and checked, no online acceptance is possible.
+**Implemented (5 November 2026)**: "My account → Data processing agreement". The person enters
+the name of the organisation, its registration number where one exists, their name and position,
+and ticks the declaration of authority. The evidence kept includes these items, the account and
+its email address, the date and time, the version, the SHA-256 fingerprint of the exact text
+accepted and its language, the IP address and the browser; it survives the deletion of the
+account and is erased five years after the end of the agreement. This page stays hidden until this
+text has been validated.
 
 ## 2. Subject matter and duration
 

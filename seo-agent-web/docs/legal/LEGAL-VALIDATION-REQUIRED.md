@@ -149,8 +149,12 @@ encore : à compléter lors de la relecture.
 
 Ceux qui restent sont marqués « À METTRE EN ŒUVRE » dans le DPA.
 
-- La case à cocher de l'article 1 et la conservation des preuves : organisation contractante,
-  compte et personne, date et heure, version exacte, trace de l'action d'acceptation.
+- ~~La case à cocher de l'article 1 et la conservation des preuves.~~ **Réalisée le 05/11/2026**
+  (`backend/dpa.py`, table `dpa_acceptances`) : organisation, immatriculation, personne et
+  fonction, compte et e-mail, date et heure, version, empreinte du texte exact et sa langue, IP et
+  navigateur ; preuve gardée après la suppression du compte, effacée cinq ans après la fin de
+  l'accord. **Masquée** tant que `legal.DPA_VERSION` vaut None : après la validation du juriste,
+  y mettre le numéro de version publié (un test rappelle ce verrou).
 - ~~La procédure de restitution des données que les exports ne couvrent pas (article 15).~~
   **Réalisée le 05/11/2026** : « Mon compte → Mes données » télécharge un ZIP de toutes les données
   de la base rattachées au compte et à ses projets (JSON et CSV, déduites du schéma, sans secret ni
