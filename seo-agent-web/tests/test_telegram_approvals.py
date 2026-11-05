@@ -801,3 +801,38 @@ def test_recovery_never_renews_expired_changed_or_rejected_source_consent(
             )
             == 2
         )
+
+
+def test_account_export_includes_only_its_telegram_records_without_bot_credentials(bot):
+    from backend import export_compte
+
+    x = bot
+    activate(x)
+    ident = a.test_request(x["owner"].id)
+    other = user(x["db"])
+    with x["db"].session() as db:
+        foreign = a.Approval(
+            id=uuid.uuid4().hex,
+            owner_id=other.id,
+            binding="f" * 32,
+            kind="test",
+            target_id="other",
+            version="f" * 64,
+            pages=["OTHER-ACCOUNT-PRIVATE"],
+            nonce="f" * 12,
+            state="pending",
+            seen=0,
+            delivery="queued",
+            expires_at=a.now() + timedelta(hours=24),
+        )
+        db.add(foreign)
+        db.commit()
+        exported = export_compte.lignes_du_compte(db, x["owner"].id)
+        assert [r["id"] for r in exported["telegram_approval_requests"]] == [ident]
+        assert exported["telegram_approval_channels"][0]["owner_id"] == x["owner"].id
+        assert (
+            not {"config_hash", "lease_token"}
+            & exported["telegram_approval_channels"][0].keys()
+        )
+        assert "OTHER-ACCOUNT-PRIVATE" not in str(exported)
+        assert a.telegram._jeton() not in str(exported)

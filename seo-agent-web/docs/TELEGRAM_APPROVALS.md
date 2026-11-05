@@ -69,3 +69,12 @@ Les simulations locales ne prouvent pas la livraison Telegram réelle.
   Aucun débordement horizontal, erreur JavaScript ou appel externe réel. Captures inspectées.
 - Migration aller/retour sur base vierge et précréée ; aucun canal actif ni demande créée.
 - La recette Telegram réelle et la vérification de production sont consignées séparément après fusion.
+
+## Coordination avec le main du 5 novembre
+
+La migration Telegram suit celle du DPA (0027 après 0026). Le filtrage Sentry conserve
+les réglages de confidentialité et le nettoyage des données clients de `sentry_filtre` ;
+il ajoute le masquage des variantes encodées de jeton et le nettoyage des breadcrumbs.
+L’export de compte découvre les tables Telegram par leurs clés étrangères, sans donnée
+d’un autre compte et sans les identifiants secrets du bot. Le rollback Telegram conserve
+les preuves DPA existantes.

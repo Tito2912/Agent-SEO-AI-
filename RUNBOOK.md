@@ -146,6 +146,21 @@ Remarques :
 - si `BACKUP_SKIP_DATA_DIR=true`, ce cron job ne sauvegarde que Postgres
 - pour une restauration sans risque, restaurer d'abord dans une base temporaire/staging
 
+### Essai mensuel de restauration (depuis le 05/11/2026)
+
+Le cron job Render `noyaru-restauration-test` (le 1er du mois, 04:00 UTC ; image
+`Dockerfile.restauration`, qui seule embarque un serveur Postgres) restaure la dernière sauvegarde
+dans une base jetable de son conteneur, contrôle son empreinte, le nombre de tables, la présence
+de comptes et de la version du schéma, puis envoie son rapport au site
+(`POST /cron/sauvegarde-verifiee`) : journal d'audit `backup.restore_check` et message Telegram.
+Il n'a pas `DATABASE_URL` : il ne peut rien écrire en production.
+
+- Mise en place : recopier dans ce job les variables AWS et `S3_BUCKET_NAME` de `noyaru-db-backup` ;
+  `CRON_SECRET` et `PUBLIC_BASE_URL` viennent du service web (`fromService`).
+- Lancer un essai à la main : Render → `noyaru-restauration-test` → « Trigger Run ».
+- Logs attendus : `[RESTAURATION] {"ok": true, ...}` ; en échec, le job sort en erreur et la raison
+  est dans le message Telegram et dans la ligne `[RESTAURATION]`.
+
 ## Procédure de déploiement (checklist)
 
 - Migrations : `alembic upgrade head` (automatique en prod via Dockerfile).

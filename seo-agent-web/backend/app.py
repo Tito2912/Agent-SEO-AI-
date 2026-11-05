@@ -22,6 +22,7 @@ import socket
 import smtplib
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import textwrap
@@ -31,7 +32,7 @@ import csv
 
 logger = logging.getLogger("seo_agent")
 from collections import Counter, deque
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager, closing, contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
@@ -58,8 +59,9 @@ except Exception:  # pragma: no cover
     class InvalidToken(Exception):  # type: ignore
         pass
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.background import BackgroundTask
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.requests import Request as StarletteRequest
@@ -121,6 +123,9 @@ try:
     from . import naturel
     from . import anti_robots
     from . import telegram
+    from . import sentry_filtre
+    from . import export_compte
+    from . import dpa
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -149,6 +154,9 @@ except ImportError:
     import naturel  # type: ignore
     import anti_robots  # type: ignore
     import telegram  # type: ignore
+    import sentry_filtre  # type: ignore
+    import export_compte  # type: ignore
+    import dpa  # type: ignore
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -263,7 +271,7 @@ _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 _CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/seo-watch", "/cron/own-seo-writing", "/cron/autocorrection-previews", "/cron/correction-publications",
                       "/cron/auto-search-backlinks", "/cron/auto-post-backlinks",
                       "/cron/refresh-competitors", "/cron/verify-pull-requests",
-                      "/cron/auto-content"}
+                      "/cron/auto-content", "/cron/sauvegarde-verifiee"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _RATE_LIMIT_BUCKETS: dict[str, deque[float]] = {}
@@ -8792,19 +8800,33 @@ def _cleanup_old_runs() -> None:
         logger.info("[RETENTION] removed runs: %s", removed)
 
 
+def _purger_preuves_dpa() -> None:
+    """Les preuves d'acceptation du DPA, cinq ans apres la fin de l'accord (backend/dpa.py). Ne
+    leve jamais : une exception ici arreterait le fil de retention pour de bon."""
+    try:
+        with DB.session() as db:
+            effacees = dpa.purger(db, datetime.now(timezone.utc))
+        if effacees:
+            logger.info("[RETENTION] preuves DPA effacees : %s", effacees)
+    except Exception as e:
+        logger.error("[RETENTION] preuves DPA : %s: %s", type(e).__name__, e)
+
+
 def _retention_loop() -> None:
     # Run quickly on boot, then every few hours.
     while not _WORKER_STOP.is_set():
         _cleanup_old_jobs()
         _cleanup_old_runs()
+        _purger_preuves_dpa()
         _WORKER_STOP.wait(float(os.getenv("SEO_AGENT_RETENTION_EVERY_SECONDS", "21600")))  # 6h
 
 
 def _start_retention() -> None:
     global _RETENTION_STARTED
+    # Le fil tourne aussi des que le DPA est publie : ses preuves s'effacent apres cinq ans.
     if _retention_cutoff_s(days_env="SEO_AGENT_JOBS_RETENTION_DAYS") is None and _retention_cutoff_s(
         days_env="SEO_AGENT_RUNS_RETENTION_DAYS"
-    ) is None:
+    ) is None and not dpa.version():
         return
     with _RETENTION_STARTED_GUARD:
         if _RETENTION_STARTED:
@@ -8836,14 +8858,14 @@ def _init_sentry() -> None:
         # SDK 2.x: FastApiIntegration/StarletteIntegration are auto-detected.
         # Do NOT call app.add_middleware() here — the middleware stack is already
         # frozen at startup time, which raises RuntimeError and corrupts init.
+        # Aucune donnee des clients : ni variables locales, ni formulaires, ni e-mails, ni
+        # parametres d'adresse (05/11/2026, voir backend/sentry_filtre.py).
         sentry_sdk.init(
             dsn=dsn,
-            before_send=telegram.redact_diagnostics,
-            before_send_transaction=telegram.redact_diagnostics,
-            before_breadcrumb=telegram.redact_diagnostics,
             traces_sample_rate=max(0.0, min(1.0, rate)),
             environment=str(os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RENDER_SERVICE_NAME") or "prod"),
             release=str(os.getenv("RENDER_GIT_COMMIT") or ""),
+            **sentry_filtre.options(),
         )
         _SENTRY_READY = True
     except Exception as e:
@@ -12256,6 +12278,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/cron/auto-search-backlinks",
         "/cron/auto-post-backlinks",
         "/cron/auto-content",
+        "/cron/sauvegarde-verifiee",
     } or path.startswith("/ressources-seo") or path.startswith("/docs"):
         return await call_next(request)
 
@@ -15818,6 +15841,8 @@ def settings_accounts(
             "is_admin": bool(getattr(user, "is_admin", False)),
             "can_access_system_settings": _user_can_access_system_settings(user),
             "signup_attribution": signup_attribution.own_status(DB, user.id),
+            # L'accord de traitement des donnees : visible seulement une fois publie (backend/dpa.py).
+            "dpa_version": dpa.version(),
             "github_oauth": {
                 **github_oauth,
                 # Renseigne UNIQUEMENT pour un membre : sur les projets de cet hote, c'est
@@ -15969,6 +15994,10 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
                 )
             if email:
                 db.execute(update(AuditLog).where(AuditLog.actor_email == email).values(actor_email=None))
+            # Les preuves d'acceptation du DPA SURVIVENT au compte : l'accord prend fin aujourd'hui,
+            # elles sont gardees cinq ans (DPA article 1, backend/dpa.py).
+            if uid:
+                dpa.terminer(db, uid, datetime.now(timezone.utc))
 
             row = db.get(User, uid) if uid else None
             if row is not None:
@@ -16044,6 +16073,151 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
     telegram.notifier("🗑 <b>Compte supprimé par son titulaire</b>\n%s\n%d site%s" % (
         telegram.echapper(email or "?"), len(project_slugs), "s" if len(project_slugs) > 1 else ""))
     return resp
+
+
+@app.get("/settings/account/export.zip")
+def settings_account_export(request: Request) -> Response:
+    """Toutes les donnees du compte, telechargees par son titulaire (05/11/2026).
+
+    La restitution promise par le DPA (article 15) et la portabilite du RGPD (article 20) ; le
+    contenu se deduit du schema, sans secret ni donnee d'un autre compte (backend/export_compte.py).
+    """
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    uid = str(user.id)
+    back = "/settings/accounts#mes-donnees"
+    # Un export a la fois par compte : un second clic pendant la preparation ne relance rien, et
+    # ne compte PAS dans la limite par heure (05/11/2026 : des clics en double l'avaient epuisee).
+    with _EXPORTS_GARDE:
+        if uid in _EXPORTS_EN_COURS:
+            return RedirectResponse(url=_path_with_flash(
+                back, msg="Votre export est déjà en préparation : le téléchargement va démarrer."), status_code=303)
+        _EXPORTS_EN_COURS.add(uid)
+    try:
+        retry = _rate_limit_retry_after(bucket="account_export", subject=uid, limit=3, window_s=3600)
+        if isinstance(retry, int):
+            return RedirectResponse(url=_path_with_flash(
+                back, err=f"Trop d’exports en peu de temps. Réessaie dans {_format_retry_after(retry)}."),
+                status_code=303)
+        return _preparer_export(request, user, uid, back)
+    finally:
+        with _EXPORTS_GARDE:
+            _EXPORTS_EN_COURS.discard(uid)
+
+
+_EXPORTS_GARDE = threading.Lock()
+_EXPORTS_EN_COURS: set[str] = set()
+
+
+def _fichiers_d_analyse_du_compte(uid: str) -> list[Any]:
+    """Les analyses du compte, sur le disque et dans S3, SANS rien telecharger : l'export ne lit
+    que ce qui entre dans son plafond (05/11/2026, le premier passage ramenait tout de S3)."""
+    with DB.session() as db:
+        slugs = [str(p.slug) for p in db.scalars(select(Project).where(Project.owner_user_id == uid)) if p.slug]
+    dossiers = [(DEFAULT_RUNS_DIR / uid).resolve()]
+    dossiers += [(DEFAULT_RUNS_DIR / _safe_storage_segment(s, "project")).resolve() for s in slugs]
+    fichiers = export_compte.fichiers_locaux(dossiers, DEFAULT_RUNS_DIR)
+    if object_store.s3_enabled():
+        # Le worker n'a pas de disque : ses analyses vivent dans S3.
+        for dossier in dossiers:
+            try:
+                for objet in object_store.list_runs_objects(DEFAULT_RUNS_DIR, dossier):
+                    fichiers.append(export_compte.Fichier(
+                        "analyses/" + objet["relative"], objet["size"], objet["modified"],
+                        lambda key=objet["key"]: closing(object_store.open_runs_object(key))))
+            except Exception as e:
+                logger.warning("[EXPORT] analyses de S3 non listees : %s", type(e).__name__)
+    return fichiers
+
+
+def _preparer_export(request: Request, user: Any, uid: str, back: str) -> Response:
+    fichiers = _fichiers_d_analyse_du_compte(uid)
+    descripteur, chemin = tempfile.mkstemp(prefix="noyaru-export-", suffix=".zip")
+    os.close(descripteur)
+    try:
+        with DB.session() as db:
+            manifeste = export_compte.construire(db, user, Path(chemin), fichiers=fichiers,
+                                                 langue=i18n.current_lang())
+    except Exception as e:
+        os.unlink(chemin)
+        logger.error("[EXPORT] echec pour %s : %s: %s", uid, type(e).__name__, e)
+        _audit_log(request, action="account.export", status="error", user=user,
+                   meta={"error": type(e).__name__})
+        return RedirectResponse(url=_path_with_flash(
+            back, err="L’export n’a pas pu être préparé. Réessaie dans quelques minutes."), status_code=303)
+    _audit_log(request, action="account.export", status="ok", user=user, meta={
+        "tables": len(manifeste["tables"]), "lignes": sum(manifeste["tables"].values()),
+        "fichiers": manifeste["analyses"]["fichiers"],
+        "laisses_de_cote": len(manifeste["analyses"]["laisses_de_cote"])})
+    reponse = FileResponse(chemin, media_type="application/zip",
+                           filename="noyaru-donnees-%s.zip" % datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                           background=BackgroundTask(os.unlink, chemin))
+    reponse.headers["Cache-Control"] = "no-store"
+    return reponse
+
+
+def _membre_d_un_autre_compte(user_id: str) -> bool:
+    with DB.session() as db:
+        return db.scalar(select(AccountMember.id).where(AccountMember.member_user_id == str(user_id))) is not None
+
+
+@app.get("/settings/dpa", response_class=HTMLResponse)
+def settings_dpa(request: Request, msg: str | None = None, err: str | None = None) -> HTMLResponse:
+    """L'accord de traitement des donnees, et son acceptation en ligne (DPA article 1, 05/11/2026).
+
+    N'existe pas tant que `legal.DPA_VERSION` vaut None : le texte attend un juriste."""
+    if not dpa.version():
+        raise HTTPException(status_code=404, detail="not_found")
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    langue = i18n.current_lang()
+    with DB.session() as db:
+        acceptation = dpa.en_vigueur(db, str(user.id))
+        if acceptation is not None:
+            db.expunge(acceptation)
+    resp = templates.TemplateResponse("settings_dpa.html", {
+        "request": request, "project": None, "msg": str(msg or "").strip(), "err": str(err or "").strip(),
+        "version": dpa.version(), "texte": dpa.html(langue), "acceptation": acceptation,
+        "a_jour": dpa.a_jour(acceptation), "membre": _membre_d_un_autre_compte(str(user.id))})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/settings/dpa")
+def settings_dpa_accepter(
+    request: Request,
+    organisation: str = Form(default=""),
+    immatriculation: str = Form(default=""),
+    signataire: str = Form(default=""),
+    fonction: str = Form(default=""),
+    habilite: str = Form(default=""),
+) -> RedirectResponse:
+    if not dpa.version():
+        raise HTTPException(status_code=404, detail="not_found")
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    back = "/settings/dpa"
+    if _membre_d_un_autre_compte(str(user.id)):
+        return RedirectResponse(url=_path_with_flash(
+            back, err="Seul le titulaire du compte peut accepter l’accord pour son organisation."), status_code=303)
+    valeurs, erreur = dpa.lire_formulaire({"organisation": organisation, "immatriculation": immatriculation,
+                                           "signataire": signataire, "fonction": fonction, "habilite": habilite})
+    if erreur:
+        return RedirectResponse(url=_path_with_flash(back, err=erreur), status_code=303)
+    langue = i18n.current_lang()
+    with DB.session() as db:
+        if dpa.a_jour(dpa.en_vigueur(db, str(user.id))):
+            return RedirectResponse(url=_path_with_flash(back, msg="Cette version de l’accord est déjà acceptée."),
+                                    status_code=303)
+        acceptation = dpa.accepter(db, user, valeurs, langue=langue, ip=_request_client_ip(request) or "",
+                                   user_agent=request.headers.get("user-agent", ""))
+        preuve = {"version": acceptation.version, "langue": acceptation.langue,
+                  "texte_sha256": acceptation.texte_sha256, "acceptation": acceptation.id}
+    _audit_log(request, action="dpa.accept", status="ok", user=user, meta=preuve)
+    return RedirectResponse(url=_path_with_flash(back, msg="Accord de traitement des données accepté."), status_code=303)
 
 
 @app.post("/settings/account/password")
@@ -36826,6 +37000,70 @@ def project_competitor_analyze(request: Request, slug: str,
     return RedirectResponse(url=_path_with_flash(
         page, msg=f"Analyse de {domain} lancée (jusqu'à {_COMPETITOR_MAX_PAGES} pages)."),
         status_code=303)
+
+
+# Ce que le journal garde du rapport de l'essai de restauration (backend/restauration.py).
+_RAPPORT_RESTAURATION = ("ok", "sauvegarde", "fichier", "octets", "empreinte_ok", "tables", "lignes", "comptes",
+                         "duree_s", "erreur", "par_table")
+
+
+def _rapport_restauration(brut: dict[str, Any]) -> dict[str, Any]:
+    """Le rapport tel qu'on le garde : les seules clés connues, des types simples, des tailles bornées."""
+    garde: dict[str, Any] = {}
+    for cle in _RAPPORT_RESTAURATION:
+        valeur = brut.get(cle)
+        if cle == "par_table" and isinstance(valeur, dict):
+            garde[cle] = {str(t)[:64]: int(n) for t, n in list(valeur.items())[:300]
+                          if isinstance(n, int) and not isinstance(n, bool)}
+        elif isinstance(valeur, bool) or valeur is None:
+            garde[cle] = valeur
+        elif isinstance(valeur, (int, float)):
+            garde[cle] = valeur
+        elif isinstance(valeur, str):
+            garde[cle] = valeur[:600]
+    return garde
+
+
+def _message_restauration(rapport: dict[str, Any]) -> str:
+    ts = str(rapport.get("sauvegarde") or "")
+    quand = ("%s/%s/%s %s:%s UTC" % (ts[6:8], ts[4:6], ts[0:4], ts[9:11], ts[11:13])
+             if re.fullmatch(r"\d{8}-\d{6}", ts) else "?")
+    if rapport.get("ok"):
+        return ("✅ <b>Sauvegarde vérifiée</b>\nLa sauvegarde du %s a été restaurée dans une base d'essai : "
+                "%s tables, %s lignes, dont %s comptes (%s s)."
+                % (quand, rapport.get("tables"), rapport.get("lignes"), rapport.get("comptes"),
+                   rapport.get("duree_s")))
+    return ("❌ <b>Essai de restauration en échec</b>\nSauvegarde du %s : %s\nLes sauvegardes quotidiennes "
+            "continuent ; détail dans les journaux de la tâche noyaru-restauration-test sur Render."
+            % (quand, telegram.echapper(rapport.get("erreur") or "raison inconnue")))
+
+
+@app.post("/cron/sauvegarde-verifiee")
+async def cron_sauvegarde_verifiee(request: Request) -> JSONResponse:
+    """Le rapport de l'essai mensuel de restauration de la sauvegarde (05/11/2026).
+
+    La tâche `noyaru-restauration-test` n'a ni l'adresse de la base de production ni le jeton
+    Telegram : elle envoie son rapport ici. Le journal d'audit le garde (`backup.restore_check`),
+    c'est la preuve que demande l'accord de traitement des données ; le propriétaire le reçoit sur
+    Telegram, réussi ou non.
+    """
+    cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
+    if not cron_secret:
+        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    auth = request.headers.get("Authorization", "")
+    token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
+    if not token or not hmac.compare_digest(token, cron_secret):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    try:
+        brut = await request.json()
+    except Exception:
+        brut = None
+    if not isinstance(brut, dict) or not isinstance(brut.get("ok"), bool):
+        return JSONResponse({"ok": False, "error": "Rapport illisible"}, status_code=400)
+    rapport = _rapport_restauration(brut)
+    _audit_log(request, action="backup.restore_check", status="ok" if rapport["ok"] else "error", meta=rapport)
+    telegram.notifier(_message_restauration(rapport))
+    return JSONResponse({"ok": True})
 
 
 @app.post("/cron/refresh-competitors")

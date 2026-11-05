@@ -174,6 +174,9 @@
     Le navigateur garde aussi, localement et sans nous les envoyer, votre choix sur le bandeau de
     cookies, l'historique de vos conversations avec l'assistant jusqu'à ce que vous l'effaciez, et,
     le temps de l'onglet, les derniers résultats d'une recherche de concurrents.
+    {% if captcha_actif %}Sur le formulaire d'inscription, la case de vérification de Cloudflare
+    Turnstile garde aussi dans votre navigateur une donnée technique (<code>cf.turnstile.u</code>),
+    nécessaire à la vérification anti-robots.{% endif %}
   </p>
 
   <h2>9. Sécurité</h2>
@@ -188,7 +191,8 @@
   <p>
     Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition
     et de portabilité. La suppression se fait vous-même, dans Mon compte (« Supprimer mon
-    compte ») ; pour le reste, écrivez à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
+    compte ») ; l'accès et la portabilité aussi : « Mon compte → Mes données » télécharge toutes vos
+    données dans un fichier ZIP. Pour le reste, écrivez à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
     Vous disposez également du droit d'introduire une réclamation auprès de la
     <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">CNIL</a> ou, dans les conditions prévues
     par la réglementation applicable, d'une autre autorité de contrôle compétente, notamment dans

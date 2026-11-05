@@ -193,6 +193,51 @@ def restore_runs_file(runs_dir: Path, path: Path) -> bool:
         return False
 
 
+def list_runs_objects(runs_dir: Path, path: Path) -> list[dict[str, Any]]:
+    """Les fichiers d'un dossier d'analyses dans S3, SANS les télécharger : clé, chemin relatif au
+    dossier des analyses, taille, date. Pour qui n'en veut qu'une partie — l'export du compte
+    (05/11/2026), qui ramenait tout avant de garder 300 Mo."""
+    relative = _relative_under_runs(runs_dir, path)
+    client = _s3_client()
+    bucket = s3_bucket_name()
+    if relative is None or client is None or not bucket:
+        return []
+    prefix = _prefix_for_relative_dir(relative)
+    if not prefix:
+        return []
+    base_prefix = s3_prefix().strip("/")
+    objets: list[dict[str, Any]] = []
+    token: str | None = None
+    while True:
+        kwargs: dict[str, Any] = {"Bucket": bucket, "Prefix": prefix}
+        if token:
+            kwargs["ContinuationToken"] = token
+        resp = client.list_objects_v2(**kwargs)
+        for item in resp.get("Contents") or []:
+            key = str(item.get("Key") or "").strip()
+            rel_key = key[len(base_prefix) + 1:] if base_prefix and key.startswith(f"{base_prefix}/") else key
+            if not key or (base_prefix and rel_key == key):
+                continue
+            modifie = item.get("LastModified")
+            objets.append({"key": key, "relative": rel_key, "size": int(item.get("Size") or 0),
+                           "modified": modifie.timestamp() if hasattr(modifie, "timestamp") else 0.0})
+        if not resp.get("IsTruncated"):
+            break
+        token = str(resp.get("NextContinuationToken") or "").strip() or None
+        if not token:
+            break
+    return objets
+
+
+def open_runs_object(key: str) -> Any:
+    """Le contenu d'un fichier d'analyse de S3, en flux (il a une méthode read)."""
+    client = _s3_client()
+    bucket = s3_bucket_name()
+    if client is None or not bucket:
+        raise RuntimeError("S3 non configuré")
+    return client.get_object(Bucket=bucket, Key=key)["Body"]
+
+
 def restore_runs_tree(runs_dir: Path, path: Path) -> bool:
     relative = _relative_under_runs(runs_dir, path)
     client = _s3_client()

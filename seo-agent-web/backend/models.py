@@ -900,3 +900,28 @@ class OwnSeoDraft(Base):
     lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class DpaAcceptance(Base):
+    """La preuve d'une acceptation de l'accord de traitement des donnees (DPA, article 1).
+
+    Gardee pendant l'accord puis cinq ans : elle SURVIT a la suppression du compte (le lien
+    devient nul, `termine_le` date la fin de l'accord), ce que le journal d'audit ne permet pas,
+    puisqu'il retire l'identite des evenements d'un compte supprime. 05/11/2026.
+    """
+    __tablename__ = "dpa_acceptances"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    organisation: Mapped[str] = mapped_column(String(200), nullable=False)
+    immatriculation: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    signataire: Mapped[str] = mapped_column(String(120), nullable=False)
+    fonction: Mapped[str] = mapped_column(String(120), nullable=False)
+    version: Mapped[str] = mapped_column(String(40), nullable=False)
+    langue: Mapped[str] = mapped_column(String(5), nullable=False)
+    texte_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    accepte_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    termine_le: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True, nullable=True)

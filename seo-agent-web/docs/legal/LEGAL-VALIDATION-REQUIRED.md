@@ -19,7 +19,7 @@ Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeu
 | Point | Document | Ce qu'il faut confirmer |
 | --- | --- | --- |
 | Adhésion au médiateur CM2C | CGU article 12 (FR/EN) | Les CGU nomment CM2C, comme la version en ligne. Confirmez qu'E-Com Shop y est bien adhérente et que l'adresse (49 rue de Ponthieu, 75008 Paris) est à jour. |
-| Mécanisme de transfert de chaque prestataire hors UE | Confidentialité § 5, DPA article 11 | La page ne dit plus quel mécanisme couvre quel prestataire. Pour Render, Stripe, Anthropic, OpenAI, Google, GitHub, Microsoft, SerpAPI, Netlify, Amazon Web Services, Sentry (et Ahrefs s'il est activé) : certification au cadre UE–États-Unis, ou clauses contractuelles types signées. La page promet d'en fournir la description sur demande. |
+| Mécanisme de transfert de chaque prestataire hors UE | Confidentialité § 5, DPA article 11 | La page ne dit plus quel mécanisme couvre quel prestataire. Pour Render, Stripe, Anthropic, OpenAI, Google (dont Analytics), GitHub, Microsoft, SerpAPI, Netlify, Amazon Web Services, Sentry, Wix, Webflow, Cloudflare, Telegram (et Ahrefs s'il est activé) : certification au cadre UE–États-Unis, ou clauses contractuelles types signées. La page promet d'en fournir la description sur demande. |
 | Conditions d'entraînement des modèles d'IA | Confidentialité § 6 | Vérifier les conditions API actuelles d'Anthropic et d'OpenAI, et l'offre Gemini utilisée (payante ou gratuite) : l'exclusion de l'entraînement en dépend. |
 | Prix « toutes taxes comprises » pour les consommateurs | CGU article 3 | La phrase est conservée de la version en ligne. Confirmer que le paramétrage Stripe affiche bien des prix TTC aux consommateurs. |
 | Coordonnées de l'hébergeur Render | Mentions légales FR/EN | Reprises de la version en ligne (525 Brannan Street, Suite 300, San Francisco). À vérifier avant publication. |
@@ -64,10 +64,10 @@ brouillon : il ne peut être proposé aux clients qu'une fois réglés tous les 
 
 | Fait | Article du DPA |
 | --- | --- |
-| La sauvegarde quotidienne et sa suppression à 30 jours fonctionnent en production, et une restauration est possible. Elles sont configurées dans `render.yaml` (tâche `noyaru-db-backup`, `BACKUP_RETENTION_DAYS=30`), sans preuve de leur fonctionnement. | 15, annexe 2 |
-| Les traces d'erreur envoyées à Sentry contiennent-elles des données personnelles des clients ? | Annexe 3 |
-| SerpAPI et Ahrefs ne reçoivent-ils vraiment aucune donnée personnelle ? | Annexe 3 |
-| Google PageSpeed Insights, appelé avec la clé d'E-Com Shop sur les adresses des pages du client : ne reçoit-il vraiment aucune donnée personnelle ? | Annexe 3 |
+| La sauvegarde quotidienne et sa suppression à 30 jours fonctionnent en production, et une restauration est possible. Elles sont configurées dans `render.yaml` (tâche `noyaru-db-backup`, `BACKUP_RETENTION_DAYS=30`), sans preuve de leur fonctionnement. **Depuis le 05/11/2026**, un essai automatique la vérifie chaque mois (tâche `noyaru-restauration-test`, `backend/restauration.py`) : la dernière sauvegarde est restaurée dans une base jetable, son empreinte et ses tables contrôlées, le rapport gardé au journal d'audit (`backup.restore_check`) et envoyé au propriétaire. La preuve sera son premier rapport réussi. | 15, annexe 2 |
+| Les traces d'erreur envoyées à Sentry contiennent-elles des données personnelles des clients ? **Constaté le 05/11/2026 : OUI jusqu'à ce jour** (variables du code, formulaires reçus, paramètres d'adresse, e-mails dans les journaux, aucun filtre). **Corrigé le même jour** (`backend/sentry_filtre.py`, testé avec le vrai SDK) : ni variables, ni formulaires, ni cookies, ni paramètres d'adresse ; e-mails et jeton Telegram masqués. Reste possible : un nom écrit dans le texte d'une erreur. | Annexe 3 |
+| SerpAPI et Ahrefs ne reçoivent-ils vraiment aucune donnée personnelle ? **Constaté le 05/11/2026 (lecture du code)** : SerpAPI reçoit des recherches courtes générées à partir des titres des pages, sans le nom ni la marque du site, ou les mots-clés que le Client saisit lui-même (recherche d'opportunités de liens) ; une recherche saisie par le Client peut donc contenir une donnée personnelle. Ahrefs n'est pas activé ; il recevrait le domaine analysé. | Annexe 3 |
+| Google PageSpeed Insights, appelé avec la clé d'E-Com Shop sur les adresses des pages du client : ne reçoit-il vraiment aucune donnée personnelle ? **Constaté le 05/11/2026 (lecture du code)** : il reçoit l'adresse publique de la page, la stratégie (mobile ou ordinateur) et la catégorie mesurée, rien d'autre ; Google charge lui-même la page publique. | Annexe 3 |
 
 ### Décisions contractuelles arrêtées le 21 octobre 2026
 
@@ -93,7 +93,7 @@ juridiquement. Ce sont des choix courants et équilibrés ; ils restent à faire
 | --- | --- | --- |
 | Notifier une violation de données dans les 48 heures, dans la mesure du possible | 13 | Lire contact@noyaru.com et les alertes du service chaque jour ouvré. |
 | Rembourser au prorata un client qui résilie après une objection | 10 | Un remboursement manuel dans Stripe, comme pour une rétractation. |
-| Restituer en 30 jours les données que les exports ne couvrent pas | 15 | Une procédure d'extraction, à mettre en œuvre (voir ci-dessous). |
+| Restituer en 30 jours les données que les exports ne couvrent pas | 15 | Le client les télécharge lui-même depuis « Mon compte → Mes données » (05/11/2026) ; au-delà de 300 Mo de fichiers d'analyse, les fichiers laissés de côté sont listés dans le ZIP et remis sur demande. |
 | Prévenir les clients 30 jours avant un nouveau sous-traitant ultérieur | 10 | Une annonce « Politique de confidentialité, et liste des prestataires » depuis l'écran « Annonces aux clients ». |
 | Faire signer un engagement de confidentialité avant de donner accès aux données à une autre personne | 8 | Le propriétaire, seul à accéder aux données le 21/10/2026, l'a indiqué ce jour-là. |
 
@@ -106,13 +106,33 @@ dataprivacyframework.gov (rubrique « Data Privacy Framework List »).
 | Prestataire | Où est le contrat | Comment l'obtenir | Transferts, d'après le contrat |
 | --- | --- | --- | --- |
 | Render | render.com/dpa | Contrat lié aux conditions de Render ; enregistrer la page en PDF, ou le demander au support si une version signée est nécessaire | Certifié au cadre UE–États-Unis depuis le 6 janvier 2025 (annonce de Render) ; clauses types en complément |
-| Amazon Web Services | AWS Artifact, dans la console AWS (rubrique Agreements) | Contrat intégré aux conditions de service AWS ; le télécharger depuis AWS Artifact | Clauses types incluses dans le contrat |
+| Amazon Web Services | d1.awsstatic.com/legal/aws-dpa/aws-dpa.pdf (corrigé le 05/11/2026 : AWS Artifact n'est pas nécessaire) | Contrat intégré aux conditions de service AWS, applicable d'office à tous les clients ; enregistrer le PDF officiel | Clauses types incluses dans le contrat |
 | Anthropic | anthropic.com/legal/data-processing-addendum | Intégré automatiquement aux conditions commerciales de l'API ; rien à signer ; enregistrer la page en PDF | Clauses types (modules 2 et 3) réputées signées ; liste des sous-traitants : anthropic.com/subprocessors |
-| OpenAI | openai.com/policies/data-processing-addendum | Accepté par l'utilisation des services ; un client établi dans l'EEE contracte avec OpenAI Ireland Ltd ; enregistrer la page en PDF | À vérifier dans le contrat |
-| Google (Gemini) | business.safety.google/processorterms, d'après les conditions de l'API Gemini (ai.google.dev/gemini/terms) | S'applique à l'usage payant (projet Google Cloud avec facturation) et, pour l'EEE, à tout usage ; vérifier que le projet a une facturation active | À vérifier dans le contrat |
-| Sentry | sentry.io/legal/dpa | À accepter en ligne : Paramètres de l'organisation → Legal & Compliance, par une personne habilitée | Cadre UE–États-Unis, et clauses types (modules 2 et 3) à défaut ; liste des sous-traitants : sentry.io/legal/subprocessors |
+| OpenAI | openai.com/policies/data-processing-addendum | Intégré au contrat de l'API ; un client établi dans l'EEE contracte avec OpenAI Ireland Ltd ; pour une version signée, remplir le formulaire de la page (d'après OpenAI, 05/11/2026), ou écrire à privacy@openai.com | À vérifier dans le contrat |
+| Google (Gemini) — **désactivé le 05/11/2026** (clé retirée de la production : l'assistant passe par Claude ; Gemini disparaît de la confidentialité et n'a plus besoin de contrat tant qu'il l'est) | business.safety.google/processorterms, d'après les conditions de l'API Gemini (ai.google.dev/gemini/terms) | S'applique à l'usage payant (projet Google Cloud avec facturation) et, pour l'EEE, à tout usage ; vérifier que le projet a une facturation active | À vérifier dans le contrat |
+| Sentry | sentry.io/legal/dpa | À accepter en ligne : Paramètres de l'organisation → Legal & Compliance, par un membre au rôle Owner ou Billing ; Sentry garde qui l'a accepté et quand | Cadre UE–États-Unis, et clauses types (modules 2 et 3) à défaut ; liste des sous-traitants : sentry.io/legal/subprocessors |
 | SerpApi | Sur demande | Écrire à privacy@serpapi.com pour obtenir le contrat en vigueur | Clauses types citées dans sa politique ; aucune certification mentionnée ; recherches gardées 31 jours (aucune avec le mode ZeroTrace) |
 | Ahrefs (non activé le 21/10/2026) | ahrefs.com/legal (Data Processing Addendum) | À faire seulement si l'intégration est activée ; les clauses types deviennent applicables une fois signées et envoyées par e-mail à Ahrefs | Clauses types (modules 2 et 3) |
+
+### Où trouver le contrat des prestataires de Noyaru pour ses propres traitements
+
+Ajouté le 5 novembre 2026. Ces prestataires ne sont pas des sous-traitants ultérieurs du DPA : ils
+traitent des données dont E-Com Shop est responsable (comptes, facturation, e-mails, inscription,
+visiteurs du site public), pas des données traitées pour le compte du Client. L'article 28 du RGPD
+impose tout de même un contrat de traitement avec chacun. Même démarche que ci-dessus : récupérer ou
+accepter le contrat, le ranger, vérifier la certification au cadre UE–États-Unis.
+
+| Prestataire | Où est le contrat | Comment l'obtenir | Transferts, d'après le contrat |
+| --- | --- | --- | --- |
+| Brevo (envoi des e-mails) | À la fin des conditions générales d'utilisation de Brevo, d'après son centre d'aide | Enregistrer la page en PDF ; vérifier dans le compte Brevo si une acceptation est demandée | Société française ; ses propres sous-traitants à vérifier dans le contrat |
+| Stripe (paiement et facturation) | stripe.com/legal/dpa | Intégré au contrat de services Stripe, rien à signer ; pour un compte européen, le contrat est passé avec Stripe Payments Europe, Limited (Irlande) ; enregistrer la version européenne en PDF | Avenant de transferts intégré au contrat ; le cadre UE–États-Unis prime quand plusieurs mécanismes s'appliquent |
+| Cloudflare (captcha Turnstile du formulaire d'inscription, depuis le 05/11/2026) | cloudflare.com/cloudflare-customer-dpa | Contrat lié aux conditions d'abonnement, y compris en libre-service ; sa documentation ne dit pas si un compte gratuit l'accepte automatiquement : le vérifier dans le tableau de bord Cloudflare ; enregistrer en PDF. Cloudflare se dit sous-traitant pour la détection des robots, mais responsable pour l'amélioration de Turnstile | À vérifier dans le contrat |
+| Google Analytics (mesure d'audience du site public, depuis le 02/11/2026) | Dans Google Analytics : Administration → Paramètres du compte → avenant relatif au traitement des données (« Google Ads Data Processing Terms ») | « Examiner l'avenant », l'accepter, puis renseigner les coordonnées de l'organisation ; il faut le rôle Éditeur sur le compte | À vérifier dans le contrat |
+| Telegram (notifications du propriétaire, depuis le 02/11/2026) | Aucun contrat de traitement connu pour les bots | À soumettre au juriste : Telegram reçoit les adresses e-mail des comptes, le forfait et le pays déclaré | Émirats arabes unis (pays à confirmer) ; aucun mécanisme connu |
+
+Ghost, PrestaShop, Wix et Webflow, connectés du 02 au 04/11/2026, rejoignent les services connectés
+par le Client ; la phrase « Services connectés par le Client » de l'annexe 3 du DPA ne les nomme pas
+encore : à compléter lors de la relecture.
 
 ### Points à faire valider par un juriste
 
@@ -127,9 +147,15 @@ dataprivacyframework.gov (rubrique « Data Privacy Framework List »).
 
 ### Développements nécessaires avant de proposer le DPA
 
-Aucun n'est réalisé ; ils sont marqués « À METTRE EN ŒUVRE » dans le DPA.
+Ceux qui restent sont marqués « À METTRE EN ŒUVRE » dans le DPA.
 
-- La case à cocher de l'article 1 et la conservation des preuves : organisation contractante,
-  compte et personne, date et heure, version exacte, trace de l'action d'acceptation.
-- La procédure de restitution des données que les exports ne couvrent pas, dans les 30 jours, si
-  le client choisit la restitution (article 15).
+- ~~La case à cocher de l'article 1 et la conservation des preuves.~~ **Réalisée le 05/11/2026**
+  (`backend/dpa.py`, table `dpa_acceptances`) : organisation, immatriculation, personne et
+  fonction, compte et e-mail, date et heure, version, empreinte du texte exact et sa langue, IP et
+  navigateur ; preuve gardée après la suppression du compte, effacée cinq ans après la fin de
+  l'accord. **Masquée** tant que `legal.DPA_VERSION` vaut None : après la validation du juriste,
+  y mettre le numéro de version publié (un test rappelle ce verrou).
+- ~~La procédure de restitution des données que les exports ne couvrent pas (article 15).~~
+  **Réalisée le 05/11/2026** : « Mon compte → Mes données » télécharge un ZIP de toutes les données
+  de la base rattachées au compte et à ses projets (JSON et CSV, déduites du schéma, sans secret ni
+  donnée d'un autre compte) et des fichiers d'analyse jusqu'à 300 Mo (`backend/export_compte.py`).

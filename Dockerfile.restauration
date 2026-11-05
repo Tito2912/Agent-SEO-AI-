@@ -1,0 +1,32 @@
+# L'image de l'essai mensuel de restauration (seo-agent-web/backend/restauration.py, 05/11/2026).
+#
+# À part de l'image du site et du worker : elle seule embarque un SERVEUR Postgres, le temps de
+# restaurer la dernière sauvegarde dans une base jetable. Même version majeure que le client qui
+# fait les sauvegardes (postgresql-client-18 dans ./Dockerfile) : pg_restore ne lit pas une
+# sauvegarde d'une version plus récente que la sienne.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates wget gnupg \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-18 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Les deux seules bibliothèques de la tâche, aux versions du service.
+RUN pip install --no-cache-dir boto3==1.43.18 requests==2.34.2
+
+COPY seo-agent-web/backend/backup.py seo-agent-web/backend/restauration.py seo-agent-web/backend/
+
+WORKDIR /app/seo-agent-web
+CMD ["python", "-m", "backend.restauration"]

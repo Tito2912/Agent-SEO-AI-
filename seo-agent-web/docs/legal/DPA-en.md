@@ -34,9 +34,13 @@ Customer of a new version before it takes effect. A version that changes the rig
 of the parties only applies after a new express acceptance; until then, the version previously
 accepted remains applicable, unless the change is required by applicable law.
 
-**TO BE IMPLEMENTED**: this mechanism does not yet exist in the service. Neither the
-checkbox, nor the identification of the organisation, nor the keeping of the evidence above is in
-place. Until it has been built and checked, no online acceptance is possible.
+**Implemented (5 November 2026)**: "My account → Data processing agreement". The person enters
+the name of the organisation, its registration number where one exists, their name and position,
+and ticks the declaration of authority. The evidence kept includes these items, the account and
+its email address, the date and time, the version, the SHA-256 fingerprint of the exact text
+accepted and its language, the IP address and the browser; it survives the deletion of the
+account and is erased five years after the end of the agreement. This page stays hidden until this
+text has been validated.
 
 ## 2. Subject matter and duration
 
@@ -248,7 +252,10 @@ deleted.
   cover all the personal data processed for the Customer. If the Customer chooses Return of
   Personal Data, E-Com Shop provides it, within 30 days of the request, with the personal data
   processed on its behalf that the exports do not cover, in a structured and commonly used format.
-  **TO BE IMPLEMENTED**: the procedure for this return does not exist yet.
+  The Customer can also obtain it themselves, at any time, from "My account → My data": a ZIP file
+  of all the database data linked to its account and projects, in JSON and CSV, and of the files
+  of its analyses (most recent first, up to 300 MB; the others on request), without its passwords,
+  tokens or keys.
 - **Backups**: data erased from the live database remains in the backups until they are deleted,
   30 days after their creation. During this residual retention, backups are used only to restore
   the service. **TO BE CONFIRMED**: that the daily backup and its automatic deletion after 30 days
@@ -354,8 +361,8 @@ security testing. Only the measures actually applied will be listed.
 | Anthropic | Artificial intelligence models: fixes, writing, assistant | Content of the analysed pages, relevant extracts of repository files, questions asked to the assistant | Subprocessor |
 | OpenAI | Artificial intelligence models, as a backup to Anthropic | The same data as Anthropic, when it is used | Subprocessor |
 | Google (Gemini), if enabled | Artificial intelligence model for the assistant | Questions asked to the assistant and the related project data | Subprocessor, if enabled |
-| Sentry | Tracking technical errors | Error traces, without IP address or account identifier | To be confirmed: depending on whether the traces contain the Customer's personal data |
-| SerpAPI | Google searches for competitors and link opportunities | Search queries derived from the Customer's site | To be confirmed: in principle, no personal data |
+| Sentry | Tracking technical errors | Error traces, without IP address or account identifier; since 5 November 2026, without code variables, forms, cookies or URL parameters, with email addresses masked | To be assessed: in principle, no personal data of the Customer; the text of an error may exceptionally contain some |
+| SerpAPI | Google searches for competitors and link opportunities | Short searches generated from page titles, without the site's name or brand, or keywords entered by the Customer | To be assessed: in principle, no personal data; a search entered by the Customer may contain some |
 | Ahrefs, if enabled | Backlink data | Domains of the analysed sites | To be confirmed: in principle, no personal data |
 
 **Services connected by the Customer.** Whether GitHub, WordPress and its host, Google Search

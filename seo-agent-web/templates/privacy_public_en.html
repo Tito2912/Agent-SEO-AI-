@@ -162,6 +162,9 @@
     Your browser also keeps, locally and without sending them to us, your choice on the cookie
     banner, the history of your conversations with the assistant until you clear it, and, for the
     duration of the tab, the latest results of a competitor search.
+    {% if captcha_actif %}On the sign-up form, the Cloudflare Turnstile verification box also keeps
+    a technical item in your browser (<code>cf.turnstile.u</code>), needed for the anti-robot
+    check.{% endif %}
   </p>
 
   <h2>9. Security</h2>
@@ -175,7 +178,8 @@
   <h2>10. Your rights</h2>
   <p>
     You have the right of access, rectification, erasure, restriction, objection and portability.
-    You delete your account yourself, in My account (“Delete my account”); for anything else, write
+    You delete your account yourself, in My account (“Delete my account”); access and portability
+    too: “My account → My data” downloads all your data as a ZIP file. For anything else, write
     to <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
     You also have the right to lodge a complaint with the
     <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">CNIL</a>, the French data protection

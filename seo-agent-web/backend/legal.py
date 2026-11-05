@@ -55,7 +55,8 @@ UPDATED: dict[str, date] = {
     # 02/11/2026 : Telegram (notifications du proprietaire) et Google Analytics (mesure d'audience
     # du site public, apres consentement), chacun nomme quand il est configure.
     # 05/11/2026 : Cloudflare Turnstile (captcha du formulaire d'inscription), nomme quand l'une de
-    # ses cles est configuree.
+    # ses cles est configuree, avec la donnee qu'il garde dans le navigateur (cf.turnstile.u) ;
+    # l'acces et la portabilite par « Mon compte -> Mes donnees » (export ZIP).
     "privacy": date(2026, 11, 5),
     "legal_notice": date(2026, 10, 21),
 }
@@ -64,6 +65,12 @@ UPDATED: dict[str, date] = {
 # (CGU, articles 6 et 7 ; crawl_settings.html, corrections.html, content.html). Elle est gardée
 # dans le journal d'audit avec chaque activation : à changer quand ce texte change.
 AUTO_MODE_WARNING_VERSION = "2026-10-21"
+
+# L'accord de traitement des données (DPA) proposé aux clients professionnels (backend/dpa.py) :
+# None tant qu'un juriste ne l'a pas validé (docs/legal/LEGAL-VALIDATION-REQUIRED.md), et alors
+# RIEN n'apparaît. Ensuite, la version publiée (« 1.0 ») : la page « Mon compte → Accord de
+# traitement des données » s'ouvre, et toute nouvelle version demande une nouvelle acceptation.
+DPA_VERSION: str | None = None
 
 _MOIS = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre",
          "octobre", "novembre", "décembre")

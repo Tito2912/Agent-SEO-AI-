@@ -8,7 +8,12 @@ import sys
 import pytest
 from sqlalchemy import inspect, select, func
 from backend.db import Database
-from backend.models import TelegramApprovalChannel, TelegramApprovalRequest, User
+from backend.models import (
+    TelegramApprovalChannel,
+    TelegramApprovalRequest,
+    User,
+    DpaAcceptance,
+)
 
 
 @pytest.mark.parametrize("precreated", [False, True])
@@ -40,7 +45,7 @@ def test_upgrade_has_no_binding_or_request_and_downgrade_preserves_owner(
 
     if precreated:
         database.create_tables()
-    migrate("upgrade", "20261104_0025")
+    migrate("upgrade", "20261105_0026")
     with database.session() as db:
         owner = User(
             email="telegram-migration@example.invalid",
@@ -50,15 +55,29 @@ def test_upgrade_has_no_binding_or_request_and_downgrade_preserves_owner(
         db.add(owner)
         db.commit()
         uid = owner.id
-    migrate("upgrade", "20261105_0026")
-    migrate("upgrade", "20261105_0026")
+        acceptance = DpaAcceptance(
+            user_id=uid,
+            email=owner.email,
+            organisation="Fixture",
+            signataire="Fixture",
+            fonction="Owner",
+            version="fixture",
+            langue="fr",
+            texte_sha256="a" * 64,
+        )
+        db.add(acceptance)
+        db.commit()
+        acceptance_id = acceptance.id
+    migrate("upgrade", "20261105_0027")
+    migrate("upgrade", "20261105_0027")
     with database.session() as db:
         assert db.scalar(select(func.count()).select_from(TelegramApprovalChannel)) == 0
         assert db.scalar(select(func.count()).select_from(TelegramApprovalRequest)) == 0
-    migrate("downgrade", "20261104_0025")
+    migrate("downgrade", "20261105_0026")
     assert not inspect(database.engine).has_table("telegram_approval_channels")
     assert not inspect(database.engine).has_table("telegram_approval_requests")
     with database.session() as db:
         assert db.get(User, uid).is_admin
-    migrate("upgrade", "20261105_0026")
+        assert db.get(DpaAcceptance, acceptance_id).texte_sha256 == "a" * 64
+    migrate("upgrade", "20261105_0027")
     database.engine.dispose()
