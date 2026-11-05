@@ -832,3 +832,28 @@ class OwnSeoBrief(Base):
     status: Mapped[str] = mapped_column(String(24), nullable=False, default='prepared')
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class OwnSeoDraft(Base):
+    """One explicit writing authorization, one transport attempt, no publication rights."""
+    __tablename__ = 'own_seo_drafts'
+    __table_args__ = (UniqueConstraint('owner_id','authorization_key',name='uq_own_seo_draft_authorization'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id',ondelete='CASCADE'), index=True, nullable=False)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey('projects.id',ondelete='CASCADE'), nullable=False)
+    brief_id: Mapped[str] = mapped_column(String(36), ForeignKey('own_seo_briefs.id',ondelete='CASCADE'), nullable=False)
+    workspace_token: Mapped[str] = mapped_column(String(32), nullable=False)
+    authorization_key: Mapped[str] = mapped_column(String(32), nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    bundle: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    content: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default='queued')
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    provider_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    provider_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True, nullable=True)
+    authorized_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    lease_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

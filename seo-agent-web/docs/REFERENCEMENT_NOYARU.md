@@ -112,8 +112,9 @@ mesurer le succès éditorial ou les citations IA.
 
 ## Étape suivante
 
-Le lot 4B devra apporter la rédaction sourcée sous budget et mandat, le contrôle
-factuel/visuel du texte, puis une publication propre au blog de Noyaru avec ses
-preuves de déploiement. Le mandat 3C limité aux titres/descriptions n'est pas étendu
+Le [lot 4B1](REDACTION_SOURCEE_NOYARU.md) apporte la rédaction privée sous budget et
+autorisation, avec sources par paragraphe et relecture explicite du texte. Le lot 4B2
+reste la publication propre au blog de Noyaru avec ses preuves de déploiement.
+Le mandat 3C limité aux titres/descriptions n'est pas étendu
 à des articles entiers. L'observation des clics, de l'indexation et des citations
 nécessitera ses fenêtres et sources réelles ; aucun résultat n'est fabriqué ici.
