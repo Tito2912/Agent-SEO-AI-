@@ -64,6 +64,9 @@ def kind_label(channel, kind):
         "draft": ("Relire un brouillon", "Review a draft"),
         "blog_pr": ("Préparer une PR du blog", "Prepare a blog PR"),
         "blog_publish": ("Publier un article", "Publish an article"),
+        "support_write": ("Préparer une réponse SAV", "Prepare a support reply"),
+        "support_send": ("Envoyer une réponse SAV", "Send a support reply"),
+        "support_review": ("Reprendre une demande SAV", "Handle a support request"),
     }
     return tr(channel, *labels[kind])
 
@@ -263,6 +266,12 @@ def register(db, channel, doc):
         # A refusal stays refused. Expiry requires an explicit web resend, not minute-by-minute spam.
         return row
     pages = split_pages(doc["text"])
+    if doc['kind'] in {'support_write','support_send','support_review'}:
+        try:
+            from . import own_support_common
+        except ImportError:
+            import own_support_common
+        pages = [own_support_common.seal({'text':page}) for page in pages]
     row = Approval(
         id=uuid.uuid4().hex,
         owner_id=channel.owner_id,
@@ -460,6 +469,9 @@ def card(channel, row, page=0, doc=None, confirm=False):
                 "Refuser la publication. Aucune fusion ; la PR reste en place.",
                 "Reject publication. No merge; the PR is kept.",
             ),
+            "support_write": tr(channel,"Refuser cet appel IA ; garder la demande pour une réponse manuelle.","Reject this AI request; keep the request for a manual reply."),
+            "support_send": tr(channel,"Refuser cet envoi ; conserver le brouillon à corriger. Aucun email envoyé.","Reject sending; keep the draft for revision. No email sent."),
+            "support_review": tr(channel,"Écarter cette demande ou ce rappel d’envoi incertain. Le résultat inconnu reste conservé ; aucun nouvel email ni appel IA.","Dismiss this request or uncertain-send reminder. The unknown result is kept; no new email or AI request."),
             "test": tr(
                 channel,
                 "Refuser le test, sans effet métier.",
@@ -492,7 +504,7 @@ def card(channel, row, page=0, doc=None, confirm=False):
             + " / "
             + str(len(row.pages))
             + "\n\n"
-            + row.pages[page]
+            + pages_for(row)[page]
         )
         text += (
             "\n\n"
@@ -763,6 +775,13 @@ def handle_callback(query, lease=None):
 
 
 def run_result(kind, ident):
+    if kind in {'support_write','support_send','support_review'}:
+        try:
+            from . import own_support
+        except ImportError:
+            import own_support
+        own_support.run(ident)
+        return
     if kind in {'blog_pr', 'blog_publish'}:
         try:
             from . import own_blog
@@ -771,6 +790,16 @@ def run_result(kind, ident):
         own_blog.run(ident)
     elif kind == 'writing':
         w.run(ident)
+
+
+def pages_for(row):
+    if row.kind in {'support_write','support_send','support_review'}:
+        try:
+            from . import own_support
+        except ImportError:
+            import own_support
+        return own_support.approval_pages(row)
+    return row.pages
 
 
 def process_update(update, lease):
