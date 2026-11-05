@@ -8,6 +8,7 @@ from urllib.parse import unquote
 import uuid
 
 import pytest
+from requests.structures import CaseInsensitiveDict
 from bs4 import BeautifulSoup
 
 from backend import app as m, own_blog as b, own_blog_content as c, own_writing as w
@@ -22,8 +23,13 @@ REAL_CONNECTION = b.connection
 
 
 class Response:
-    def __init__(self, data=None, status=200, headers=None):
-        self.data, self.status_code, self.headers = data, status, headers or {}
+    def __init__(self, data=None, status=200, headers=None, raw=None):
+        self.data, self.status_code, self.headers, self.raw = (
+            data,
+            status,
+            CaseInsensitiveDict(headers or {}),
+            raw,
+        )
 
     def __enter__(self):
         return self
@@ -32,7 +38,7 @@ class Response:
         return False
 
     def iter_content(self, size):
-        yield json.dumps(self.data).encode()
+        yield self.raw if self.raw is not None else json.dumps(self.data).encode()
 
 
 class Remote:
@@ -377,7 +383,7 @@ def test_proposal_and_get_are_read_only_and_duplicate_submission_is_one_row(blog
 
 
 def test_two_distinct_decisions_merge_exact_files_and_observe_public_release(
-    blog, monkeypatch
+    blog, monkeypatch, tmp_path
 ):
     x = blog
     ident = proposal(x)
@@ -400,20 +406,36 @@ def test_two_distinct_decisions_merge_exact_files_and_observe_public_release(
     )
     assert len(x["remote"].writes) == 5
     file = result.proposal["files"][0]
+    public = served_article(file, result.receipt["merge"], monkeypatch, tmp_path)
     monkeypatch.setattr(
         b.requests,
         "get",
-        lambda *a, **kw: Response(
-            headers={
-                "X-Noyaru-Article-SHA256": file["sha256"],
-                "X-Noyaru-Release": result.receipt["merge"],
-            }
-        ),
+        lambda *a, **kw: Response(headers=dict(public.headers), raw=public.content),
     )
     b.run(ident)
     assert row(x, ident).state == "published"
     b.run(ident)
     assert len(x["remote"].writes) == 5
+
+
+def served_article(file, release, monkeypatch, tmp_path):
+    """Exercise the real public route and template, not a mirrored HTML fixture."""
+    path = tmp_path / "article.md"
+    path.write_text(file["text"])
+    article = m.content_library._load_page(path, collection="blog", lang=file["lang"])
+    original = m.content_library.get_article
+    monkeypatch.setattr(
+        m.content_library,
+        "get_article",
+        lambda slug, lang="fr": (
+            article
+            if slug == article["slug"] and lang == file["lang"]
+            else original(slug, lang)
+        ),
+    )
+    monkeypatch.setenv("RENDER_GIT_COMMIT", release)
+    monkeypatch.setenv("PUBLIC_BASE_URL", "https://noyaru.com")
+    return client().get("/ressources-seo/" + article["slug"] + "?lang=" + file["lang"])
 
 
 @pytest.mark.parametrize("stage", ["blog_pr", "blog_publish"])
@@ -805,3 +827,41 @@ def test_connection_read_under_decision_lock_never_rotates_or_commits(
         db.rollback()
     with x["db"].session() as db:
         assert db.query(UserConnection).one().secret_value == stored
+
+
+@pytest.mark.parametrize(
+    "change", ["language", "canonical", "title", "description", "body"]
+)
+def test_correct_release_headers_cannot_hide_wrong_rendered_article(
+    blog, monkeypatch, tmp_path, change
+):
+    x = blog
+    ident = reviewed_pr(x)
+    decide(x, ident, "blog_publish")
+    b.run(ident)
+    result = row(x, ident)
+    file = result.proposal["files"][0]
+    public = served_article(file, result.receipt["merge"], monkeypatch, tmp_path)
+    parsed = BeautifulSoup(public.content, "html.parser")
+    if change == "language":
+        parsed.html["lang"] = "en"
+    if change == "canonical":
+        parsed.select_one("link[rel=canonical]")["href"] = "https://noyaru.com/other"
+    if change == "title":
+        parsed.select_one("article h1").string = "Autre article"
+    if change == "description":
+        parsed.select_one("meta[name=description]")["content"] = "Autre description"
+    if change == "body":
+        parsed.select_one("article .content-body").clear()
+    monkeypatch.setattr(
+        b.requests,
+        "get",
+        lambda *a, **kw: Response(
+            headers=dict(public.headers), raw=str(parsed).encode()
+        ),
+    )
+    b.run(ident)
+    assert (
+        row(x, ident).state == "observing"
+        and row(x, ident).error_code == "deploy_pending"
+    )

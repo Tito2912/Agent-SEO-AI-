@@ -668,6 +668,13 @@ def observe(worker):
                 release_sha = response.headers.get("X-Noyaru-Release", "")
                 if not re.fullmatch("[a-f0-9]{40}", release_sha):
                     raise Stop("deploy_pending")
+                document = bytearray()
+                for chunk in response.iter_content(65536):
+                    document.extend(chunk)
+                    if len(document) > 1500000:
+                        raise Stop("response_limit")
+                if not c.public_matches(file, document.decode("utf-8")):
+                    raise Stop("deploy_pending")
         except Stop:
             raise
         except Exception:

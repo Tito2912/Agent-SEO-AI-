@@ -21,7 +21,8 @@ exigent le compte propriétaire. Aucun article réel n'est créé par les tests 
 5. Examiner le diff et les contrôles du même commit. Si `main` avance, un nouvel accord
    de préparation permet uniquement de synchroniser la branche de cette opération.
 6. Approuver dans une seconde carte la fusion. GitHub conserve ses règles de protection.
-7. Observer les pages effectivement servies ; distinguer publication technique, indexation
+7. Observer les pages effectivement servies (langue, canonique, titre, description, corps
+   d'article, empreinte source et version déployée) ; distinguer publication technique, indexation
    et visibilité. Aucun gain de classement ou de citation n'est déduit de la publication.
 
 L'interface reprend les cartes, focus visibles, cibles de 44 px, détails et états textuels
@@ -53,6 +54,7 @@ Références API : [contenus GitHub](https://docs.github.com/en/rest/repos/conte
 - Réponses GitHub perdues avant/après effet, synchronisation, reprise sous bail, expiration,
   double décision, refus, preuves CI absentes/échouées/ignorées, protections de branche,
   source ou connexion modifiée, ajout non autorisé et faux succès HTTP sont couverts.
+  Des en-têtes corrects ne suffisent pas si le HTML servi est vide ou ne correspond pas.
 - La lecture d'un ancien secret ou d'un secret chiffré ne peut ni le migrer ni valider
   implicitement une transaction de décision. Les données du compte restent exportables.
 - La CI et les contrôles en production sont consignés dans la PR. Aucune publication

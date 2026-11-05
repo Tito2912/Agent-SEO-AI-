@@ -6,6 +6,7 @@ import re
 from urllib.parse import urlsplit
 
 import yaml
+from bs4 import BeautifulSoup
 
 try:
     from . import own_seo as s, own_writing as w, seo_watch
@@ -138,6 +139,40 @@ def article(row, slug, date):
         "blob": blob(text),
         "sha256": sha(text),
     }
+
+
+def public_matches(file, document):
+    """Check the rendered article as well as its release/source response headers."""
+    library = s.module().content_library
+    _, front, body = file["text"].split("---\n", 2)
+    meta = yaml.safe_load(front)
+    expected = library.resolve(
+        {**meta, "body_html": library._markdown_instance().convert(body)},
+        s.module()._content_tokens(file["lang"]),
+    )
+    parsed = BeautifulSoup(document, "html.parser")
+    root = parsed.find("html")
+    canonical = parsed.select('link[rel="canonical"]')
+    description = parsed.select('meta[name="description"]')
+    title = parsed.select("article h1")
+    content = parsed.select("article .content-body")
+
+    def text(node):
+        return " ".join(node.get_text(" ", strip=True).split())
+
+    expected_body = BeautifulSoup(expected["body_html"], "html.parser")
+    return (
+        root is not None
+        and root.get("lang") == file["lang"]
+        and len(canonical) == 1
+        and canonical[0].get("href") == file["url"]
+        and len(description) == 1
+        and description[0].get("content") == expected["description"]
+        and len(title) == 1
+        and text(title[0]) == " ".join(expected["title"].split())
+        and len(content) == 1
+        and text(content[0]) == text(expected_body)
+    )
 
 
 def drafts(db, owner, fr_id, en_id=None, *, current=True):
