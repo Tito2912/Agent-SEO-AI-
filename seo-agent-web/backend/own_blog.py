@@ -12,13 +12,13 @@ from sqlalchemy import select, or_
 try:
     from . import own_seo as s, own_writing as w, own_blog_content as c
     from .own_blog_github import GitHub, Stop
-    from .models import OwnBlogPublication as Publication, AuditLog
+    from .models import OwnBlogPublication as Publication, AuditLog, UserConnection
 except ImportError:
     import own_seo as s
     import own_writing as w
     import own_blog_content as c
     from own_blog_github import GitHub, Stop
-    from models import OwnBlogPublication as Publication, AuditLog
+    from models import OwnBlogPublication as Publication, AuditLog, UserConnection
 
 PATH = "/settings/system/own-seo/publication"
 MAX_READS = 600
@@ -58,11 +58,26 @@ def audit(db, row, action):
     )
 
 
-def connection(owner):
-    token, source = s.module()._effective_user_connection_value(
-        user_id=owner, key="GITHUB_TOKEN"
+def connection(owner, *, db):
+    # The general connection helper can lazy-rotate a legacy secret and commit its
+    # session. Decisions must stay atomic, and SQLite must not open a second writer
+    # under this transaction's lock. Decode here without migrating or committing.
+    stored = db.scalar(
+        select(UserConnection).where(
+            UserConnection.user_id == owner, UserConnection.key == "GITHUB_TOKEN"
+        )
     )
-    if not token or source != "user":
+    try:
+        token, _ = (
+            s.module()._decrypt_secret_with_rotation(
+                str(stored.secret_value or "").strip()
+            )
+            if stored
+            else ("", False)
+        )
+    except Exception:
+        token = ""
+    if not token:
         raise Stop("github_required")
     return token, s.digest(["own-blog", token])
 
@@ -102,7 +117,7 @@ def scope(db, owner, ident, *, fresh=True):
             or c.blob(file["text"]) != file["blob"]
         ):
             raise Stop("target_changed")
-    token, fingerprint = connection(owner)
+    token, fingerprint = connection(owner, db=db)
     if fingerprint != row.connection_hash:
         raise Stop("connection_changed")
     return row, token
@@ -154,7 +169,7 @@ def prepare(owner, fr_id, en_id, key, confirm):
                 raise Stop("article_exists")
             else:
                 return existing.id
-        _, fingerprint = connection(owner)
+        _, fingerprint = connection(owner, db=db)
         row = Publication(
             owner_id=owner,
             project_id=project.id,

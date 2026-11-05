@@ -42,3 +42,18 @@ de l'espace SEO. FR / EN, petits écrans, accès refusé et erreurs ont les mêm
 Références API : [contenus GitHub](https://docs.github.com/en/rest/repos/contents),
 [fusion d'une PR](https://docs.github.com/en/rest/pulls/pulls),
 [fusion vers une branche](https://docs.github.com/en/rest/branches/branches).
+
+## Vérifications de ce lot
+
+- Chromium local : 80 combinaisons FR/EN, 360 à 1440 px, états de décision, d'attente,
+  d'incertitude, de refus et de publication ; formulaires natifs de préparation et d'arrêt.
+  Aucun débordement, erreur JavaScript ou appel externe réel. Les états publiés y sont simulés.
+- 213 tests combinés de non-régression, puis 39 tests publication/migration après le
+  durcissement de la lecture des connexions. 34 contrôles du démarrage des services.
+- Réponses GitHub perdues avant/après effet, synchronisation, reprise sous bail, expiration,
+  double décision, refus, preuves CI absentes/échouées/ignorées, protections de branche,
+  source ou connexion modifiée, ajout non autorisé et faux succès HTTP sont couverts.
+- La lecture d'un ancien secret ou d'un secret chiffré ne peut ni le migrer ni valider
+  implicitement une transaction de décision. Les données du compte restent exportables.
+- La CI et les contrôles en production sont consignés dans la PR. Aucune publication
+  réelle d'article n'est incluse dans la recette locale ; elle exige ses propres accords.

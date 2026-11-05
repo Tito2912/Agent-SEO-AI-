@@ -18,6 +18,8 @@ from test_own_seo import own as own, NOW
 from test_customer_activation import lab as lab, client, user
 from test_telegram_approvals import bot as bot
 
+REAL_CONNECTION = b.connection
+
 
 class Response:
     def __init__(self, data=None, status=200, headers=None):
@@ -323,7 +325,9 @@ def blog(writing, monkeypatch):
     w.review(x["owner"].id, draft, fingerprint, True)
     remote = Remote()
     monkeypatch.setattr(
-        m, "_effective_user_connection_value", lambda **kw: ("local-github", "user")
+        b,
+        "connection",
+        lambda owner, **kw: ("local-github", b.s.digest(["own-blog", "local-github"])),
     )
     monkeypatch.setattr(b.requests, "request", remote.request)
     return {**x, "draft": draft, "remote": remote}
@@ -444,7 +448,9 @@ def test_changes_after_approval_stop_before_any_github_write(blog, monkeypatch, 
         db.commit()
     if change == "connection":
         monkeypatch.setattr(
-            m, "_effective_user_connection_value", lambda **kw: ("changed", "user")
+            b,
+            "connection",
+            lambda owner, **kw: ("changed", b.s.digest(["own-blog", "changed"])),
         )
     if change == "source":
         from backend import seo_watch
@@ -765,3 +771,37 @@ def test_refused_proposal_stays_refused_until_explicit_fresh_preparation(blog):
     assert row(x, ident).state == "cancelled" and not x["remote"].writes
     fresh = b.prepare(x["owner"].id, x["draft"], None, uuid.uuid4().hex, True)
     assert fresh != ident and row(x, fresh).state == "checking"
+
+
+@pytest.mark.parametrize("encrypted", [False, True])
+def test_connection_read_under_decision_lock_never_rotates_or_commits(
+    blog, monkeypatch, encrypted
+):
+    from backend.models import UserConnection
+
+    x = blog
+    monkeypatch.setattr(b, "connection", REAL_CONNECTION)
+    monkeypatch.setenv("SEO_AGENT_ENCRYPTION_KEY", "blog-test-encryption-" + "e" * 50)
+    monkeypatch.setenv("SEO_AGENT_ENCRYPTION_KEYS", "")
+    stored = m._encrypt_secret("local-github") if encrypted else "local-github"
+    with x["db"].session() as db:
+        db.add(
+            UserConnection(
+                user_id=x["owner"].id, key="GITHUB_TOKEN", secret_value=stored, meta={}
+            )
+        )
+        db.commit()
+    monkeypatch.setattr(
+        m,
+        "_effective_user_connection_value",
+        lambda **kw: pytest.fail("No helper that can commit"),
+    )
+    with x["db"].session() as db:
+        b.s.locked(db)
+        monkeypatch.setattr(
+            db, "commit", lambda: pytest.fail("No implicit commit of the decision")
+        )
+        assert REAL_CONNECTION(x["owner"].id, db=db)[0] == "local-github"
+        db.rollback()
+    with x["db"].session() as db:
+        assert db.query(UserConnection).one().secret_value == stored
