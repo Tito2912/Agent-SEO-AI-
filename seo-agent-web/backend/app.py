@@ -40248,3 +40248,9 @@ try:
 except ImportError:
     from telegram_approval_routes import router as telegram_approval_router
 app.include_router(telegram_approval_router)
+
+try:
+    from .analyses_orphelines import router as analyses_orphelines_router
+except ImportError:
+    from analyses_orphelines import router as analyses_orphelines_router
+app.include_router(analyses_orphelines_router)

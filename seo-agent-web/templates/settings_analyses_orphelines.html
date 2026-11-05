@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block title %}Analyses orphelines - Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/customer-accounts.css?v=4" />{% endblock %}
+{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/settings/operations">Exploitation</a><span class="crumb-sep">/</span><span class="crumb-current">Analyses orphelines</span>{% endblock %}
+{% block content %}
+<div class="customer-accounts">
+  <div class="page-header">
+    <h1>Analyses orphelines</h1>
+    <p class="muted">Les fichiers d’analyse restés sur le disque ou dans S3 après la suppression de leur projet ou de leur compte.</p>
+  </div>
+  {% if msg %}<div class="alert ok"><p>{{ msg }}</p></div>{% endif %}
+  {% if err %}<div class="alert error" role="alert"><p>{{ err }}</p></div>{% endif %}
+  <section class="card">
+    <h2>{{ orphelins|length }} dossier{% if orphelins|length != 1 %}s{% endif %} orphelin{% if orphelins|length != 1 %}s{% endif %}</h2>
+    <p class="small">Un dossier n’apparaît ici que s’il est rangé comme l’application range les analyses et que son compte n’existe plus, ou que ni ce compte ni une équipe dont il est membre n’a de projet à ce nom.{% if ignores %} {{ ignores }} dossier{% if ignores != 1 %}s{% endif %} d’un autre rangement (hérité ou technique) {% if ignores != 1 %}sont laissés{% else %}est laissé{% endif %} de côté.{% endif %}</p>
+    <p class="muted small">Rien n’est coché d’office. Au moment d’effacer, l’inventaire est refait : un dossier redevenu vivant entre-temps est gardé et nommé. L’effacement est définitif, sur le disque comme dans S3.</p>
+    {% if orphelins %}
+    <form method="post" action="/settings/operations/analyses-orphelines/supprimer">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <div class="account-table-wrap" tabindex="0" role="region" aria-label="Analyses orphelines">
+        <table class="table compact">
+          <thead><tr><th scope="col">Effacer</th><th scope="col">Dossier</th><th scope="col">Pourquoi</th><th scope="col">Où</th></tr></thead>
+          <tbody>
+            {% for o in orphelins %}
+            <tr>
+              <td><input type="checkbox" name="chemin" value="{{ o.chemin }}" id="orphelin-{{ loop.index }}" /></td>
+              <td><label for="orphelin-{{ loop.index }}"><code>{{ o.chemin }}</code></label></td>
+              <td>{{ o.raison }}{% if o.compte %} ({{ o.compte }}){% endif %}</td>
+              <td>{{ o.ou }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <label style="margin-top:12px;">Tapez SUPPRIMER pour confirmer
+        <input name="confirmation" autocomplete="off" required />
+      </label>
+      <button class="btn danger" type="submit" style="margin-top:8px;">Effacer les dossiers cochés</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
