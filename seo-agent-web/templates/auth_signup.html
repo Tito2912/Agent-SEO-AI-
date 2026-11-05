@@ -67,6 +67,12 @@
             </details>
           {% endif %}
 
+          {% if captcha_cle_site %}
+            {# LE CAPTCHA (05/11/2026, backend/anti_robots.py) : Cloudflare Turnstile, le plus
+               souvent une coche qui se valide seule. Il ajoute au formulaire le champ
+               cf-turnstile-response, que le serveur fait verifier par Cloudflare. #}
+            <div class="cf-turnstile" data-sitekey="{{ captcha_cle_site }}" data-language="{{ current_lang() }}" data-theme="dark" data-size="flexible" style="min-height:65px;"></div>
+          {% endif %}
           <button class="btn primary block" type="submit">{{ tr("Créer le compte") }}</button>
           {% if google_auth_available %}
             <div class="auth-divider"><span>{{ tr("ou") }}</span></div>
@@ -88,5 +94,6 @@
       </section>
     </main>
     {% set avec_style_bandeau = true %}{% include "_mesure_audience.html" %}
+    {% if captcha_cle_site %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
   </body>
 </html>

@@ -1061,6 +1061,12 @@ def _mesure_audience(request: Any) -> str:
     return ident
 
 
+def _captcha_inscription() -> tuple[str, str]:
+    """Les cles Cloudflare Turnstile (site, secrete), ou ("", "") : le captcha d'inscription
+    n'existe qu'avec les DEUX (05/11/2026, voir backend/anti_robots.py)."""
+    return anti_robots.cles_captcha(_safe_env("TURNSTILE_SITE_KEY"), _safe_env("TURNSTILE_SECRET_KEY"))
+
+
 def _content_security_policy(request: Request) -> str:
     custom = _safe_env("SEO_AGENT_CSP")
     if custom:
@@ -1074,6 +1080,12 @@ def _content_security_policy(request: Request) -> str:
     # ecrans de l'application ne le font jamais, et gardent une politique sans hote tiers —
     # autoriser googletagmanager.com partout ouvrirait un contournement connu de la CSP.
     ga4 = bool(getattr(getattr(request, "state", None), "mesure_audience", False))
+    # LE CAPTCHA, SUR LA SEULE PAGE QUI L'AFFICHE (05/11/2026) : le formulaire d'inscription le
+    # note quand il sert la case Turnstile — son script, et le cadre ou elle se valide.
+    captcha = bool(getattr(getattr(request, "state", None), "captcha_inscription", False))
+    cadres = ["'self'"] if article_preview else []
+    if captcha:
+        cadres.append("https://challenges.cloudflare.com")
     directives = [
         "default-src 'self'",
         "base-uri 'self'",
@@ -1091,10 +1103,11 @@ def _content_security_policy(request: Request) -> str:
         "img-src 'self' data: https:",
         "font-src 'self' data:",
         "style-src 'self' 'unsafe-inline'",
-        "script-src 'self' 'unsafe-inline'" + (" https://www.googletagmanager.com" if ga4 else ""),
+        "script-src 'self' 'unsafe-inline'" + (" https://www.googletagmanager.com" if ga4 else "")
+        + (" https://challenges.cloudflare.com" if captcha else ""),
         "connect-src 'self'" + (" https://*.google-analytics.com https://*.analytics.google.com"
                                 " https://www.googletagmanager.com" if ga4 else ""),
-        "frame-src 'self'" if article_preview else "frame-src 'none'",
+        "frame-src " + (" ".join(cadres) or "'none'"),
         "manifest-src 'self'",
     ]
     if _request_is_secure(request):
@@ -12506,6 +12519,37 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
             ],
         },
     },
+    "TURNSTILE_SITE_KEY": {
+        "label": "Turnstile — clé du site",
+        "hint": "Site Key de Cloudflare Turnstile, ex. 0x4AAAA…",
+        "group": "Anti-robots",
+        "order": 1,
+        "editable": True,
+        "help": {
+            "title": "Cloudflare Turnstile — clé du site",
+            "steps": [
+                "Sur dash.cloudflare.com (compte gratuit) : Turnstile → « Add widget ».",
+                "Nom « Noyaru », domaine noyaru.com, mode « Managed », puis « Create ».",
+                "Copie la « Site Key » ici (« Configurer », coller, « Enregistrer »), puis la « Secret Key » dans la ligne suivante.",
+                "La case s'affiche à l'inscription dès que les DEUX clés sont enregistrées.",
+            ],
+        },
+    },
+    "TURNSTILE_SECRET_KEY": {
+        "label": "Turnstile — clé secrète",
+        "hint": "Secret Key de Cloudflare Turnstile, ex. 0x4AAAA…",
+        "group": "Anti-robots",
+        "order": 2,
+        "editable": True,
+        "help": {
+            "title": "Cloudflare Turnstile — clé secrète",
+            "steps": [
+                "Dans Cloudflare : Turnstile → ton widget « Noyaru » → « Secret Key ».",
+                "Dans cette page : « Configurer », colle-la, « Enregistrer ».",
+                "Ne la colle nulle part ailleurs : c'est elle qui fait vérifier les inscriptions.",
+            ],
+        },
+    },
     "OPENAI_API_KEY": {
         "label": "OpenAI",
         "hint": "Clé API",
@@ -12926,6 +12970,9 @@ def _validate_settings_env_value(key: str, value: str) -> str | None:
 
     if k == "TELEGRAM_BOT_TOKEN" and not re.fullmatch(r"\d{5,15}:[A-Za-z0-9_-]{30,64}", v):
         return "Jeton invalide : celui que donne @BotFather a la forme 123456789:ABC…"
+
+    if k in {"TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"} and not re.fullmatch(anti_robots.FORME_CLE, v):
+        return "Clé invalide : celles de Cloudflare Turnstile commencent par 0x (ex. 0x4AAAA…)."
 
     if k == "GOOGLE_APPLICATION_CREDENTIALS":
         p = Path(v).expanduser()
@@ -14077,6 +14124,9 @@ def auth_signup(
     invite_required = bool(_safe_env("SIGNUP_INVITE_CODE")) and not n.startswith("/team/accept")
     signup_disabled = _env_bool("SIGNUP_DISABLED")
     e = _normalize_email(email or "")
+    captcha_cle_site = "" if signup_disabled else _captcha_inscription()[0]
+    if captcha_cle_site:
+        request.state.captcha_inscription = True
     resp = templates.TemplateResponse(
         "auth_signup.html",
         {
@@ -14099,6 +14149,7 @@ def auth_signup(
             "acquisition_campaign": signup_attribution.find(DB, query=request.query_params),
             # L'heure d'ouverture signee : un envoi plus rapide qu'une personne est un robot.
             "formulaire_ouvert": anti_robots.jeton_d_ouverture(_safe_env("SEO_AGENT_SECRET_KEY")),
+            "captcha_cle_site": captcha_cle_site,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -14118,6 +14169,7 @@ def auth_signup_submit(
     country_requested: str = Form(default=""),
     site_web: str = Form(default=""),
     formulaire_ouvert: str = Form(default=""),
+    captcha: str = Form(default="", alias=anti_robots.CHAMP_CAPTCHA),
 ) -> Response:
     secret = _safe_env("SEO_AGENT_SECRET_KEY")
     if not secret:
@@ -14178,6 +14230,19 @@ def auth_signup_submit(
         return _signup_error(
             "Votre inscription n’a pas pu être validée. Patientez quelques secondes, puis réessayez.",
             400, statut="robot", raison=raison_robot)
+    # PUIS LE CAPTCHA (05/11/2026), seulement si ses deux cles sont reglees. Apres les deux
+    # signes : ils ne coutent rien, lui un appel a Cloudflare.
+    captcha_cle_secrete = _captcha_inscription()[1]
+    if captcha_cle_secrete:
+        refus_captcha, incident_captcha = anti_robots.verifier_captcha(captcha_cle_secrete, captcha, ip)
+        if incident_captcha:
+            logger.warning("[CAPTCHA] inscription laissee au piege et au delai : %s", incident_captcha)
+            _audit_log(request, action="auth.captcha", status="error", actor_email=e,
+                       meta={"reason": incident_captcha})
+        if refus_captcha:
+            return _signup_error(
+                "La vérification anti-robots n’a pas abouti. Attendez que la case de vérification "
+                "soit validée, puis réessayez.", 400, statut="robot", raison=refus_captcha)
 
     if (country_requested == "yes" and not country_code) or (country.strip() and not country_code):
         return _signup_error("Choisissez votre pays de résidence dans la liste.", 400)
@@ -14605,6 +14670,9 @@ def privacy_public(request: Request) -> HTMLResponse:
         # Les notifications du proprietaire (02/11/2026) : nomme des que le JETON est la, avant
         # meme que la conversation soit choisie — declarer trop tot vaut mieux que trop tard.
         telegram_actif=bool(_safe_env("TELEGRAM_BOT_TOKEN")),
+        # Le captcha d'inscription (05/11/2026) : nomme des que L'UNE de ses cles est la, comme
+        # Telegram — declarer trop tot vaut mieux que trop tard.
+        captcha_actif=bool(_safe_env("TURNSTILE_SITE_KEY") or _safe_env("TURNSTILE_SECRET_KEY")),
     )
 
 
@@ -16754,6 +16822,17 @@ def settings_system(request: Request) -> HTMLResponse:
             "items": [
                 _build_env_setting_item("TELEGRAM_BOT_TOKEN"),
                 _build_env_setting_item("TELEGRAM_CHAT_ID"),
+            ],
+        },
+        {
+            "id": "captcha-system",
+            "title": "Anti-robots (Cloudflare Turnstile)",
+            "description": ("Une case de vérification sur le formulaire d'inscription par e-mail, en plus du "
+                            "champ piège et du délai. Active dès que les deux clés sont enregistrées ; si "
+                            "Cloudflare ne répond pas, l'inscription reste gardée par le piège et le délai."),
+            "items": [
+                _build_env_setting_item("TURNSTILE_SITE_KEY"),
+                _build_env_setting_item("TURNSTILE_SECRET_KEY"),
             ],
         },
         {
