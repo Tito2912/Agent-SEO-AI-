@@ -32,6 +32,10 @@ Après une indisponibilité temporaire, une demande encore dans sa durée de val
 redevenir utilisable si sa version exacte est de nouveau vérifiée dans la même liaison.
 Le message n’est pas renvoyé et sa durée n’est pas prolongée. Un refus reste un refus.
 
+Les diagnostics Sentry (erreurs, traces HTTP et événements de navigation) masquent aussi
+les jetons Telegram, y compris les formats d’URL encodés et les jetons après rotation.
+Le contrôle avec le SDK réel utilise uniquement un transport mémoire et une URL locale.
+
 Les cartes sont paginées, les libellés FR/EN sont explicites, les actions positives ont une
 confirmation propre et la page web utilise les composants et protections CSRF existants.
 Les droits des clients sur leurs sites restent inchangés : ce canal concerne le propriétaire

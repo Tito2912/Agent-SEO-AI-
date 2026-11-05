@@ -8838,6 +8838,9 @@ def _init_sentry() -> None:
         # frozen at startup time, which raises RuntimeError and corrupts init.
         sentry_sdk.init(
             dsn=dsn,
+            before_send=telegram.redact_diagnostics,
+            before_send_transaction=telegram.redact_diagnostics,
+            before_breadcrumb=telegram.redact_diagnostics,
             traces_sample_rate=max(0.0, min(1.0, rate)),
             environment=str(os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RENDER_SERVICE_NAME") or "prod"),
             release=str(os.getenv("RENDER_GIT_COMMIT") or ""),

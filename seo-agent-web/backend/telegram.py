@@ -19,6 +19,7 @@ from __future__ import annotations
 import html
 import logging
 import os
+import re
 import threading
 from typing import Any
 
@@ -40,6 +41,30 @@ def _conversation() -> str:
 
 def configure() -> bool:
     return bool(_jeton() and _conversation())
+
+
+def redact_diagnostics(value: Any, _hint: Any = None) -> Any:
+    """Sentry errors, HTTP breadcrumbs and transactions must not retain bot tokens.
+
+    Telegram puts the credential in the URL path. Also mask a previously rotated
+    token, and the colon-encoded spelling, without suppressing useful diagnostics.
+    """
+    token = _jeton()
+    literals = (token, token.replace(":", "%3A"), token.replace(":", "%3a")) if len(token) > 8 else ()
+    pattern = re.compile(r"(?<!\d)\d{5,15}(?::|%3[aA])[A-Za-z0-9_-]{30,64}(?![A-Za-z0-9_-])")
+
+    def clean(item: Any) -> Any:
+        if isinstance(item, str):
+            for literal in literals:
+                item = item.replace(literal, "[telegram-token]")
+            return pattern.sub("[telegram-token]", item)
+        if isinstance(item, dict):
+            return {clean(key): clean(content) for key, content in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [clean(content) for content in item]
+        return item
+
+    return clean(value)
 
 
 def echapper(texte: Any) -> str:
