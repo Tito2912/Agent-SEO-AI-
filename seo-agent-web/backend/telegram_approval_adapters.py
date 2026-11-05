@@ -1,6 +1,7 @@
 """Closed set of owner actions. Telegram text is never executable input."""
 
 import json
+from datetime import timedelta
 from sqlalchemy import select
 
 try:
@@ -38,6 +39,12 @@ def document(kind, target, version, title, body, effect, path, ready=True):
 
 def inspect(db, owner, kind, target, lang):
     s.actor(db, owner)
+    if kind in {'support_write','support_send','support_review'}:
+        try:
+            from . import own_support
+        except ImportError:
+            import own_support
+        return own_support.approval_document(db, owner, target, kind, lang)
     if kind in {'blog_pr', 'blog_publish'}:
         try:
             from . import own_blog
@@ -189,6 +196,16 @@ def candidates(db, owner, lang):
     for row in db.scalars(select(OwnBlogPublication).where(OwnBlogPublication.owner_id == owner,
                          OwnBlogPublication.state.in_({'proposal', 'review_ready'})).order_by(OwnBlogPublication.created_at).limit(20)):
         yield ('blog_pr' if row.state == 'proposal' else 'blog_publish'), row.id
+    try:
+        from .models import OwnSupportChannel, OwnSupportTicket
+    except ImportError:
+        from models import OwnSupportChannel, OwnSupportTicket
+    for row in db.scalars(select(OwnSupportTicket).where(OwnSupportTicket.owner_id==owner,
+        OwnSupportTicket.binding.in_(select(OwnSupportChannel.binding).where(OwnSupportChannel.owner_id==owner,OwnSupportChannel.active.is_(True))),
+        OwnSupportTicket.created_at>s.clock()-timedelta(days=30),
+        OwnSupportTicket.state.in_({'received','draft','review_required','send_uncertain'})).order_by(OwnSupportTicket.created_at).limit(20)):
+        if row.state=='send_uncertain' and row.receipt.get('review_ack'):continue
+        yield {'received':'support_write','draft':'support_send','review_required':'support_review','send_uncertain':'support_review'}[row.state], row.id
     for key in seo_watch.REGISTRY:
         yield "knowledge", key
     for row in db.scalars(
@@ -212,6 +229,12 @@ def candidates(db, owner, lang):
 
 def apply(db, owner, kind, target, approve, key, version):
     actor = s.actor(db, owner)
+    if kind in {'support_write','support_send','support_review'}:
+        try:
+            from . import own_support
+        except ImportError:
+            import own_support
+        return own_support.decide(db, owner, target, kind, approve, version)
     if kind in {'blog_pr', 'blog_publish'}:
         try:
             from . import own_blog

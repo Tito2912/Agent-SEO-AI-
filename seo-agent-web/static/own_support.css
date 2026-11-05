@@ -1,0 +1,7 @@
+.own-support input:not([type=checkbox]),.own-support textarea {display:block;width:100%;min-height:44px;margin:8px 0 18px;}
+.own-support textarea {padding:12px;line-height:1.6;resize:vertical;}
+.own-support label:not(.own-check) {display:block;line-height:1.5;margin-top:14px;}
+.own-support fieldset {min-width:0;margin-top:16px;}
+.own-support .support-code {font-family:monospace;overflow-wrap:anywhere;}
+.own-support .support-text {white-space:pre-wrap;overflow-wrap:anywhere;}
+.own-support form>button {margin-block:12px;}

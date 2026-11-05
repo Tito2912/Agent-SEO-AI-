@@ -10777,6 +10777,11 @@ def _startup() -> None:
     except ImportError:
         import own_blog
     own_blog.start()
+    try:
+        from . import own_support
+    except ImportError:
+        import own_support
+    own_support.start()
 
 
 def _shutdown() -> None:
@@ -10791,6 +10796,11 @@ def _shutdown() -> None:
     except ImportError:
         import own_blog
     own_blog.stop()
+    try:
+        from . import own_support
+    except ImportError:
+        import own_support
+    own_support.stop()
 
 
 @asynccontextmanager
@@ -40269,6 +40279,12 @@ try:
 except ImportError:
     from own_blog_routes import router as own_blog_router
 app.include_router(own_blog_router)
+
+try:
+    from .own_support_routes import router as own_support_router
+except ImportError:
+    from own_support_routes import router as own_support_router
+app.include_router(own_support_router)
 
 try:
     from .analyses_orphelines import router as analyses_orphelines_router

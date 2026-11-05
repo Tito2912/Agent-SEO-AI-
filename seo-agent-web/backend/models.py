@@ -930,6 +930,66 @@ class OwnBlogPublication(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class OwnSupportChannel(Base):
+    """An explicit owner-only Gmail support binding, independent of client Google grants."""
+    __tablename__ = 'own_support_channels'
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    binding: Mapped[str] = mapped_column(String(32), nullable=False)
+    mailbox: Mapped[str] = mapped_column(String(320), nullable=False)
+    label_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    label_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    gmail_credentials: Mapped[str] = mapped_column(Text, nullable=False)
+    sender_credentials: Mapped[str | None] = mapped_column(Text, nullable=True)
+    oauth_nonce_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    oauth_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cursor: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    pending: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    read_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    read_window: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_poll_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    lease_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class OwnSupportTicket(Base):
+    """Reduced encrypted request, versioned reply and a one-attempt outbox."""
+    __tablename__ = 'own_support_tickets'
+    __table_args__ = (UniqueConstraint('binding', 'google_id', name='uq_own_support_message'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), index=True, nullable=False)
+    channel_id: Mapped[str] = mapped_column(String(16), ForeignKey('own_support_channels.id', ondelete='CASCADE'), nullable=False)
+    binding: Mapped[str] = mapped_column(String(32), nullable=False)
+    google_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    thread_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    lang: Mapped[str] = mapped_column(String(2), nullable=False, default='fr')
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    state: Mapped[str] = mapped_column(String(24), nullable=False, default='received')
+    reason: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    dossier: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    draft_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    outbox_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    draft_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    provider_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    provider_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    authorized_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sender_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    send_intent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    receipt: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    lease_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class DpaAcceptance(Base):
     """La preuve d'une acceptation de l'accord de traitement des donnees (DPA, article 1).
 

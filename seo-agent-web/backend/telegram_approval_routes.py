@@ -133,6 +133,7 @@ def page(request: Request, err: str = ""):
             base=a.PATH,
             channel=channel,
             items=items,
+            pages_for=a.pages_for,
             configured=a.telegram.configure(),
             en=lang == "en",
             err=error_text(err or problem, lang),

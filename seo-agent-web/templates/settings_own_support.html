@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% block title %}{{ copy.title }} · {{ app_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/own_seo.css?v=1" /><link rel="stylesheet" href="/static/own_support.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/settings/system">{{ copy.back }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
+{% macro consent(text) %}<label class="own-check"><input type="checkbox" name="confirm" value="true" required /><span>{{ text }}</span></label>{% endmacro %}
+{% block content %}<div class="own-seo own-support">
+<header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
+<nav class="own-actions"><a class="btn" href="/settings/system">{{ copy.back }}</a><a class="btn" href="/settings/system/telegram/approvals">{{ copy.bot }}</a><a class="btn" href="{{ base }}">{{ copy.reload }}</a></nav>
+{% if unavailable %}<p class="alert error" role="alert">{{ copy.errors.unavailable }}</p>{% else %}
+{% if error %}<p class="alert error" role="alert">{{ error }}</p>{% endif %}
+<section class="card"><p>{{ copy.limits }}</p><details><summary>{{ copy.privacy_title }}</summary><p>{{ copy.privacy }}</p><p>{{ copy.identity }}</p></details></section>
+{% if cfg %}<section class="card"><h2>{{ copy.connection }}</h2><p role="status">{{ copy.active if cfg.active else copy.paused }} · {{ cfg.mailbox }}</p><p>{{ copy.label }} : {{ cfg.label_name }}</p>
+{% if cfg.active %}<div class="own-actions"><form method="post" action="{{ base }}/channel/poll">{{ csrf() }}<button class="btn" type="submit">{{ copy.poll }}</button></form><form method="post" action="{{ base }}/channel/pause">{{ csrf() }}<button class="btn" type="submit">{{ copy.pause }}</button></form></div>
+{% else %}{% if connected %}<p>{{ copy.connected }}</p><form method="post" action="{{ base }}/channel/activate">{{ csrf() }}{{ consent(copy.activate_ack) }}<button class="btn primary" type="submit">{{ copy.activate }}</button></form>{% endif %}
+<details {{ 'open' if not connected else '' }}><summary>{{ copy.connect }}</summary><p>{{ copy.scope }}</p><form method="post" action="{{ base }}/oauth/start">{{ csrf() }}{{ consent(copy.connect_ack) }}<button class="btn" type="submit">{{ copy.connect }}</button></form></details>{% endif %}</section>{% endif %}
+{% if not cfg or not cfg.active %}<section class="card"><details {{ 'open' if not cfg else '' }}><summary>{{ copy.setup }}</summary><p>{{ copy.scope }}</p><p>{{ copy.instructions }}</p><p class="support-code">{{ callback }}</p><p>{{ copy.label_help }}</p>
+<form method="post" action="{{ base }}/configure">{{ csrf() }}
+<label for="support-mailbox">{{ copy.mailbox }}</label><input id="support-mailbox" name="mailbox" type="email" autocomplete="email" maxlength="254" value="{{ cfg.mailbox if cfg else '' }}" required />
+<label for="support-label">{{ copy.label }}</label><input id="support-label" name="label" type="text" maxlength="80" value="{{ cfg.label_name if cfg else 'Noyaru-SAV' }}" required />
+<label for="support-client">{{ copy.client_id }}</label><input id="support-client" name="client_id" type="text" maxlength="250" autocomplete="off" required />
+<label for="support-secret">{{ copy.secret }}</label><input id="support-secret" name="client_secret" type="password" maxlength="300" autocomplete="new-password" required />
+{{ consent(copy.setup_ack) }}<button class="btn primary" type="submit">{{ copy.save }}</button></form></details></section>{% endif %}
+{% if cfg %}<section class="card" id="support-sender"><h2>{{ copy.sender }}</h2><p>{{ copy.sender_ready if sender else copy.sender_missing }}{% if sender %} · {{ sender.provider }} · {{ sender.from }}{% endif %}</p><p>{{ copy.sender_help }}</p><details><summary>{{ copy.sender_save }}</summary><form method="post" action="{{ base }}/sender">{{ csrf() }}
+<label for="support-provider">{{ copy.provider }}</label><select id="support-provider" name="provider"><option value="brevo">Brevo</option><option value="resend">Resend</option><option value="sendgrid">SendGrid</option></select>
+<label for="support-key">{{ copy.api_key }}</label><input id="support-key" name="key" type="password" maxlength="1000" autocomplete="new-password" required />
+{{ consent(copy.sender_ack) }}<button class="btn" type="submit">{{ copy.sender_save }}</button></form></details></section>{% endif %}
+<h2>{{ copy.history }}</h2>{% if not items %}<section class="card"><p>{{ copy.empty }}</p></section>{% endif %}
+{% for item in items %}{% set row=item.row %}<article class="card" id="ticket-{{ row.id }}" data-support="{{ row.state }}"><h3>{{ item.payload.subject or copy.unknown_subject }}</h3><p role="status">{{ copy.states.get(row.state,copy.errors.changed) }} · {{ row.lang|upper }}</p><p>{{ row.received_at }} UTC{% if item.payload.from %} · {{ item.payload.from }}{% endif %}</p>
+{% if row.reason or row.error_code or item.problem %}<p class="alert warning">{{ copy.errors.get(item.problem or row.error_code or row.reason,copy.errors.unavailable) }}</p>{% endif %}
+{% if not item.binding_current %}<p class="alert warning">{{ copy.errors.changed }}</p>{% endif %}
+{% if item.payload.text %}<details><summary>{{ copy.question }}</summary><p class="support-text">{{ item.payload.text }}</p></details>{% endif %}
+{% if (row.state in ['received','review_required'] or (row.state=='draft' and item.current and sender)) and cfg and cfg.active and item.binding_current %}<p>{{ copy.pending }}</p><a class="btn primary" href="/settings/system/telegram/approvals">{{ copy.bot }}</a>{% endif %}
+{% if row.state=='received' and not row.provider_calls and item.binding_current and cfg and cfg.active %}<form method="post" action="{{ base }}/tickets/{{ row.id }}/language">{{ csrf() }}<label for="support-language-{{ row.id }}">{{ copy.language }}</label><select id="support-language-{{ row.id }}" name="lang"><option value="fr" {{ 'selected' if row.lang=='fr' else '' }}>Français</option><option value="en" {{ 'selected' if row.lang=='en' else '' }}>English</option></select><button class="btn" type="submit">{{ copy.set_language }}</button></form>{% endif %}
+{% if row.state=="draft" and not sender %}<p>{{ copy.errors.sender_required }}</p><a class="btn" href="#support-sender">{{ copy.sender_save }}</a>{% endif %}
+{% if item.manifest %}<details><summary>{{ copy.draft }}</summary><p>{{ item.manifest.from }} → {{ item.manifest.to }}</p><p>{{ item.manifest.subject }}</p><pre>{{ item.manifest.text }}</pre></details>{% endif %}
+{% if row.state=='accepted' %}<p>{{ copy.accepted }}</p>{% endif %}{% if row.state=='send_uncertain' %}<p class="alert warning">{{ copy.uncertain }}</p>{% endif %}{% if row.state=='human' %}<p>{{ copy.human }}</p>{% endif %}
+{% if item.packet and item.binding_current and cfg and cfg.active and not row.send_intent_at %}<details><summary>{{ copy.edit }}</summary><form method="post" action="{{ base }}/tickets/{{ row.id }}/draft">{{ csrf() }}<label for="support-body-{{ row.id }}">{{ copy.body }}</label><textarea id="support-body-{{ row.id }}" name="body" minlength="80" maxlength="2200" rows="9" required>{{ item.draft.body or '' }}</textarea>
+<fieldset><legend>{{ copy.sources }}</legend>{% for source in item.packet.sources %}<label class="own-check"><input type="checkbox" name="sources" value="{{ source.id }}" {{ 'checked' if source.id in item.draft.sources|default([]) else '' }} /><span><a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.title }}</a></span></label><details><summary>{{ source.title }}</summary><p class="support-text">{{ source.text }}</p></details>{% endfor %}</fieldset>{{ consent(copy.edit_ack) }}<button class="btn" type="submit">{{ copy.edit_save }}</button></form></details>{% endif %}
+<div class="own-actions"><a class="btn" href="{{ base }}/tickets/{{ row.id }}/download">{{ copy.download }}</a>
+{% if row.state in ['review_required','human','send_uncertain'] %}<a class="btn" href="https://mail.google.com/" target="_blank" rel="noopener noreferrer">{{ copy.gmail }}</a>{% endif %}
+{% if row.state in ['writing_queued','writing','send_queued','sending'] %}<form method="post" action="{{ base }}/tickets/{{ row.id }}/resume">{{ csrf() }}<button class="btn" type="submit">{{ copy.check }}</button></form>{% endif %}
+{% if row.state not in ['accepted','send_uncertain','ignored'] %}<form method="post" action="{{ base }}/tickets/{{ row.id }}/cancel">{{ csrf() }}<button class="btn" type="submit">{{ copy.cancel }}</button></form>{% endif %}</div>
+</article>{% endfor %}{% endif %}</div>{% endblock %}
