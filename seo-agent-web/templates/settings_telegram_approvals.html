@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block title %}{{ 'Telegram approvals' if en else 'Validations Telegram' }} · Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/telegram-approvals.css?v=1">{% endblock %}
+{% block crumbs %}<a href="/settings/system">{{ 'System' if en else 'Système' }}</a><span class="crumb-sep">/</span><span>{{ 'Telegram approvals' if en else 'Validations Telegram' }}</span>{% endblock %}
+{% macro form(operation,label,primary=false) %}
+<form method="post" action="{{ base }}/{{ operation }}"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><button class="btn {{ 'primary' if primary else '' }}" type="submit">{{ label }}</button></form>
+{% endmacro %}
+{% block content %}
+<div class="telegram-approvals">
+<header class="page-header"><h1>{{ 'Telegram approvals' if en else 'Validations Telegram' }}</h1><p class="muted">{{ 'Review and decide from your private bot conversation.' if en else 'Relis et décide depuis ta conversation privée avec le bot.' }}</p></header>
+{% if unavailable %}<section class="card" role="alert"><h2>{{ 'Temporarily unavailable' if en else 'Momentanément indisponible' }}</h2><p>{{ 'No decision was recorded. Try again later.' if en else 'Aucune décision enregistrée. Réessaie plus tard.' }}</p></section>
+{% else %}
+{% if err %}<p class="card" role="alert">{{ err }}</p>{% endif %}
+<section class="card"><h2>{{ 'Your private conversation' if en else 'Ta conversation privée' }}</h2>
+<p>{{ ('Active' if en else 'Actif') if channel and channel.enabled else ('Paused' if en else 'En pause') }}</p>
+<p>{{ 'Only the system owner can approve. Telegram groups and other accounts cannot decide.' if en else 'Seul le propriétaire système peut valider. Les groupes Telegram et les autres comptes ne peuvent pas décider.' }}</p>
+{% if not configured %}<p>{{ 'First configure your bot and chat in System.' if en else 'Configure d’abord ton bot et ta conversation dans Système.' }} <a href="/settings/system#telegram-system">{{ 'Open settings' if en else 'Ouvrir les réglages' }}</a></p>{% endif %}
+{% if channel and channel.enabled %}
+<div class="telegram-actions">{{ form('test','Send a test request' if en else 'Envoyer une demande de test',true) }}{{ form('sync','Refresh requests' if en else 'Actualiser les demandes') }}{{ form('pause','Pause approvals' if en else 'Mettre les validations en pause') }}</div>
+{% else %}
+<form method="post" action="{{ base }}/activate"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}">
+<label class="telegram-confirm"><input type="checkbox" name="confirm" value="true" required> <span>{{ 'Link the configured private Telegram conversation to my owner account. Send pending internal requests and accept my decisions there.' if en else 'Relier la conversation Telegram privée configurée à mon compte propriétaire. Y envoyer les demandes internes en attente et accepter mes décisions.' }}</span></label>
+<button class="btn primary" type="submit" {% if not configured %}disabled{% endif %}>{{ 'Enable Telegram approvals' if en else 'Activer les validations Telegram' }}</button></form>
+{% endif %}
+</section>
+<section class="card"><h2>{{ 'What you can decide' if en else 'Ce que tu peux décider' }}</h2>
+<ul><li>{{ 'SEO/GEO source summaries: approve the exact FR/EN version or reject the request.' if en else 'Résumés des sources SEO/GEO : approuver la version FR/EN exacte ou refuser la demande.' }}</li>
+<li>{{ 'Noyaru briefs: validate or discard the editorial brief.' if en else 'Briefs Noyaru : valider ou abandonner le brief éditorial.' }}</li>
+<li>{{ 'Writing: authorize one paid AI request, within the two requests per rolling 24h cap.' if en else 'Rédaction : autoriser un appel IA payant, dans la limite de deux appels par 24 h glissantes.' }}</li>
+<li>{{ 'Private drafts: confirm source support or cancel. This approval does not publish.' if en else 'Brouillons privés : confirmer les sources ou annuler. Cette validation ne publie pas.' }}</li></ul>
+<p class="muted">{{ 'Read every page before approving, then confirm. Buttons expire after 24 hours. Changed requests must be reviewed again. Future publication and support workflows will be connected when delivered.' if en else 'Lis toutes les pages avant d’approuver, puis confirme. Les boutons expirent après 24 heures. Une demande modifiée doit être relue. Les prochains parcours de publication et de SAV seront raccordés lors de leur livraison.' }}</p>
+<p><a href="/settings/system/own-seo">{{ 'Noyaru search visibility' if en else 'Référencement de Noyaru' }}</a> · <a href="/settings/system/own-seo/writing">{{ 'Private drafts' if en else 'Brouillons privés' }}</a> · <a href="/settings/system/seo-knowledge">{{ 'SEO/GEO knowledge' if en else 'Veille SEO/GEO' }}</a></p>
+</section>
+<section class="card"><h2>{{ 'Requests and decisions' if en else 'Demandes et décisions' }}</h2>
+{% if not items %}<p>{{ 'No requests yet. After activation, send a test request. No AI call or site change is made by the test.' if en else 'Aucune demande pour le moment. Après activation, envoie une demande de test. Le test ne fait aucun appel IA et ne modifie aucun site.' }}</p>{% endif %}
+{% for row in items %}<article class="telegram-request"><h3>{{ {'test':('Test' if en else 'Test'),'knowledge':('Source review' if en else 'Relecture de source'),'brief':('Brief review' if en else 'Relecture de brief'),'writing':('Authorize writing' if en else 'Autoriser la rédaction'),'draft':('Draft review' if en else 'Relecture de brouillon')}.get(row.kind,row.kind) }} · {{ row.id[:8] }}</h3>
+<p>{{ {'pending':('Pending' if en else 'En attente'),'approved':('Approved' if en else 'Approuvée'),'rejected':('Rejected' if en else 'Refusée'),'stale':('Changed / obsolete' if en else 'Modifiée / obsolète'),'expired':('Expired' if en else 'Expirée')}.get(row.state,row.state) }} · {{ {'queued':('Queued for sending' if en else 'En attente d’envoi'),'sent':('Sent to Telegram' if en else 'Envoyée sur Telegram'),'sending':('Sending' if en else 'Envoi en cours'),'uncertain':('Delivery unknown' if en else 'Livraison inconnue')}.get(row.delivery,row.delivery) }}</p>
+<p class="muted">UTC · {{ row.created_at.strftime('%d/%m/%Y %H:%M') }} · {{ 'Expires' if en else 'Expire le' }} {{ row.expires_at.strftime('%d/%m/%Y %H:%M') }}</p>
+<details><summary>{{ 'Read the request' if en else 'Lire la demande' }}</summary>{% for page in row.pages %}<pre>{{ page }}</pre>{% endfor %}</details>
+{% if channel and channel.enabled and row.binding==channel.binding and row.state in ['pending','expired'] and row.delivery in ['sent','uncertain'] %}
+<form method="post" action="{{ base }}/resend"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><input type="hidden" name="ident" value="{{ row.id }}"><p class="muted">{{ 'Check the bot before resending. Previous buttons will be disabled.' if en else 'Vérifie le bot avant de renvoyer. Les anciens boutons seront désactivés.' }}</p><button class="btn" type="submit">{{ 'Resend this request' if en else 'Renvoyer cette demande' }}</button></form>
+{% endif %}</article>{% endfor %}
+</section>{% endif %}
+</div>
+{% endblock %}

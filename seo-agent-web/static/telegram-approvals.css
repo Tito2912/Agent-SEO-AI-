@@ -1,0 +1,13 @@
+.telegram-approvals { max-width: 1080px; margin-inline: auto; }
+.telegram-approvals .card { margin-block: 20px; padding: clamp(18px, 3vw, 30px); }
+.telegram-approvals h1, .telegram-approvals h2, .telegram-approvals h3 { overflow-wrap: break-word; }
+.telegram-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.telegram-confirm { display: flex; align-items: flex-start; gap: 12px; margin-block: 20px; }
+.telegram-confirm input { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 3px; }
+.telegram-request { border-top: 1px solid var(--border, #38443c); margin-top: 24px; padding-top: 20px; }
+.telegram-approvals pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.telegram-approvals .btn, .telegram-approvals summary { min-height: 44px; }
+.telegram-approvals summary { display: list-item; padding-block: 10px; cursor: pointer; }
+.telegram-approvals a { overflow-wrap: anywhere; }
+.telegram-approvals :focus-visible { outline: 3px solid var(--accent, #8eb99b); outline-offset: 4px; }
+@media (max-width: 540px) { .telegram-actions form, .telegram-actions button { width: 100%; } }

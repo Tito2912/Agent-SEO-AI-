@@ -242,18 +242,22 @@ def brief_for(db,owner_id,brief_id):
     return workspace,project,brief
 
 
+def review_in_session(db,owner_id,brief_id,token,*,confirm,status):
+    workspace,project,brief=brief_for(db,owner_id,brief_id)
+    if workspace.token!=token:raise ValueError('changed')
+    if status not in {'reviewed','discarded'}:raise ValueError('changed')
+    if status=='reviewed':
+        if not confirm:raise ValueError('confirm_required')
+        if workspace.paused:raise ValueError('paused')
+        state=view(db,owner_id,lang=brief.lang)
+        if brief.candidate_key not in {row['key'] for row in state['candidates']}:raise ValueError('evidence_changed')
+    brief.status=status;brief.reviewed_at=clock() if status=='reviewed' else None
+    audit(db,owner_id,'review',project=project,brief=brief,token=token)
+
+
 def review(owner_id,brief_id,token,*,confirm,status):
     with module().DB.session() as db:
-        locked(db);workspace,project,brief=brief_for(db,owner_id,brief_id)
-        if workspace.token!=token:raise ValueError('changed')
-        if status not in {'reviewed','discarded'}:raise ValueError('changed')
-        if status=='reviewed':
-            if not confirm:raise ValueError('confirm_required')
-            if workspace.paused:raise ValueError('paused')
-            state=view(db,owner_id,lang=brief.lang)
-            if brief.candidate_key not in {row['key'] for row in state['candidates']}:raise ValueError('evidence_changed')
-        brief.status=status;brief.reviewed_at=clock() if status=='reviewed' else None
-        audit(db,owner_id,'review',project=project,brief=brief,token=token);db.commit()
+        locked(db);review_in_session(db,owner_id,brief_id,token,confirm=confirm,status=status);db.commit()
 
 
 def history(db,owner_id,state):

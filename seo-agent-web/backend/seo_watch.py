@@ -288,7 +288,7 @@ def review(db, key, fingerprint, *, fr, en, actor, now=None):
            for v in (fr, en)):
         raise ValueError('invalid_review')
     # Atomic comparison: an operator must not approve an obsolete page after a refresh.
-    changed = db.execute(update(SeoKnowledgeSource).where(
+    changed = db.execute(update(SeoKnowledgeSource).execution_options(synchronize_session='fetch').where(
         SeoKnowledgeSource.key == key, SeoKnowledgeSource.latest_hash == fingerprint,
         SeoKnowledgeSource.error_code.is_(None), SeoKnowledgeSource.checked_at >= now-timedelta(days=FRESH_DAYS),
         SeoKnowledgeSource.checked_at <= now,
