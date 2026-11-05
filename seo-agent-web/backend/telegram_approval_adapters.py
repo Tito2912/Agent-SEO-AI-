@@ -38,6 +38,12 @@ def document(kind, target, version, title, body, effect, path, ready=True):
 
 def inspect(db, owner, kind, target, lang):
     s.actor(db, owner)
+    if kind in {'blog_pr', 'blog_publish'}:
+        try:
+            from . import own_blog
+        except ImportError:
+            import own_blog
+        return own_blog.approval_document(db, owner, target, kind, lang)
     en = lang == "en"
     if kind == "knowledge":
         row = db.get(SeoKnowledgeSource, target)
@@ -176,6 +182,13 @@ def inspect(db, owner, kind, target, lang):
 
 def candidates(db, owner, lang):
     # Limits bound a sweep, not authority. Older rows are still checked on every click.
+    try:
+        from .models import OwnBlogPublication
+    except ImportError:
+        from models import OwnBlogPublication
+    for row in db.scalars(select(OwnBlogPublication).where(OwnBlogPublication.owner_id == owner,
+                         OwnBlogPublication.state.in_({'proposal', 'review_ready'})).order_by(OwnBlogPublication.created_at).limit(20)):
+        yield ('blog_pr' if row.state == 'proposal' else 'blog_publish'), row.id
     for key in seo_watch.REGISTRY:
         yield "knowledge", key
     for row in db.scalars(
@@ -199,6 +212,12 @@ def candidates(db, owner, lang):
 
 def apply(db, owner, kind, target, approve, key, version):
     actor = s.actor(db, owner)
+    if kind in {'blog_pr', 'blog_publish'}:
+        try:
+            from . import own_blog
+        except ImportError:
+            import own_blog
+        return own_blog.decision_in_session(db, owner, target, kind, approve, version)
     if kind == "test":
         return None
     if kind == "knowledge":

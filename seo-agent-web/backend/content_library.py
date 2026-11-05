@@ -24,6 +24,7 @@ happens on the rendered HTML, not the source, so a token can never inject markup
 from __future__ import annotations
 
 import functools
+import hashlib
 import html
 import os
 import re
@@ -266,6 +267,7 @@ def _load_page(path: Path, *, collection: str, lang: str = "fr") -> dict[str, An
         "headings": headings,
         "body_html": body_html,
         "source": path.name,
+        "source_sha256": hashlib.sha256(raw.encode('utf-8')).hexdigest(),
     }
 
 
