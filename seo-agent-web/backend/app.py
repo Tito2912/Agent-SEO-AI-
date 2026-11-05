@@ -796,6 +796,23 @@ def _delete_runs_path_from_object_store(path: Path, *, recursive: bool = False) 
         logger.error("[S3] delete error for %s: %s: %s", path, type(e).__name__, e)
 
 
+def _effacer_les_analyses(parent: Path, nom: str) -> bool:
+    """Efface le dossier d'analyses `parent/nom`, dans S3 PUIS sur le disque.
+
+    S3 sans regarder le disque : le worker n'a pas de disque, une analyse que le web n'a jamais
+    rapatriee n'existe que dans S3 — un `exists()` local la laissait derriere. Et `nom` doit
+    designer un enfant DIRECT de `parent` (ni vide, ni « .. », ni « a/b ») : un prefixe S3 trop
+    court effacerait les analyses d'autres comptes, voire tout « seo-runs/ »."""
+    parent = parent.resolve()
+    cible = (parent / nom).resolve()
+    if not nom or cible.parent != parent:
+        logger.error("[RUNS] effacement refuse, %r ne designe pas un dossier sous %s", nom, parent)
+        return False
+    _delete_runs_path_from_object_store(cible, recursive=True)
+    shutil.rmtree(str(cible), ignore_errors=True)
+    return True
+
+
 dash.register_runs_localizer(_ensure_runs_artifact_local)
 
 _JOB_LOCKS_GUARD = threading.Lock()
@@ -16021,10 +16038,7 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
 
     try:
         if uid:
-            user_runs_dir = (DEFAULT_RUNS_DIR / uid).resolve()
-            if user_runs_dir.exists() and user_runs_dir.is_dir():
-                _delete_runs_path_from_object_store(user_runs_dir, recursive=True)
-                shutil.rmtree(str(user_runs_dir), ignore_errors=True)
+            _effacer_les_analyses(DEFAULT_RUNS_DIR, uid)
             for slug in project_slugs:
                 legacy_runs_dir = (DEFAULT_RUNS_DIR / _safe_storage_segment(slug, "project")).resolve()
                 if legacy_runs_dir.exists() and legacy_runs_dir.is_dir():
@@ -17425,6 +17439,15 @@ def delete_projects(request: Request, slugs: list[str] = Form(default=[])) -> Re
                 db.delete(cms_connection)
             db.delete(p)
         db.commit()
+    # « La suppression est définitive : elle emporte l'historique des crawls, les rapports… » (doc
+    # « Ajouter un projet », DPA art. 12). Jusqu'au 05/11/2026 seules les lignes partaient : les
+    # fichiers d'analyse restaient sur le disque et dans S3, et ressortaient dans l'export du compte.
+    try:
+        dossier_du_compte = _runs_dir_for_user(str(user.id))
+        for slug in deleted_slugs:
+            _effacer_les_analyses(dossier_du_compte, slug)
+    except Exception as e:
+        logger.error("[RUNS] analyses des projets supprimes : %s: %s", type(e).__name__, e)
     _audit_log(
         request,
         action="project.delete",

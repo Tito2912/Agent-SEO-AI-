@@ -166,13 +166,15 @@ def test_site_mutations_still_require_csrf(sites, path):
     assert response.status_code == 403 and len(owned(sites['db'],owner))==1
 
 
-def test_delete_keeps_shared_projects_and_does_not_move_report_files(sites):
+def test_delete_keeps_shared_projects_and_erases_only_the_owned_reports(sites):
     owner,host=user(sites['db']),user(sites['db'])
     own=project(sites['db'],owner,slug='personal'); shared=project(sites['db'],host,slug='shared')
     with sites['db'].session() as db:
         db.add(AccountMember(owner_user_id=host.id,member_user_id=owner.id));db.commit()
     report=m._runs_dir_for_user(owner.id)/own.slug/'audit'/'report.json';report.parent.mkdir(parents=True);report.write_text('{}')
+    hosted=m._runs_dir_for_user(host.id)/shared.slug/'audit'/'report.json';hosted.parent.mkdir(parents=True);hosted.write_text('{}')
     c=client(owner);c.get('/')
     response=c.post('/projects/delete',data={'_csrf':c.cookies.get(m._CSRF_COOKIE_NAME),'slugs':[own.slug,shared.slug]},follow_redirects=False)
     assert response.status_code==303 and not owned(sites['db'],owner)
-    assert len(owned(sites['db'],host))==1 and report.exists()
+    # The docs promise that deleting a project takes its reports with it; a shared one is untouched.
+    assert len(owned(sites['db'],host))==1 and not report.exists() and hosted.exists()
