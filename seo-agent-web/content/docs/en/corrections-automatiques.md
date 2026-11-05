@@ -5,7 +5,7 @@ description: "The three fix scopes, what {{app_name}} actually writes to your re
 kind: "Documentation"
 section: "Fixing"
 order: 22
-updated_at: "2026-11-03"
+updated_at: "2026-11-04"
 audience: "Solo, Pro and Business"
 keywords: ["automatic fix", "pull request", "technical SEO", "AI"]
 app_href: "/"
@@ -74,9 +74,9 @@ and the Jinja templates of a Flask site, as well as hosting configuration files 
 
 Then it makes the distinction that matters: **does the issue come from the page or from the template?**
 
-On WordPress with Yoast SEO, Ghost and PrestaShop, titles and meta descriptions can be fixed
+On WordPress with Yoast SEO, Ghost, PrestaShop, Wix and Webflow, titles and meta descriptions can be fixed
 without a repository, from {{app_name}}: see [Compatible CMSs and platforms](/docs/cms-compatibles).
-For other fixes and other CMSs (Shopify, Wix, Webflow, Squarespace, Systeme.io), follow the
+For other fixes and other CMSs (Shopify, Squarespace, Systeme.io), follow the
 guided instructions for each issue, use the exportable reports and, starting with the Solo
 plan, the [fix pack to apply manually](/docs/fix-pack-sans-depot).
 

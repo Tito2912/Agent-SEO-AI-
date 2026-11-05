@@ -5,7 +5,7 @@ description: "Le parcours complet du premier compte au premier correctif : crée
 kind: "Prise en main"
 section: "Prise en main"
 order: 10
-updated_at: "2026-11-03"
+updated_at: "2026-11-04"
 audience: "Nouveau compte"
 keywords: ["prise en main", "démarrer", "premier crawl", "onboarding"]
 app_href: "/"
@@ -88,9 +88,9 @@ Vous gardez la main : rien n'est fusionné sans vous.
 [Corrections automatiques](/docs/corrections-automatiques)
 
 !!! note "Pas de dépôt Git ?"
-    Sur WordPress avec Yoast SEO, Ghost et PrestaShop, {{app_name}} corrige les titres et
+    Sur WordPress avec Yoast SEO, Ghost, PrestaShop, Wix et Webflow, {{app_name}} corrige les titres et
     méta-descriptions directement : [CMS et plateformes compatibles](/docs/cms-compatibles).
-    Pour le reste, et sous Shopify, Wix ou avec un dépôt inaccessible, le
+    Pour le reste, et sous Shopify ou avec un dépôt inaccessible, le
     [fix-pack](/docs/fix-pack-sans-depot) exporte les correctifs prêts à coller, avec le
     mode d'emploi. Vous perdez l'automatisation, pas les corrections.
 

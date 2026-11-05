@@ -5,7 +5,7 @@ description: "Les trois portées de correction, ce que {{app_name}} écrit réel
 kind: "Documentation"
 section: "Corriger"
 order: 22
-updated_at: "2026-11-03"
+updated_at: "2026-11-04"
 audience: "Solo, Pro et Business"
 keywords: ["correction automatique", "pull request", "SEO technique", "IA"]
 app_href: "/"
@@ -74,9 +74,9 @@ et les gabarits Jinja d'un site Flask, ainsi que les fichiers de configuration d
 
 Puis il fait la distinction qui compte : **l'anomalie vient-elle de la page ou du gabarit ?**
 
-Sur WordPress avec Yoast SEO, Ghost et PrestaShop, les titres et méta-descriptions se
+Sur WordPress avec Yoast SEO, Ghost, PrestaShop, Wix et Webflow, les titres et méta-descriptions se
 corrigent sans dépôt, depuis {{app_name}} : voir [CMS et plateformes compatibles](/docs/cms-compatibles).
-Pour les autres corrections et les autres CMS (Shopify, Wix, Webflow, Squarespace, Systeme.io),
+Pour les autres corrections et les autres CMS (Shopify, Squarespace, Systeme.io),
 suivez les instructions guidées de chaque anomalie, utilisez les rapports exportables et, dès le
 plan Solo, le [fix-pack à appliquer manuellement](/docs/fix-pack-sans-depot).
 

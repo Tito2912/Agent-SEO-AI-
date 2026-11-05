@@ -45,7 +45,7 @@
       <tbody>
         <tr><th scope="row">Account</th><td>Email address; password, stored only as a hash (PBKDF2); Google identifier if you sign in with Google; country of residence you declare, editable in your preferences; preferences such as the time zone and the display language. The country is not inferred from your IP address, your language or your email address.</td></tr>
         <tr><th scope="row">Projects</th><td>Addresses of the analyzed sites, settings, analysis results — that is, the public content of the pages read on those sites.</td></tr>
-        <tr><th scope="row">Connections</th><td>Access tokens and keys you entrust to us (GitHub, Google Search Console, Bing Webmaster key, Netlify, access to your CMS: WordPress application password, Ghost Admin API key, PrestaShop Webservice key), encrypted at rest.</td></tr>
+        <tr><th scope="row">Connections</th><td>Access tokens and keys you entrust to us (GitHub, Google Search Console, Bing Webmaster key, Netlify, access to your CMS: WordPress application password, Ghost Admin API key, PrestaShop Webservice key, Wix API key, Webflow site token), encrypted at rest.</td></tr>
         <tr><th scope="row">Generated content</th><td>Suggested fixes, written pages, messages sent to the assistant and its replies.</td></tr>
         <tr><th scope="row">Team</th><td>Email addresses of the collaborators you invite.</td></tr>
         <tr><th scope="row">Billing</th><td>Plan, Stripe customer and subscription identifiers, invoices. Payment takes place on a Stripe page: no card data passes through our servers.</td></tr>
@@ -83,6 +83,8 @@
         <tr><th scope="row">Microsoft Bing</th><td>Bing Webmaster data, with your key</td><td>Performance data of your site</td><td>United States</td></tr>
         <tr><th scope="row">SerpAPI</th><td>Google searches to find your competitors and link opportunities</td><td>Search queries derived from your site</td><td>United States</td></tr>
         <tr><th scope="row">Netlify</th><td>If you connect your account: reading your sites and their deployments</td><td>List of Netlify sites and deployments</td><td>United States</td></tr>
+        <tr><th scope="row">Wix</th><td>If you connect your Wix site: reading and editing the SEO title and meta description of your pages, after your approval</td><td>SEO titles and meta descriptions of the pages concerned</td><td>Israel, United States, Ireland, Japan</td></tr>
+        <tr><th scope="row">Webflow</th><td>If you connect your Webflow site: reading and editing the SEO title and meta description of your pages, after your approval; going live remains your own publication</td><td>SEO titles and meta descriptions of the pages concerned</td><td>United States</td></tr>
         {% if ahrefs_actif %}<tr><th scope="row">Ahrefs</th><td>Backlink data</td><td>Domains of the analyzed sites</td><td>Singapore</td></tr>{% endif %}
         {% if gemini_actif %}<tr><th scope="row">Google (Gemini)</th><td>Artificial intelligence for the assistant</td><td>Questions asked to the assistant and the project data relating to them</td><td>United States</td></tr>{% endif %}
         {% if ga4_actif %}<tr><th scope="row">Google (Analytics)</th><td>Audience measurement of the public website, with your consent</td><td>Pages viewed, source of the visit, device and browser, random identifier of the measurement cookies</td><td>United States</td></tr>{% endif %}

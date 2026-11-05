@@ -56,7 +56,7 @@
       <tbody>
         <tr><th scope="row">Compte</th><td>Adresse e-mail ; mot de passe, stocké uniquement sous forme d'empreinte (PBKDF2) ; identifiant Google si vous vous connectez avec Google ; pays de résidence que vous déclarez, modifiable dans vos préférences ; préférences comme le fuseau horaire et la langue d'affichage. Le pays n’est pas déduit de votre adresse IP, de votre langue ou de votre adresse e-mail.</td></tr>
         <tr><th scope="row">Projets</th><td>Adresses des sites analysés, réglages, résultats des analyses — c'est-à-dire le contenu public des pages lues sur ces sites.</td></tr>
-        <tr><th scope="row">Connexions</th><td>Jetons et clés d'accès que vous nous confiez (GitHub, Google Search Console, clé Bing Webmaster, Netlify, accès à votre CMS : mot de passe d'application WordPress, clé Admin API Ghost, clé Webservice PrestaShop), chiffrés au repos.</td></tr>
+        <tr><th scope="row">Connexions</th><td>Jetons et clés d'accès que vous nous confiez (GitHub, Google Search Console, clé Bing Webmaster, Netlify, accès à votre CMS : mot de passe d'application WordPress, clé Admin API Ghost, clé Webservice PrestaShop, clé API Wix, jeton de site Webflow), chiffrés au repos.</td></tr>
         <tr><th scope="row">Contenus produits</th><td>Corrections proposées, pages rédigées, messages envoyés à l'assistant et ses réponses.</td></tr>
         <tr><th scope="row">Équipe</th><td>Adresses e-mail des collaborateurs que vous invitez.</td></tr>
         <tr><th scope="row">Facturation</th><td>Plan, identifiants client et abonnement Stripe, factures. Le paiement se fait sur une page Stripe : aucune donnée de carte ne passe par nos serveurs.</td></tr>
@@ -94,6 +94,8 @@
         <tr><th scope="row">Microsoft Bing</th><td>Données Bing Webmaster, avec votre clé</td><td>Données de performance de votre site</td><td>États-Unis</td></tr>
         <tr><th scope="row">SerpAPI</th><td>Recherches Google pour trouver vos concurrents et des opportunités de liens</td><td>Requêtes de recherche dérivées de votre site</td><td>États-Unis</td></tr>
         <tr><th scope="row">Netlify</th><td>Si vous connectez votre compte : lecture de vos sites et de leurs déploiements</td><td>Liste des sites et déploiements Netlify</td><td>États-Unis</td></tr>
+        <tr><th scope="row">Wix</th><td>Si vous connectez votre site Wix : lecture et modification du titre SEO et de la méta-description de vos pages, après votre validation</td><td>Titres SEO et méta-descriptions des pages concernées</td><td>Israël, États-Unis, Irlande, Japon</td></tr>
+        <tr><th scope="row">Webflow</th><td>Si vous connectez votre site Webflow : lecture et modification du titre SEO et de la méta-description de vos pages, après votre validation ; la mise en ligne reste votre publication</td><td>Titres SEO et méta-descriptions des pages concernées</td><td>États-Unis</td></tr>
         {% if ahrefs_actif %}<tr><th scope="row">Ahrefs</th><td>Données de backlinks</td><td>Domaines des sites analysés</td><td>Singapour</td></tr>{% endif %}
         {% if gemini_actif %}<tr><th scope="row">Google (Gemini)</th><td>Intelligence artificielle de l'assistant</td><td>Questions posées à l'assistant et données du projet qui s'y rapportent</td><td>États-Unis</td></tr>{% endif %}
         {% if ga4_actif %}<tr><th scope="row">Google (Analytics)</th><td>Mesure d'audience du site public, avec votre accord</td><td>Pages vues, source de la visite, appareil et navigateur, identifiant aléatoire des cookies de mesure</td><td>États-Unis</td></tr>{% endif %}

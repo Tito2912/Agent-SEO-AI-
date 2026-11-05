@@ -52,6 +52,8 @@ TIERS = {
     "accounts.google.com": "Google",
     "www.googleapis.com": "Google",
     "api.netlify.com": "Netlify",
+    "www.wixapis.com": "Wix",
+    "api.webflow.com": "Webflow",
     "api.brevo.com": "Brevo",
     "checkout.stripe.com": "Stripe",
     "billing.stripe.com": "Stripe",

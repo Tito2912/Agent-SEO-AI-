@@ -124,3 +124,6 @@ class Connecteur:
     raisons: dict = field(default_factory=dict)
     # Les champs du formulaire de connexion, dans l'ordre (gabarit cms_connexion_<nom>.html).
     champs: tuple = ()
+    # Un CMS qui garde l'écriture EN ATTENTE jusqu'à une publication du client (Webflow) : ce
+    # qu'il faut faire avant le contrôle. Vide : l'écriture est en ligne aussitôt.
+    publication: str = ""
