@@ -365,8 +365,8 @@ tests de sécurité. Seules les mesures effectivement appliquées seront inscrit
 | Anthropic | Modèles d'intelligence artificielle : corrections, rédaction, assistant | Contenu des pages analysées, extraits des fichiers du dépôt concernés, questions posées à l'assistant | Sous-traitant ultérieur |
 | OpenAI | Modèles d'intelligence artificielle, en secours d'Anthropic | Les mêmes données qu'Anthropic, lorsqu'il est utilisé | Sous-traitant ultérieur |
 | Google (Gemini), si activé | Modèle d'intelligence artificielle de l'assistant | Questions posées à l'assistant et données du projet qui s'y rapportent | Sous-traitant ultérieur, s'il est activé |
-| Sentry | Suivi des erreurs techniques | Traces d'erreur, sans adresse IP ni identifiant de compte | À confirmer : selon que les traces contiennent des données personnelles du Client |
-| SerpAPI | Recherches Google pour les concurrents et les opportunités de liens | Requêtes de recherche dérivées du site du Client | À confirmer : en principe, aucune donnée personnelle |
+| Sentry | Suivi des erreurs techniques | Traces d'erreur, sans adresse IP ni identifiant de compte ; depuis le 05/11/2026, sans variables du code, formulaires, cookies ni paramètres d'adresse, adresses e-mail masquées | À apprécier : en principe, aucune donnée personnelle du Client ; le texte d'une erreur peut exceptionnellement en contenir |
+| SerpAPI | Recherches Google pour les concurrents et les opportunités de liens | Recherches courtes générées à partir des titres des pages, sans le nom ni la marque du site, ou mots-clés saisis par le Client | À apprécier : en principe, aucune donnée personnelle ; une recherche saisie par le Client peut en contenir |
 | Ahrefs, si activé | Données de backlinks | Domaines des sites analysés | À confirmer : en principe, aucune donnée personnelle |
 
 **Services connectés par le Client.** La qualification de GitHub, de WordPress et de son hébergeur,

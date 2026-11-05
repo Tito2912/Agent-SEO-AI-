@@ -354,8 +354,8 @@ security testing. Only the measures actually applied will be listed.
 | Anthropic | Artificial intelligence models: fixes, writing, assistant | Content of the analysed pages, relevant extracts of repository files, questions asked to the assistant | Subprocessor |
 | OpenAI | Artificial intelligence models, as a backup to Anthropic | The same data as Anthropic, when it is used | Subprocessor |
 | Google (Gemini), if enabled | Artificial intelligence model for the assistant | Questions asked to the assistant and the related project data | Subprocessor, if enabled |
-| Sentry | Tracking technical errors | Error traces, without IP address or account identifier | To be confirmed: depending on whether the traces contain the Customer's personal data |
-| SerpAPI | Google searches for competitors and link opportunities | Search queries derived from the Customer's site | To be confirmed: in principle, no personal data |
+| Sentry | Tracking technical errors | Error traces, without IP address or account identifier; since 5 November 2026, without code variables, forms, cookies or URL parameters, with email addresses masked | To be assessed: in principle, no personal data of the Customer; the text of an error may exceptionally contain some |
+| SerpAPI | Google searches for competitors and link opportunities | Short searches generated from page titles, without the site's name or brand, or keywords entered by the Customer | To be assessed: in principle, no personal data; a search entered by the Customer may contain some |
 | Ahrefs, if enabled | Backlink data | Domains of the analysed sites | To be confirmed: in principle, no personal data |
 
 **Services connected by the Customer.** Whether GitHub, WordPress and its host, Google Search

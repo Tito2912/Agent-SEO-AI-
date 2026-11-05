@@ -121,6 +121,7 @@ try:
     from . import naturel
     from . import anti_robots
     from . import telegram
+    from . import sentry_filtre
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -149,6 +150,7 @@ except ImportError:
     import naturel  # type: ignore
     import anti_robots  # type: ignore
     import telegram  # type: ignore
+    import sentry_filtre  # type: ignore
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -8836,11 +8838,14 @@ def _init_sentry() -> None:
         # SDK 2.x: FastApiIntegration/StarletteIntegration are auto-detected.
         # Do NOT call app.add_middleware() here — the middleware stack is already
         # frozen at startup time, which raises RuntimeError and corrupts init.
+        # Aucune donnee des clients : ni variables locales, ni formulaires, ni e-mails, ni
+        # parametres d'adresse (05/11/2026, voir backend/sentry_filtre.py).
         sentry_sdk.init(
             dsn=dsn,
             traces_sample_rate=max(0.0, min(1.0, rate)),
             environment=str(os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RENDER_SERVICE_NAME") or "prod"),
             release=str(os.getenv("RENDER_GIT_COMMIT") or ""),
+            **sentry_filtre.options(),
         )
         _SENTRY_READY = True
     except Exception as e:
