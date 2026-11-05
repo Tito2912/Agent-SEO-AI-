@@ -10750,10 +10750,20 @@ def _startup() -> None:
         _start_contenu_auto()
         autocorrection.start()
         correction_publication.start()
+    try:
+        from . import telegram_approvals
+    except ImportError:
+        import telegram_approvals
+    telegram_approvals.start()
 
 
 def _shutdown() -> None:
     _WORKER_STOP.set()
+    try:
+        from . import telegram_approvals
+    except ImportError:
+        import telegram_approvals
+    telegram_approvals.stop()
 
 
 @asynccontextmanager
@@ -17200,6 +17210,15 @@ def settings_telegram_conversation(request: Request) -> RedirectResponse:
     """
     _require_system_owner(request)
     page = "/settings/system#telegram-system"
+    try:
+        from . import telegram_approvals
+    except ImportError:
+        import telegram_approvals
+    with DB.session() as db:
+        channel = db.get(telegram_approvals.Channel, telegram_approvals.KEY)
+        if channel and (channel.enabled or (channel.lease_until and
+                telegram_approvals.s.seo_watch.utc(channel.lease_until) > telegram_approvals.now())):
+            return RedirectResponse(url=telegram_approvals.PATH, status_code=303)
     trouvees, raison = telegram.conversations_recentes()
     if raison:
         return RedirectResponse(url=_path_with_flash(page, err=raison), status_code=303)
@@ -40200,3 +40219,9 @@ try:
 except ImportError:
     from own_writing_routes import router as own_writing_router
 app.include_router(own_writing_router)
+
+try:
+    from .telegram_approval_routes import router as telegram_approval_router
+except ImportError:
+    from telegram_approval_routes import router as telegram_approval_router
+app.include_router(telegram_approval_router)

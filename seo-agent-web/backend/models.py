@@ -13,6 +13,49 @@ class Base(DeclarativeBase):
     pass
 
 
+class TelegramApprovalChannel(Base):
+    __tablename__ = 'telegram_approval_channels'
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    binding: Mapped[str] = mapped_column(String(32), nullable=False)
+    config_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    bot_id: Mapped[str] = mapped_column(String(24), nullable=False)
+    chat_id: Mapped[str] = mapped_column(String(24), nullable=False)
+    lang: Mapped[str] = mapped_column(String(2), default='fr', nullable=False)
+    # IDs fit in signed 64 bits; decimal strings avoid platform-specific integer limits.
+    offset: Mapped[str] = mapped_column(String(24), default='0', nullable=False)
+    lease_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class TelegramApprovalRequest(Base):
+    __tablename__ = 'telegram_approval_requests'
+    __table_args__ = (UniqueConstraint('binding', 'kind', 'target_id', 'version', name='uq_telegram_approval_version'),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    binding: Mapped[str] = mapped_column(String(32), nullable=False)
+    kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    version: Mapped[str] = mapped_column(String(64), nullable=False)
+    pages: Mapped[list] = mapped_column(JSON, nullable=False)
+    state: Mapped[str] = mapped_column(String(24), default='pending', nullable=False)
+    nonce: Mapped[str] = mapped_column(String(12), nullable=False)
+    confirmation: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    choice: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    seen: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    delivery: Mapped[str] = mapped_column(String(16), default='queued', nullable=False)
+    delivery_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    message_id: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    result_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class User(Base):
     __tablename__ = "users"
 

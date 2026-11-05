@@ -18,6 +18,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
+try:
+    from . import telegram
+except ImportError:
+    import telegram
+
 COURRIEL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
 # Le jeton d'un bot Telegram (« 123456789:ABC… »), tel qu'il figure dans l'adresse de son API.
 # Il suit « bot » sans séparation : pas de limite de mot avant lui.
@@ -36,7 +41,7 @@ def nettoyer(valeur: Any) -> Any:
     if isinstance(valeur, str):
         valeur = PARAMETRES.sub(r"\1", valeur)
         valeur = JETON_TELEGRAM.sub("[jeton]", valeur)
-        return COURRIEL.sub("[e-mail]", valeur)
+        return telegram.redact_diagnostics(COURRIEL.sub("[e-mail]", valeur))
     if isinstance(valeur, dict):
         return {cle: nettoyer(v) for cle, v in valeur.items() if cle not in CLES_RETIREES}
     if isinstance(valeur, (list, tuple)):
@@ -63,4 +68,5 @@ def options() -> dict[str, Any]:
         "max_request_body_size": "never",
         "before_send": nettoyer_evenement,
         "before_send_transaction": nettoyer_evenement,
+        "before_breadcrumb": nettoyer_evenement,
     }

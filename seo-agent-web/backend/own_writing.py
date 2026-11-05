@@ -84,27 +84,31 @@ def reserved(db,owner_id):
         and_(OwnSeoDraft.status.in_(ACTIVE),OwnSeoDraft.provider_started_at.is_(None),OwnSeoDraft.authorized_until>now())))) or 0
 
 
-def authorize(owner_id,brief_id,input_hash,key,confirm):
+def authorize_in_session(db,owner_id,brief_id,input_hash,key,confirm):
     if not confirm:raise ValueError('confirm_required')
     if not re.fullmatch('[a-f0-9]{32}',key):raise ValueError('changed')
+    value,fingerprint=bundle(db,owner_id,brief_id)
+    if fingerprint!=input_hash:raise ValueError('evidence_changed')
+    existing=db.scalar(select(OwnSeoDraft).where(OwnSeoDraft.owner_id==owner_id,OwnSeoDraft.authorization_key==key))
+    if existing:
+        if existing.brief_id!=brief_id or existing.input_hash!=input_hash:raise ValueError('changed')
+        return existing.id
+    previous=db.scalar(select(OwnSeoDraft).where(OwnSeoDraft.owner_id==owner_id,OwnSeoDraft.brief_id==brief_id,
+        OwnSeoDraft.input_hash==input_hash,OwnSeoDraft.status.in_({'queued','running','draft','reviewed','uncertain'})).order_by(OwnSeoDraft.created_at.desc()))
+    if previous:return previous.id
+    if reserved(db,owner_id)>=DAILY_CALLS:raise ValueError('budget')
+    if not module()._ai_configured():raise ValueError('provider_missing')
+    workspace,project,_=seo.brief_for(db,owner_id,brief_id)
+    row=OwnSeoDraft(owner_id=owner_id,project_id=project.id,brief_id=brief_id,workspace_token=workspace.token,
+        authorization_key=key,input_hash=input_hash,bundle=value,content={},status='queued',provider_calls=0,
+        authorized_until=now()+timedelta(hours=24),created_at=now())
+    db.add(row);db.flush();audit(db,row,'authorize');return row.id
+
+
+def authorize(owner_id,brief_id,input_hash,key,confirm):
     with module().DB.session() as db:
-        seo.locked(db)
-        value,fingerprint=bundle(db,owner_id,brief_id)
-        if fingerprint!=input_hash:raise ValueError('evidence_changed')
-        existing=db.scalar(select(OwnSeoDraft).where(OwnSeoDraft.owner_id==owner_id,OwnSeoDraft.authorization_key==key))
-        if existing:
-            if existing.brief_id!=brief_id or existing.input_hash!=input_hash:raise ValueError('changed')
-            return existing.id
-        previous=db.scalar(select(OwnSeoDraft).where(OwnSeoDraft.owner_id==owner_id,OwnSeoDraft.brief_id==brief_id,
-            OwnSeoDraft.input_hash==input_hash,OwnSeoDraft.status.in_({'queued','running','draft','reviewed','uncertain'})).order_by(OwnSeoDraft.created_at.desc()))
-        if previous:return previous.id
-        if reserved(db,owner_id)>=DAILY_CALLS:raise ValueError('budget')
-        if not module()._ai_configured():raise ValueError('provider_missing')
-        workspace,project,_=seo.brief_for(db,owner_id,brief_id)
-        row=OwnSeoDraft(owner_id=owner_id,project_id=project.id,brief_id=brief_id,workspace_token=workspace.token,
-            authorization_key=key,input_hash=input_hash,bundle=value,content={},status='queued',provider_calls=0,
-            authorized_until=now()+timedelta(hours=24),created_at=now())
-        db.add(row);db.flush();audit(db,row,'authorize');db.commit();return row.id
+        seo.locked(db);result=authorize_in_session(db,owner_id,brief_id,input_hash,key,confirm)
+        db.commit();return result
 
 
 SYSTEM='''You write a short useful article for independent professionals and small businesses.
@@ -227,20 +231,30 @@ def tick():
     return len(ids)
 
 
-def review(owner_id,draft_id,content_hash,confirm):
+def review_in_session(db,owner_id,draft_id,content_hash,confirm):
     if not confirm:raise ValueError('confirm_required')
+    row=row_for(db,owner_id,draft_id)
+    if row.status not in {'draft','reviewed'} or not row.content_hash or content_hash!=row.content_hash or seo.digest(row.content)!=content_hash:raise ValueError('changed')
+    if not current(db,row):raise ValueError('evidence_changed')
+    row.status='reviewed';row.reviewed_at=now();audit(db,row,'review')
+
+
+def review(owner_id,draft_id,content_hash,confirm):
     with module().DB.session() as db:
-        seo.locked(db);row=row_for(db,owner_id,draft_id)
-        if row.status not in {'draft','reviewed'} or not row.content_hash or content_hash!=row.content_hash or seo.digest(row.content)!=content_hash:raise ValueError('changed')
-        if not current(db,row):raise ValueError('evidence_changed')
-        row.status='reviewed';row.reviewed_at=now();audit(db,row,'review');db.commit()
+        seo.locked(db);result=review_in_session(db,owner_id,draft_id,content_hash,confirm)
+        db.commit();return result
+
+
+def cancel_in_session(db,owner_id,draft_id):
+    row=row_for(db,owner_id,draft_id)
+    row.status='cancelled';row.reviewed_at=None;row.lease_token=None;row.lease_until=None
+    audit(db,row,'cancel')
 
 
 def cancel(owner_id,draft_id):
     with module().DB.session() as db:
-        seo.locked(db);row=row_for(db,owner_id,draft_id)
-        row.status='cancelled';row.reviewed_at=None;row.lease_token=None;row.lease_until=None
-        audit(db,row,'cancel');db.commit()
+        seo.locked(db);result=cancel_in_session(db,owner_id,draft_id)
+        db.commit();return result
 
 
 def export(row):

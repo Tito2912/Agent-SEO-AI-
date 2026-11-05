@@ -31,6 +31,7 @@ if str(WEB_ROOT) not in sys.path:
     sys.path.insert(0, str(WEB_ROOT))
 
 os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
+os.environ.setdefault("SEO_AGENT_DISABLE_TELEGRAM_RECEIVER", "true")
 os.environ.setdefault("SEO_AGENT_SECRET_KEY", "test-session-secret")
 
 
