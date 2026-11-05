@@ -651,3 +651,39 @@ def test_receiver_resumes_an_accepted_writing_request_after_a_process_restart(
     assert len(x["calls"]) == 1
     with x["db"].session() as db:
         assert db.get(OwnSeoDraft, row(x, r.id).result_id).status == "draft"
+
+
+def test_source_summary_changed_after_card_read_cannot_be_approved(
+    bot, writing, monkeypatch
+):
+    x = writing
+    bot["owner"] = x["owner"]
+    activate(bot)
+    with x["db"].session() as db:
+        db.get(SeoKnowledgeSource, "google_essentials").approved_hash = None
+        db.commit()
+    a.sync()
+    r = next(
+        r
+        for r in rows(x)
+        if r.kind == "knowledge" and r.target_id == "google_essentials"
+    )
+    a.deliver_one()
+    for page in range(len(r.pages)):
+        click(x, r.id, "p" + str(page))
+    click(x, r.id, "y")
+    r = row(x, r.id)
+    original = a.adapters.apply
+
+    def changed(db, *args):
+        db.get(
+            SeoKnowledgeSource, "google_essentials"
+        ).guidance_fr = "New summary prepared after the Telegram card was read."
+        db.flush()
+        return original(db, *args)
+
+    monkeypatch.setattr(a.adapters, "apply", changed)
+    a.handle_callback(query(r, "c", r.confirmation))
+    assert row(x, r.id).state == "pending"
+    with x["db"].session() as db:
+        assert db.get(SeoKnowledgeSource, "google_essentials").approved_hash is None

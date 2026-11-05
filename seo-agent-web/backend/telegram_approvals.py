@@ -647,7 +647,8 @@ def handle_callback(query, lease=None):
                 )
                 row.state = "approved" if row.choice == "yes" else "rejected"
                 row.decided_at = now()
-                row.confirmation = None
+                # Keep the final nonce so a repeated click can be acknowledged as
+                # already handled. check() forbids every second business action.
                 row.result_id = result_id
                 audit(
                     db,

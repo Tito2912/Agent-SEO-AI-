@@ -204,6 +204,11 @@ def apply(db, owner, kind, target, approve, key, version):
     if kind == "knowledge":
         row = db.get(SeoKnowledgeSource, target)
         if approve:
+            # Web source reviews use their own transaction. Lock and reload before
+            # applying this exact Telegram version, including both editable summaries.
+            db.refresh(row, with_for_update=True)
+            if s.digest([row.latest_hash, row.guidance_fr, row.guidance_en]) != version:
+                raise ValueError("changed")
             seo_watch.review(
                 db,
                 target,
