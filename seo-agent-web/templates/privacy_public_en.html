@@ -89,6 +89,7 @@
         {% if gemini_actif %}<tr><th scope="row">Google (Gemini)</th><td>Artificial intelligence for the assistant</td><td>Questions asked to the assistant and the project data relating to them</td><td>United States</td></tr>{% endif %}
         {% if ga4_actif %}<tr><th scope="row">Google (Analytics)</th><td>Audience measurement of the public website, with your consent</td><td>Pages viewed, source of the visit, device and browser, random identifier of the measurement cookies</td><td>United States</td></tr>{% endif %}
         {% if telegram_actif %}<tr><th scope="row">Telegram</th><td>Internal notifications to Noyaru's publisher: account creation, subscription, deletion</td><td>Account email address, plan and declared country</td><td>United Arab Emirates</td></tr>{% endif %}
+        {% if captcha_actif %}<tr><th scope="row">Cloudflare (Turnstile)</th><td>Anti-robot check on the email sign-up form</td><td>IP address, technical characteristics of the browser and connection</td><td>United States</td></tr>{% endif %}
         <tr><th scope="row">Sentry</th><td>Tracking technical errors</td><td>Error traces, without IP address or account identifier</td><td>{{ sentry_localisation }}</td></tr>
         <tr><th scope="row">Amazon Web Services (S3)</th><td>Backups: daily copies of the database, kept for 30 days{% if rapports_s3 %}; storage of analysis reports{% endif %}</td><td>All the data in the database</td><td>{{ sauvegarde_localisation }}</td></tr>
       </tbody>
