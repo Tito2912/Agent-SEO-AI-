@@ -81,3 +81,9 @@ cette API. Les demandes sensibles, pièces jointes et formats hors périmètre p
   retour à la migration précédente en conservant utilisateurs, blog et lien Telegram.
 - Gmail, IA, Telegram et emails **simulés** dans les tests. Aucun email SAV réel lu ou envoyé
   pour cette validation ; connexion réelle et réception témoin restent à vérifier.
+
+La politique de confidentialité FR/EN décrit aussi les données SAV, leur passage par Gmail,
+le modèle, Telegram et l'envoi, ainsi que la conservation des copies actives et sauvegardes.
+Les transports alternatifs sont nommés explicitement comme options si configurés.
+Références des localisations : [Resend](https://resend.com/security),
+[API globale et API UE SendGrid](https://www.twilio.com/en-us/changelog/data-residency).

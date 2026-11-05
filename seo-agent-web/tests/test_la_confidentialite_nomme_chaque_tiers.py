@@ -48,6 +48,9 @@ TIERS = {
     "api.github.com": "GitHub",
     "www.bing.com": "Microsoft Bing",
     "searchconsole.googleapis.com": "Google",
+    "gmail.googleapis.com": "Google",
+    "api.resend.com": "Resend",
+    "api.sendgrid.com": "SendGrid",
     "oauth2.googleapis.com": "Google",
     "accounts.google.com": "Google",
     "www.googleapis.com": "Google",
@@ -71,8 +74,6 @@ CONDITIONNELS = {"api.ahrefs.com": ("Ahrefs", "AHREFS_API_TOKEN"),
 VALEURS_DE_TEST = {"GA4_MEASUREMENT_ID": "G-TEST1234"}
 # Écartés, avec leur raison.
 ECARTES = {
-    # Transports d'e-mail que le code SAIT utiliser mais qui ne le sont pas : Brevo l'est.
-    "api.sendgrid.com", "api.resend.com",
     # Liens affichés ou documentation, pas des appels.
     "github.com", "app.netlify.com", "console.cloud.google.com",
     "schema.org", "www.cnil.fr",
