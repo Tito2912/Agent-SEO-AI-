@@ -55,6 +55,17 @@ def tr(channel, fr, en):
     return en if channel.lang == "en" else fr
 
 
+def kind_label(channel, kind):
+    labels = {
+        "test": ("Test", "Test"),
+        "knowledge": ("Source SEO/GEO", "SEO/GEO source"),
+        "brief": ("Brief éditorial", "Editorial brief"),
+        "writing": ("Autoriser la rédaction", "Authorize writing"),
+        "draft": ("Relire un brouillon", "Review a draft"),
+    }
+    return tr(channel, *labels[kind])
+
+
 def api(method, body=None):
     """Only allowlisted methods; provider errors/URLs never enter logs or storage."""
     if method not in {
@@ -461,7 +472,7 @@ def card(channel, row, page=0, doc=None, confirm=False):
         page = max(0, min(page, len(row.pages) - 1))
         text = (
             "Noyaru · "
-            + row.kind
+            + kind_label(channel, row.kind)
             + " · "
             + row.id[:8]
             + "\n"
@@ -777,7 +788,10 @@ def process_update(update, lease):
                     + str(len(pending))
                     + "\n"
                 )
-                text += "\n".join(row.id[:8] + " · " + row.kind for row in pending)
+                text += "\n".join(
+                    row.id[:8] + " · " + kind_label(channel, row.kind)
+                    for row in pending
+                )
                 text += "\n" + s.module()._lien_admin(PATH)
             else:
                 text = None
