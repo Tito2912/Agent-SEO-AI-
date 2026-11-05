@@ -45,6 +45,9 @@ de deux requêtes par propriétaire sur 24 heures glissantes s'applique aussi au
 administrateurs ; les appels commencés restent comptés même si leur résultat est
 rejeté. Ce plafond porte sur des appels et tokens, pas sur une somme en euros.
 Les tarifs et le fournisseur configurés déterminent le coût réel.
+Le contexte du suivi de coût est fixé explicitement au propriétaire et à
+`own_seo_writing`, puis restauré. Une reprise par cron ne dépend pas d'une session
+web et ne doit jamais imputer ce coût à un autre compte.
 
 La reprise ne prend que les opérations déjà autorisées ; aucun brief n'est sélectionné
 ou autorisé par le cron. Une réponse interrompue après le début de l'appel est
@@ -62,7 +65,7 @@ résultat incertain, preuves changées, annulé et relu doivent indiquer la suit
 
 ## Vérifications locales
 
-- 38 nouveaux cas : transport Anthropic/OpenAI simulé, idempotence, concurrence,
+- 39 nouveaux cas : transport Anthropic/OpenAI simulé, idempotence, concurrence,
   révocation, source/liaison changée, bail expiré, plafond glissant, schéma, relecture,
   CSRF/droits, cron et migration additive `20261104_0025` avec retour arrière.
 - 146 régressions briefs, veille, publication et accès ; inventaire des sept nouvelles

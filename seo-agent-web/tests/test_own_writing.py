@@ -205,6 +205,23 @@ def test_active_worker_cannot_be_started_twice(writing,monkeypatch):
     assert not errors and len(x['calls'])==1 and row(x,draft).status=='draft'
 
 
+def test_scheduled_writing_cost_belongs_to_owner_and_restores_callers_context(writing,monkeypatch):
+    x=writing;other=user(x['db']);draft=authorize(x);original=m.requests.post;seen=[]
+    def post(*a,**kw):
+        seen.append(dict(m._IA_CONTEXTE.get() or {}));return original(*a,**kw)
+    monkeypatch.setattr(m.requests,'post',post)
+    token=m._poser_contexte_ia(payeur=other.id,fonction='unrelated_request')
+    try:
+        w.run(draft)
+        assert m._IA_CONTEXTE.get()['payeur']==other.id
+        assert m._IA_CONTEXTE.get()['fonction']=='unrelated_request'
+    finally:m._IA_CONTEXTE.reset(token)
+    assert len(seen)==1 and seen[0]['payeur']==x['owner'].id and seen[0]['fonction']=='own_seo_writing'
+    with x['db'].session() as db:
+        usage=list(db.scalars(select(UsageEvent)))
+        assert usage and all(e.user_id==x['owner'].id and e.metric=='ia_cout_microdollars' for e in usage)
+
+
 @pytest.mark.parametrize('change',['unknown_source','html','foreign_link','missing_sources','extra_key','duplicate_slug','too_long','insufficient'])
 def test_invalid_or_unsupported_output_is_rejected_before_storage(writing,change):
     x=writing

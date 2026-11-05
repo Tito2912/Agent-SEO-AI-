@@ -190,13 +190,17 @@ def run(draft_id):
         if utc(row.authorized_until)<=now() or not current(db,row):
             row.status='stopped';row.error_code='evidence_changed';audit(db,row,'stopped');db.commit();return
         row.status='running';row.lease_token=token;row.lease_until=now()+timedelta(minutes=10)
-        value=row.bundle;db.commit()
+        value=row.bundle;owner_id=row.owner_id;db.commit()
     content={};status='draft';reason=None
     try:
         message=json.dumps(value,ensure_ascii=True)
         if len(message)+len(SYSTEM)+160>MAX_INPUT:raise ValueError('request_limit')
-        with execution.bounded(Policy(draft_id,token)):
-            result=module()._correction_ai_json(system=SYSTEM,user_msg=message,max_tokens=MAX_TOKENS)
+        m=module();cost_token=m._poser_contexte_ia(payeur=owner_id,fonction='own_seo_writing')
+        try:
+            with execution.bounded(Policy(draft_id,token)):
+                result=m._correction_ai_json(system=SYSTEM,user_msg=message,max_tokens=MAX_TOKENS)
+        finally:
+            m._IA_CONTEXTE.reset(cost_token)
         content=validate(result,value['sources'])
     except execution.ExecutionStopped as exc:status='uncertain' if exc.reason=='provider_uncertain' else 'stopped';reason=exc.reason
     except ValueError as exc:status='rejected';reason=str(exc) if str(exc) in {'invalid_output','insufficient_sources','duplicate_article','request_limit'} else 'invalid_output'
