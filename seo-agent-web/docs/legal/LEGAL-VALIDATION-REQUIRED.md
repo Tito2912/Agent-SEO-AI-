@@ -93,7 +93,7 @@ juridiquement. Ce sont des choix courants et équilibrés ; ils restent à faire
 | --- | --- | --- |
 | Notifier une violation de données dans les 48 heures, dans la mesure du possible | 13 | Lire contact@noyaru.com et les alertes du service chaque jour ouvré. |
 | Rembourser au prorata un client qui résilie après une objection | 10 | Un remboursement manuel dans Stripe, comme pour une rétractation. |
-| Restituer en 30 jours les données que les exports ne couvrent pas | 15 | Une procédure d'extraction, à mettre en œuvre (voir ci-dessous). |
+| Restituer en 30 jours les données que les exports ne couvrent pas | 15 | Le client les télécharge lui-même depuis « Mon compte → Mes données » (05/11/2026) ; au-delà de 300 Mo de fichiers d'analyse, les fichiers laissés de côté sont listés dans le ZIP et remis sur demande. |
 | Prévenir les clients 30 jours avant un nouveau sous-traitant ultérieur | 10 | Une annonce « Politique de confidentialité, et liste des prestataires » depuis l'écran « Annonces aux clients ». |
 | Faire signer un engagement de confidentialité avant de donner accès aux données à une autre personne | 8 | Le propriétaire, seul à accéder aux données le 21/10/2026, l'a indiqué ce jour-là. |
 
@@ -109,7 +109,7 @@ dataprivacyframework.gov (rubrique « Data Privacy Framework List »).
 | Amazon Web Services | d1.awsstatic.com/legal/aws-dpa/aws-dpa.pdf (corrigé le 05/11/2026 : AWS Artifact n'est pas nécessaire) | Contrat intégré aux conditions de service AWS, applicable d'office à tous les clients ; enregistrer le PDF officiel | Clauses types incluses dans le contrat |
 | Anthropic | anthropic.com/legal/data-processing-addendum | Intégré automatiquement aux conditions commerciales de l'API ; rien à signer ; enregistrer la page en PDF | Clauses types (modules 2 et 3) réputées signées ; liste des sous-traitants : anthropic.com/subprocessors |
 | OpenAI | openai.com/policies/data-processing-addendum | Intégré au contrat de l'API ; un client établi dans l'EEE contracte avec OpenAI Ireland Ltd ; pour une version signée, remplir le formulaire de la page (d'après OpenAI, 05/11/2026), ou écrire à privacy@openai.com | À vérifier dans le contrat |
-| Google (Gemini) | business.safety.google/processorterms, d'après les conditions de l'API Gemini (ai.google.dev/gemini/terms) | S'applique à l'usage payant (projet Google Cloud avec facturation) et, pour l'EEE, à tout usage ; vérifier que le projet a une facturation active | À vérifier dans le contrat |
+| Google (Gemini) — **désactivé le 05/11/2026** (clé retirée de la production : l'assistant passe par Claude ; Gemini disparaît de la confidentialité et n'a plus besoin de contrat tant qu'il l'est) | business.safety.google/processorterms, d'après les conditions de l'API Gemini (ai.google.dev/gemini/terms) | S'applique à l'usage payant (projet Google Cloud avec facturation) et, pour l'EEE, à tout usage ; vérifier que le projet a une facturation active | À vérifier dans le contrat |
 | Sentry | sentry.io/legal/dpa | À accepter en ligne : Paramètres de l'organisation → Legal & Compliance, par un membre au rôle Owner ou Billing ; Sentry garde qui l'a accepté et quand | Cadre UE–États-Unis, et clauses types (modules 2 et 3) à défaut ; liste des sous-traitants : sentry.io/legal/subprocessors |
 | SerpApi | Sur demande | Écrire à privacy@serpapi.com pour obtenir le contrat en vigueur | Clauses types citées dans sa politique ; aucune certification mentionnée ; recherches gardées 31 jours (aucune avec le mode ZeroTrace) |
 | Ahrefs (non activé le 21/10/2026) | ahrefs.com/legal (Data Processing Addendum) | À faire seulement si l'intégration est activée ; les clauses types deviennent applicables une fois signées et envoyées par e-mail à Ahrefs | Clauses types (modules 2 et 3) |
@@ -147,9 +147,11 @@ encore : à compléter lors de la relecture.
 
 ### Développements nécessaires avant de proposer le DPA
 
-Aucun n'est réalisé ; ils sont marqués « À METTRE EN ŒUVRE » dans le DPA.
+Ceux qui restent sont marqués « À METTRE EN ŒUVRE » dans le DPA.
 
 - La case à cocher de l'article 1 et la conservation des preuves : organisation contractante,
   compte et personne, date et heure, version exacte, trace de l'action d'acceptation.
-- La procédure de restitution des données que les exports ne couvrent pas, dans les 30 jours, si
-  le client choisit la restitution (article 15).
+- ~~La procédure de restitution des données que les exports ne couvrent pas (article 15).~~
+  **Réalisée le 05/11/2026** : « Mon compte → Mes données » télécharge un ZIP de toutes les données
+  de la base rattachées au compte et à ses projets (JSON et CSV, déduites du schéma, sans secret ni
+  donnée d'un autre compte) et des fichiers d'analyse jusqu'à 300 Mo (`backend/export_compte.py`).

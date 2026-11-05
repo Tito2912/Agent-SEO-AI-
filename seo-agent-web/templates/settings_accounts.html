@@ -303,6 +303,21 @@
     </details>
   </section>
 
+  {# TOUTES SES DONNEES (05/11/2026, backend/export_compte.py) : la restitution du DPA et la
+     portabilite du RGPD, sans passer par une demande ecrite. #}
+  <section class="card setting-card" id="mes-donnees">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">{{ tr("Mes données") }}</h2>
+        <div class="muted small">{{ tr("Tout ce que Noyaru garde pour votre compte, dans un fichier ZIP.") }}</div>
+      </div>
+    </div>
+    <p class="muted small setting-note" style="margin-top:0;">
+      {{ tr("Votre compte, vos projets et tout ce qui en dépend (analyses, anomalies, corrections, contenus, mots-clés, concurrents, connexions, abonnement), en JSON et en CSV, avec les fichiers de vos analyses. Vos mots de passe, jetons et clés n’en font pas partie. À télécharger avant de supprimer votre compte si vous voulez les garder.") }}
+    </p>
+    <a class="btn" href="/settings/account/export.zip" download>{{ tr("Télécharger toutes mes données") }}</a>
+  </section>
+
   <section class="card setting-card" id="danger-zone">
     <div class="setting-head">
       <div>

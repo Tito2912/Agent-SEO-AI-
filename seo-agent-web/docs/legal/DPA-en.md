@@ -248,7 +248,10 @@ deleted.
   cover all the personal data processed for the Customer. If the Customer chooses Return of
   Personal Data, E-Com Shop provides it, within 30 days of the request, with the personal data
   processed on its behalf that the exports do not cover, in a structured and commonly used format.
-  **TO BE IMPLEMENTED**: the procedure for this return does not exist yet.
+  The Customer can also obtain it themselves, at any time, from "My account → My data": a ZIP file
+  of all the database data linked to its account and projects, in JSON and CSV, and of the files
+  of its analyses (most recent first, up to 300 MB; the others on request), without its passwords,
+  tokens or keys.
 - **Backups**: data erased from the live database remains in the backups until they are deleted,
   30 days after their creation. During this residual retention, backups are used only to restore
   the service. **TO BE CONFIRMED**: that the daily backup and its automatic deletion after 30 days

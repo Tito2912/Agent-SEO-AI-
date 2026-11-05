@@ -255,8 +255,10 @@ suivant la fin des services, les données sont supprimées.
   couvrent pas nécessairement toutes les données personnelles traitées pour le Client. Si le
   Client choisit la restitution, E-Com Shop lui remet, dans les 30 jours de sa demande, les données
   personnelles traitées pour son compte que les exports ne couvrent pas, dans un format structuré
-  et couramment utilisé. **À METTRE EN ŒUVRE** : la procédure de cette restitution n'existe pas
-  encore.
+  et couramment utilisé. Le Client peut aussi les obtenir lui-même, à tout moment, depuis « Mon
+  compte → Mes données » : un fichier ZIP de toutes les données de la base rattachées à son compte
+  et à ses projets, en JSON et en CSV, et des fichiers de ses analyses (les plus récents d'abord,
+  dans la limite de 300 Mo ; les autres sur demande), sans ses mots de passe, jetons ni clés.
 - **Sauvegardes** : les données effacées de la base active subsistent dans les sauvegardes jusqu'à
   la suppression de celles-ci, 30 jours après leur création. Pendant cette conservation résiduelle,
   les sauvegardes ne servent qu'à restaurer le service. **À CONFIRMER** : fonctionnement en

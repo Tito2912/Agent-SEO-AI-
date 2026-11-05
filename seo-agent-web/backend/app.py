@@ -22,6 +22,7 @@ import socket
 import smtplib
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import textwrap
@@ -58,8 +59,9 @@ except Exception:  # pragma: no cover
     class InvalidToken(Exception):  # type: ignore
         pass
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.background import BackgroundTask
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.requests import Request as StarletteRequest
@@ -122,6 +124,7 @@ try:
     from . import anti_robots
     from . import telegram
     from . import sentry_filtre
+    from . import export_compte
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -151,6 +154,7 @@ except ImportError:
     import anti_robots  # type: ignore
     import telegram  # type: ignore
     import sentry_filtre  # type: ignore
+    import export_compte  # type: ignore
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -16037,6 +16041,59 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
     telegram.notifier("🗑 <b>Compte supprimé par son titulaire</b>\n%s\n%d site%s" % (
         telegram.echapper(email or "?"), len(project_slugs), "s" if len(project_slugs) > 1 else ""))
     return resp
+
+
+@app.get("/settings/account/export.zip")
+def settings_account_export(request: Request) -> Response:
+    """Toutes les donnees du compte, telechargees par son titulaire (05/11/2026).
+
+    La restitution promise par le DPA (article 15) et la portabilite du RGPD (article 20) ; le
+    contenu se deduit du schema, sans secret ni donnee d'un autre compte (backend/export_compte.py).
+    """
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    uid = str(user.id)
+    back = "/settings/accounts#mes-donnees"
+    retry = _rate_limit_retry_after(bucket="account_export", subject=uid, limit=3, window_s=3600)
+    if isinstance(retry, int):
+        return RedirectResponse(url=_path_with_flash(
+            back, err=f"Trop d’exports en peu de temps. Réessaie dans {_format_retry_after(retry)}."), status_code=303)
+
+    with DB.session() as db:
+        slugs = [str(p.slug) for p in db.scalars(select(Project).where(Project.owner_user_id == uid)) if p.slug]
+    dossiers = [(DEFAULT_RUNS_DIR / uid).resolve()]
+    dossiers += [(DEFAULT_RUNS_DIR / _safe_storage_segment(s, "project")).resolve() for s in slugs]
+    if object_store.s3_enabled():
+        # Les analyses du worker vivent dans S3 : on les ramene avant de les mettre dans le ZIP.
+        for dossier in dossiers:
+            try:
+                object_store.restore_runs_tree(DEFAULT_RUNS_DIR, dossier)
+            except Exception as e:
+                logger.warning("[EXPORT] analyses non ramenees de S3 : %s", type(e).__name__)
+
+    descripteur, chemin = tempfile.mkstemp(prefix="noyaru-export-", suffix=".zip")
+    os.close(descripteur)
+    try:
+        with DB.session() as db:
+            manifeste = export_compte.construire(db, user, Path(chemin), dossiers_analyses=dossiers,
+                                                 racine_analyses=DEFAULT_RUNS_DIR, langue=i18n.current_lang())
+    except Exception as e:
+        os.unlink(chemin)
+        logger.error("[EXPORT] echec pour %s : %s: %s", uid, type(e).__name__, e)
+        _audit_log(request, action="account.export", status="error", user=user,
+                   meta={"error": type(e).__name__})
+        return RedirectResponse(url=_path_with_flash(
+            back, err="L’export n’a pas pu être préparé. Réessaie dans quelques minutes."), status_code=303)
+    _audit_log(request, action="account.export", status="ok", user=user, meta={
+        "tables": len(manifeste["tables"]), "lignes": sum(manifeste["tables"].values()),
+        "fichiers": manifeste["analyses"]["fichiers"],
+        "laisses_de_cote": len(manifeste["analyses"]["laisses_de_cote"])})
+    reponse = FileResponse(chemin, media_type="application/zip",
+                           filename="noyaru-donnees-%s.zip" % datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                           background=BackgroundTask(os.unlink, chemin))
+    reponse.headers["Cache-Control"] = "no-store"
+    return reponse
 
 
 @app.post("/settings/account/password")
