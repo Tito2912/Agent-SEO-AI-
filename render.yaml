@@ -310,3 +310,42 @@ services:
         value: backups
       - key: BACKUP_RETENTION_DAYS
         value: "30"
+
+  # L'essai mensuel de restauration (05/11/2026, seo-agent-web/backend/restauration.py) : la
+  # dernière sauvegarde restaurée dans une base jetable, son rapport envoyé au site (journal
+  # d'audit + Telegram). PAS de DATABASE_URL : la tâche ne peut rien écrire en production.
+  # Les clés AWS sont celles de noyaru-db-backup, à recopier ; « Trigger Run » lance un essai.
+  - type: cron
+    name: noyaru-restauration-test
+    runtime: docker
+    plan: starter
+    region: oregon
+    schedule: "0 4 1 * *"
+    dockerfilePath: ./Dockerfile.restauration
+    dockerContext: .
+    dockerCommand: python -m backend.restauration
+    envVars:
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: BACKUP_ENV
+        value: noyaru-prod
+      - key: BACKUP_S3_PREFIX
+        value: backups
+      - key: PUBLIC_BASE_URL
+        fromService:
+          type: web
+          name: seo-agent-web
+          envVarKey: PUBLIC_BASE_URL
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: seo-agent-web
+          envVarKey: CRON_SECRET

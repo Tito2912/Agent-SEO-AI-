@@ -265,7 +265,7 @@ _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 _CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/seo-watch", "/cron/own-seo-writing", "/cron/autocorrection-previews", "/cron/correction-publications",
                       "/cron/auto-search-backlinks", "/cron/auto-post-backlinks",
                       "/cron/refresh-competitors", "/cron/verify-pull-requests",
-                      "/cron/auto-content"}
+                      "/cron/auto-content", "/cron/sauvegarde-verifiee"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _RATE_LIMIT_BUCKETS: dict[str, deque[float]] = {}
@@ -12248,6 +12248,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/cron/auto-search-backlinks",
         "/cron/auto-post-backlinks",
         "/cron/auto-content",
+        "/cron/sauvegarde-verifiee",
     } or path.startswith("/ressources-seo") or path.startswith("/docs"):
         return await call_next(request)
 
@@ -36809,6 +36810,70 @@ def project_competitor_analyze(request: Request, slug: str,
     return RedirectResponse(url=_path_with_flash(
         page, msg=f"Analyse de {domain} lancée (jusqu'à {_COMPETITOR_MAX_PAGES} pages)."),
         status_code=303)
+
+
+# Ce que le journal garde du rapport de l'essai de restauration (backend/restauration.py).
+_RAPPORT_RESTAURATION = ("ok", "sauvegarde", "fichier", "octets", "empreinte_ok", "tables", "lignes", "comptes",
+                         "duree_s", "erreur", "par_table")
+
+
+def _rapport_restauration(brut: dict[str, Any]) -> dict[str, Any]:
+    """Le rapport tel qu'on le garde : les seules clés connues, des types simples, des tailles bornées."""
+    garde: dict[str, Any] = {}
+    for cle in _RAPPORT_RESTAURATION:
+        valeur = brut.get(cle)
+        if cle == "par_table" and isinstance(valeur, dict):
+            garde[cle] = {str(t)[:64]: int(n) for t, n in list(valeur.items())[:300]
+                          if isinstance(n, int) and not isinstance(n, bool)}
+        elif isinstance(valeur, bool) or valeur is None:
+            garde[cle] = valeur
+        elif isinstance(valeur, (int, float)):
+            garde[cle] = valeur
+        elif isinstance(valeur, str):
+            garde[cle] = valeur[:600]
+    return garde
+
+
+def _message_restauration(rapport: dict[str, Any]) -> str:
+    ts = str(rapport.get("sauvegarde") or "")
+    quand = ("%s/%s/%s %s:%s UTC" % (ts[6:8], ts[4:6], ts[0:4], ts[9:11], ts[11:13])
+             if re.fullmatch(r"\d{8}-\d{6}", ts) else "?")
+    if rapport.get("ok"):
+        return ("✅ <b>Sauvegarde vérifiée</b>\nLa sauvegarde du %s a été restaurée dans une base d'essai : "
+                "%s tables, %s lignes, dont %s comptes (%s s)."
+                % (quand, rapport.get("tables"), rapport.get("lignes"), rapport.get("comptes"),
+                   rapport.get("duree_s")))
+    return ("❌ <b>Essai de restauration en échec</b>\nSauvegarde du %s : %s\nLes sauvegardes quotidiennes "
+            "continuent ; détail dans les journaux de la tâche noyaru-restauration-test sur Render."
+            % (quand, telegram.echapper(rapport.get("erreur") or "raison inconnue")))
+
+
+@app.post("/cron/sauvegarde-verifiee")
+async def cron_sauvegarde_verifiee(request: Request) -> JSONResponse:
+    """Le rapport de l'essai mensuel de restauration de la sauvegarde (05/11/2026).
+
+    La tâche `noyaru-restauration-test` n'a ni l'adresse de la base de production ni le jeton
+    Telegram : elle envoie son rapport ici. Le journal d'audit le garde (`backup.restore_check`),
+    c'est la preuve que demande l'accord de traitement des données ; le propriétaire le reçoit sur
+    Telegram, réussi ou non.
+    """
+    cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
+    if not cron_secret:
+        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    auth = request.headers.get("Authorization", "")
+    token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
+    if not token or not hmac.compare_digest(token, cron_secret):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    try:
+        brut = await request.json()
+    except Exception:
+        brut = None
+    if not isinstance(brut, dict) or not isinstance(brut.get("ok"), bool):
+        return JSONResponse({"ok": False, "error": "Rapport illisible"}, status_code=400)
+    rapport = _rapport_restauration(brut)
+    _audit_log(request, action="backup.restore_check", status="ok" if rapport["ok"] else "error", meta=rapport)
+    telegram.notifier(_message_restauration(rapport))
+    return JSONResponse({"ok": True})
 
 
 @app.post("/cron/refresh-competitors")
