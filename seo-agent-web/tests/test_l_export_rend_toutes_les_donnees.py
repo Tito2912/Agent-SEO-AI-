@@ -289,12 +289,23 @@ def test_la_liste_S3_ne_telecharge_RIEN_et_suit_les_pages(monkeypatch, tmp_path)
     assert objets[0]["modified"] == dt.datetime(2026, 11, 5, tzinfo=dt.timezone.utc).timestamp()
 
 
-def test_un_second_clic_pendant_la_preparation_ne_relance_RIEN(comptes, monkeypatch) -> None:
+def test_un_second_clic_pendant_la_preparation_ne_relance_RIEN_et_ne_compte_PAS(comptes, monkeypatch) -> None:
+    """05/11/2026 : des clics en double, pendant une préparation, avaient épuisé la limite par heure."""
     monkeypatch.setattr(m, "_EXPORTS_EN_COURS", {comptes["a"]})
     monkeypatch.setattr(m, "_preparer_export", lambda *a: pytest.fail("un export est déjà en préparation"))
+    monkeypatch.setattr(m, "_rate_limit_retry_after", lambda **kw: pytest.fail("le second clic ne compte pas"))
     with _client(comptes["a"]) as client:
         reponse = client.get("/settings/account/export.zip", follow_redirects=False)
     assert reponse.status_code == 303 and "msg=" in reponse.headers["location"]
+
+
+def test_la_limite_par_heure_LIBERE_le_verrou(comptes, monkeypatch) -> None:
+    monkeypatch.setattr(m, "_EXPORTS_EN_COURS", set())
+    monkeypatch.setattr(m, "_rate_limit_retry_after", lambda **kw: 1200)
+    with _client(comptes["a"]) as client:
+        reponse = client.get("/settings/account/export.zip", follow_redirects=False)
+    assert reponse.status_code == 303 and "err=" in reponse.headers["location"]
+    assert m._EXPORTS_EN_COURS == set()
 
 
 def test_le_verrou_se_LIBERE_meme_quand_la_preparation_echoue(comptes, monkeypatch) -> None:

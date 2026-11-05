@@ -16077,18 +16077,19 @@ def settings_account_export(request: Request) -> Response:
         raise HTTPException(status_code=401, detail="auth_required")
     uid = str(user.id)
     back = "/settings/accounts#mes-donnees"
-    retry = _rate_limit_retry_after(bucket="account_export", subject=uid, limit=3, window_s=3600)
-    if isinstance(retry, int):
-        return RedirectResponse(url=_path_with_flash(
-            back, err=f"Trop d’exports en peu de temps. Réessaie dans {_format_retry_after(retry)}."), status_code=303)
-
-    # Un export a la fois par compte : un second clic pendant la preparation ne relance rien.
+    # Un export a la fois par compte : un second clic pendant la preparation ne relance rien, et
+    # ne compte PAS dans la limite par heure (05/11/2026 : des clics en double l'avaient epuisee).
     with _EXPORTS_GARDE:
         if uid in _EXPORTS_EN_COURS:
             return RedirectResponse(url=_path_with_flash(
                 back, msg="Votre export est déjà en préparation : le téléchargement va démarrer."), status_code=303)
         _EXPORTS_EN_COURS.add(uid)
     try:
+        retry = _rate_limit_retry_after(bucket="account_export", subject=uid, limit=3, window_s=3600)
+        if isinstance(retry, int):
+            return RedirectResponse(url=_path_with_flash(
+                back, err=f"Trop d’exports en peu de temps. Réessaie dans {_format_retry_after(retry)}."),
+                status_code=303)
         return _preparer_export(request, user, uid, back)
     finally:
         with _EXPORTS_GARDE:
