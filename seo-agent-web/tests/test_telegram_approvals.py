@@ -687,3 +687,115 @@ def test_source_summary_changed_after_card_read_cannot_be_approved(
     assert row(x, r.id).state == "pending"
     with x["db"].session() as db:
         assert db.get(SeoKnowledgeSource, "google_essentials").approved_hash is None
+
+
+@pytest.mark.parametrize("delivery", ["queued", "sent", "uncertain"])
+def test_same_version_recovers_after_a_refresh_without_duplicate_delivery(
+    bot, writing, delivery
+):
+    x = writing
+    bot["owner"] = x["owner"]
+    activate(bot)
+    with x["db"].session() as db:
+        db.get(SeoKnowledgeSource, "google_essentials").approved_hash = None
+        db.commit()
+    a.sync()
+    r = next(
+        r
+        for r in rows(x)
+        if r.kind == "knowledge" and r.target_id == "google_essentials"
+    )
+    if delivery == "sent":
+        a.deliver_one()
+    elif delivery == "uncertain":
+        with x["db"].session() as db:
+            db.get(a.Approval, r.id).delivery = "uncertain"
+            db.commit()
+    original = row(x, r.id)
+    with x["db"].session() as db:
+        source = db.get(SeoKnowledgeSource, "google_essentials")
+        source.lease_token = "refresh"
+        source.lease_until = a.now() + timedelta(minutes=1)
+        db.commit()
+    a.sync()
+    assert row(x, r.id).state == "stale"
+    with x["db"].session() as db:
+        source = db.get(SeoKnowledgeSource, "google_essentials")
+        source.lease_token = None
+        source.lease_until = None
+        db.commit()
+    a.sync()
+    recovered = row(x, r.id)
+    assert recovered.state == "pending" and recovered.expires_at == original.expires_at
+    assert recovered.version == original.version and recovered.delivery == delivery
+    assert recovered.message_id == original.message_id
+    assert (
+        len(
+            [
+                i
+                for i in rows(x)
+                if i.kind == "knowledge" and i.target_id == "google_essentials"
+            ]
+        )
+        == 1
+    )
+    if delivery == "sent":
+        decision(x, r.id)
+        assert row(x, r.id).state == "approved"
+    if delivery == "uncertain":
+        assert not a.deliver_one()
+
+
+@pytest.mark.parametrize("reason", ["expired", "version_changed", "rejected"])
+def test_recovery_never_renews_expired_changed_or_rejected_source_consent(
+    bot, writing, reason
+):
+    x = writing
+    bot["owner"] = x["owner"]
+    activate(bot)
+    with x["db"].session() as db:
+        db.get(SeoKnowledgeSource, "google_essentials").approved_hash = None
+        db.commit()
+    a.sync()
+    r = next(
+        r
+        for r in rows(x)
+        if r.kind == "knowledge" and r.target_id == "google_essentials"
+    )
+    if reason == "rejected":
+        a.deliver_one()
+        decision(x, r.id, False)
+    with x["db"].session() as db:
+        source = db.get(SeoKnowledgeSource, "google_essentials")
+        source.lease_token = "refresh"
+        source.lease_until = a.now() + timedelta(minutes=1)
+        if reason == "expired":
+            db.get(a.Approval, r.id).expires_at = a.now() - timedelta(seconds=1)
+        db.commit()
+    a.sync()
+    with x["db"].session() as db:
+        source = db.get(SeoKnowledgeSource, "google_essentials")
+        source.lease_token = None
+        source.lease_until = None
+        if reason == "version_changed":
+            source.guidance_fr += " New substantive guidance."
+        db.commit()
+    a.sync()
+    original = row(x, r.id)
+    assert (
+        original.state
+        == {"expired": "expired", "version_changed": "stale", "rejected": "rejected"}[
+            reason
+        ]
+    )
+    if reason == "version_changed":
+        assert (
+            len(
+                [
+                    i
+                    for i in rows(x)
+                    if i.kind == "knowledge" and i.target_id == "google_essentials"
+                ]
+            )
+            == 2
+        )

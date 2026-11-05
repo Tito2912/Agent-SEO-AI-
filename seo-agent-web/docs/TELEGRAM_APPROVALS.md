@@ -28,6 +28,10 @@ pas un webhook existant. Le curseur avance après traitement ; une reprise peut 
 jamais des instructions d’exécution. Les demandes et refus restent consultables dans Noyaru.
 Une livraison dont le résultat réseau est inconnu n’est pas renvoyée automatiquement.
 
+Après une indisponibilité temporaire, une demande encore dans sa durée de validité peut
+redevenir utilisable si sa version exacte est de nouveau vérifiée dans la même liaison.
+Le message n’est pas renvoyé et sa durée n’est pas prolongée. Un refus reste un refus.
+
 Les cartes sont paginées, les libellés FR/EN sont explicites, les actions positives ont une
 confirmation propre et la page web utilise les composants et protections CSRF existants.
 Les droits des clients sur leurs sites restent inchangés : ce canal concerne le propriétaire

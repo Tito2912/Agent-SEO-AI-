@@ -233,6 +233,20 @@ def register(db, channel, doc):
         )
     )
     if row:
+        # inspect() has just revalidated this exact version in the current binding.
+        # A refresh lease or temporary outage must not strand its existing card.
+        if row.state == "stale":
+            row.state = (
+                "pending" if s.seo_watch.utc(row.expires_at) > now() else "expired"
+            )
+            row.confirmation = None
+            audit(
+                db,
+                channel.owner_id,
+                "recover",
+                row.id,
+                {"state": row.state, "version": row.version},
+            )
         # A refusal stays refused. Expiry requires an explicit web resend, not minute-by-minute spam.
         return row
     pages = split_pages(doc["text"])
