@@ -10772,6 +10772,11 @@ def _startup() -> None:
     except ImportError:
         import telegram_approvals
     telegram_approvals.start()
+    try:
+        from . import own_blog
+    except ImportError:
+        import own_blog
+    own_blog.start()
 
 
 def _shutdown() -> None:
@@ -10781,6 +10786,11 @@ def _shutdown() -> None:
     except ImportError:
         import telegram_approvals
     telegram_approvals.stop()
+    try:
+        from . import own_blog
+    except ImportError:
+        import own_blog
+    own_blog.stop()
 
 
 @asynccontextmanager
@@ -14949,7 +14959,7 @@ def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
     help_project = _help_project_context(request)
     page["body_html"] = help_navigation.body_links(page["body_html"], help_project)
     page["app_href"] = help_navigation.app_path("blog", slug, help_project)
-    return _help_response(
+    response = _help_response(
         "seo_resource_article_public.html",
         _public_template_context(
             request,
@@ -14960,6 +14970,11 @@ def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
             alternates=_content_versions("blog", slug, french),
         ),
     )
+    response.headers['X-Noyaru-Article-SHA256'] = raw['source_sha256']
+    release = _safe_env('RENDER_GIT_COMMIT')
+    if re.fullmatch('[a-f0-9]{40}', release):
+        response.headers['X-Noyaru-Release'] = release
+    return response
 
 
 @app.api_route("/robots.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse, include_in_schema=False)
@@ -40248,6 +40263,12 @@ try:
 except ImportError:
     from telegram_approval_routes import router as telegram_approval_router
 app.include_router(telegram_approval_router)
+
+try:
+    from .own_blog_routes import router as own_blog_router
+except ImportError:
+    from own_blog_routes import router as own_blog_router
+app.include_router(own_blog_router)
 
 try:
     from .analyses_orphelines import router as analyses_orphelines_router

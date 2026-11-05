@@ -2,7 +2,7 @@
 def strings(lang):
     en=lang=='en'
     def t(fr,eng):return eng if en else fr
-    return dict(title=t('Rédaction sourcée de Noyaru','Sourced writing for Noyaru'),
+    return dict(title=t('Rédaction sourcée de Noyaru','Sourced writing for Noyaru'),publication=t('Publication du blog','Blog publication'),
         intro=t('Du brief relu au brouillon privé : retrouvez les sources de chaque affirmation avant de préparer sa publication.','From reviewed brief to private draft: check the sources behind each claim before preparing publication.'),
         back=t('Référencement de Noyaru','Noyaru search visibility'),reload=t('Actualiser l’état','Refresh status'),
         scope=t('Cet espace prépare un texte privé. L’autorisation de rédaction ne permet aucune publication ni modification du site.','This workspace prepares private text. Writing authorization grants no publication or site changes.'),

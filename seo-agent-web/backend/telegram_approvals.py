@@ -62,6 +62,8 @@ def kind_label(channel, kind):
         "brief": ("Brief éditorial", "Editorial brief"),
         "writing": ("Autoriser la rédaction", "Authorize writing"),
         "draft": ("Relire un brouillon", "Review a draft"),
+        "blog_pr": ("Préparer une PR du blog", "Prepare a blog PR"),
+        "blog_publish": ("Publier un article", "Publish an article"),
     }
     return tr(channel, *labels[kind])
 
@@ -273,7 +275,7 @@ def register(db, channel, doc):
         nonce=secrets.token_hex(6),
         seen=0,
         delivery="queued",
-        expires_at=now() + timedelta(hours=24),
+        expires_at=min(now() + timedelta(hours=24), s.seo_watch.utc(doc['expires_at'])) if doc.get('expires_at') else now() + timedelta(hours=24),
         created_at=now(),
     )
     db.add(row)
@@ -447,6 +449,16 @@ def card(channel, row, page=0, doc=None, confirm=False):
                 channel,
                 "Annuler ce brouillon privé. Aucune publication.",
                 "Cancel this private draft. No publication.",
+            ),
+            "blog_pr": tr(
+                channel,
+                "Arrêter cette préparation. Aucune nouvelle écriture GitHub ; une PR existante reste en place.",
+                "Stop this preparation. No new GitHub write; any existing PR is kept.",
+            ),
+            "blog_publish": tr(
+                channel,
+                "Refuser la publication. Aucune fusion ; la PR reste en place.",
+                "Reject publication. No merge; the PR is kept.",
             ),
             "test": tr(
                 channel,
@@ -743,11 +755,22 @@ def handle_callback(query, lease=None):
         pass
     if result_id:
         threading.Thread(
-            target=w.run,
-            args=(result_id,),
-            name="telegram-authorized-writing",
+            target=run_result,
+            args=(row.kind, result_id),
+            name="telegram-authorized-operation",
             daemon=True,
         ).start()
+
+
+def run_result(kind, ident):
+    if kind in {'blog_pr', 'blog_publish'}:
+        try:
+            from . import own_blog
+        except ImportError:
+            import own_blog
+        own_blog.run(ident)
+    elif kind == 'writing':
+        w.run(ident)
 
 
 def process_update(update, lease):

@@ -902,6 +902,34 @@ class OwnSeoDraft(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class OwnBlogPublication(Base):
+    """Two separate owner decisions, fixed own blog only; no AI or client authority."""
+    __tablename__ = 'own_blog_publications'
+    __table_args__ = (UniqueConstraint('owner_id', 'authorization_key', name='uq_own_blog_authorization'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), index=True, nullable=False)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    fr_id: Mapped[str] = mapped_column(String(36), ForeignKey('own_seo_drafts.id', ondelete='CASCADE'), nullable=False)
+    en_id: Mapped[str | None] = mapped_column(String(36), ForeignKey('own_seo_drafts.id', ondelete='CASCADE'), nullable=True)
+    workspace_token: Mapped[str] = mapped_column(String(32), nullable=False)
+    authorization_key: Mapped[str] = mapped_column(String(32), nullable=False)
+    connection_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    slug: Mapped[str] = mapped_column(String(80), nullable=False)
+    proposal: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    receipt: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    intents: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    state: Mapped[str] = mapped_column(String(24), nullable=False, default='proposal')
+    generation: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    reads: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    writes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    next_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lease_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class DpaAcceptance(Base):
     """La preuve d'une acceptation de l'accord de traitement des donnees (DPA, article 1).
 

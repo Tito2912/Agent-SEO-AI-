@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block title %}{{ copy.title }} - {{ app_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/own_seo.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/settings/system/own-seo/writing">{{ copy.writing }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
+{% block content %}<div class="own-seo">
+<header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
+<nav class="own-actions"><a class="btn" href="/settings/system/own-seo/writing">{{ copy.writing }}</a><a class="btn" href="/settings/system/telegram/approvals">{{ copy.bot }}</a><a class="btn" href="{{ base }}">{{ copy.reload }}</a></nav>
+{% if unavailable %}<p class="alert error" role="alert">{{ copy.errors.unavailable }}</p>{% else %}
+{% if error %}<p class="alert error" role="alert">{{ error }}</p>{% endif %}
+<section class="card"><p>{{ copy.scope }}</p><p>{{ copy.limits }}</p></section>
+<section class="card"><h2>{{ copy.choose }}</h2>
+{% set french=eligible|selectattr('bundle.brief.lang','equalto','fr')|list %}
+{% if french %}<form method="post" action="{{ base }}/prepare">{{ csrf() }}<input type="hidden" name="key" value="{{ key }}" />
+<label for="blog-fr">{{ copy.fr }}</label><select id="blog-fr" name="fr" required>{% for draft in french %}<option value="{{ draft.id }}">{{ draft.content.title }}</option>{% endfor %}</select>
+<label for="blog-en">{{ copy.en }}</label><select id="blog-en" name="en"><option value="">{{ copy.none }}</option>{% for draft in eligible if draft.bundle.brief.lang=='en' %}<option value="{{ draft.id }}">{{ draft.content.title }}</option>{% endfor %}</select>
+<label class="own-check"><input type="checkbox" name="confirm" value="true" required /><span>{{ copy.consent }}</span></label><button class="btn primary" type="submit">{{ copy.prepare }}</button></form>
+{% else %}<p>{{ copy.empty }}</p>{% endif %}</section>
+<h2>{{ copy.history }}</h2>{% for row in items %}<article class="card" id="publication-{{ row.id }}" data-publication="{{ row.state }}">
+<h3>{{ row.slug }}</h3><p role="status">{{ copy.status }} : {{ copy.statuses.get(row.state,copy.errors.changed) }}</p><p>{{ copy.expires }} : {{ row.expires_at }}</p>
+{% if row.error_code %}<p class="alert warning" role="status">{{ copy.errors.get(row.error_code,copy.errors.changed) }}</p>{% endif %}
+{% if row.state in ['proposal','review_ready'] %}<p>{{ copy.next }}</p><a class="btn primary" href="/settings/system/telegram/approvals">{{ copy.bot }}</a>{% endif %}
+{% if row.receipt.url %}<p><a href="{{ row.receipt.url }}" target="_blank" rel="noopener noreferrer">GitHub · PR #{{ row.receipt.number }}</a></p>{% endif %}
+{% if row.receipt.checks %}<p><a href="{{ row.receipt.checks.url }}" target="_blank" rel="noopener noreferrer">GitHub · CI</a></p>{% endif %}
+{% if row.state=='published' %}<p>{{ copy.proof }}</p>{% for observed in row.receipt.observed %}<p><a href="{{ observed.url }}" target="_blank" rel="noopener noreferrer">{{ observed.url }}</a> · {{ row.receipt.observed_at }}</p>{% endfor %}{% endif %}
+<details><summary>{{ copy.files }}</summary><p>main · {{ row.proposal.base or '…' }}</p>{% for file in row.proposal.files %}<h3>{{ file.lang|upper }} · {{ file.path }}</h3><p>{{ file.url }}</p><pre>{{ file.text }}</pre>{% endfor %}</details>
+<div class="own-actions">
+{% if row.state in ['queued_prepare','preparing','reviewing','queued_publish','publishing','observing','uncertain'] %}<form method="post" action="{{ base }}/{{ row.id }}/check">{{ csrf() }}<button class="btn" type="submit">{{ copy.check }}</button></form>{% endif %}
+{% if row.state in ['checking','proposal','review_ready','reviewing','needs_review'] %}<form method="post" action="{{ base }}/{{ row.id }}/refresh">{{ csrf() }}<button class="btn" type="submit">{{ copy.refresh }}</button></form>{% endif %}
+{% if row.state not in ['published','cancelled'] %}<form method="post" action="{{ base }}/{{ row.id }}/cancel">{{ csrf() }}<button class="btn" type="submit">{{ copy.cancel }}</button></form>{% endif %}
+</div></article>{% endfor %}{% endif %}</div>{% endblock %}
