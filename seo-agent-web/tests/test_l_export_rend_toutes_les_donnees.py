@@ -220,6 +220,14 @@ def test_au_plus_TROIS_exports_par_heure(comptes) -> None:
     assert "err=" in quatrieme.headers["location"]
 
 
+@pytest.mark.parametrize("chemin, phrase", [("/privacy", "« Mon compte → Mes données » télécharge toutes vos"),
+                                            ("/en/privacy", "“My account → My data” downloads all your data")])
+def test_la_confidentialite_dit_ou_exercer_l_acces_et_la_portabilite(chemin, phrase) -> None:
+    with TestClient(m.app) as client:
+        page = client.get(chemin).text
+    assert phrase in " ".join(page.split("10.", 1)[1].split())
+
+
 def test_le_bouton_est_dans_Mon_compte(comptes) -> None:
     with _client(comptes["a"]) as client:
         page = client.get("/settings/accounts").text
