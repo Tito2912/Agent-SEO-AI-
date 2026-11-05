@@ -162,6 +162,9 @@
     Your browser also keeps, locally and without sending them to us, your choice on the cookie
     banner, the history of your conversations with the assistant until you clear it, and, for the
     duration of the tab, the latest results of a competitor search.
+    {% if captcha_actif %}On the sign-up form, the Cloudflare Turnstile verification box also keeps
+    a technical item in your browser (<code>cf.turnstile.u</code>), needed for the anti-robot
+    check.{% endif %}
   </p>
 
   <h2>9. Security</h2>

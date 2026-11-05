@@ -55,7 +55,7 @@ UPDATED: dict[str, date] = {
     # 02/11/2026 : Telegram (notifications du proprietaire) et Google Analytics (mesure d'audience
     # du site public, apres consentement), chacun nomme quand il est configure.
     # 05/11/2026 : Cloudflare Turnstile (captcha du formulaire d'inscription), nomme quand l'une de
-    # ses cles est configuree.
+    # ses cles est configuree, avec la donnee qu'il garde dans le navigateur (cf.turnstile.u).
     "privacy": date(2026, 11, 5),
     "legal_notice": date(2026, 10, 21),
 }

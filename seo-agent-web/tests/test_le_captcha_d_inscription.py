@@ -291,6 +291,21 @@ def test_le_piege_et_le_delai_PASSENT_AVANT_et_epargnent_l_appel(envois, avec_ca
     assert statut == "robot" and "heure d'ouverture" in consignee
 
 
+# ── La confidentialité ───────────────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("chemin, section", [("/privacy", 'id="cookies"'), ("/en/privacy", 'id="cookies"')])
+def test_la_donnee_gardee_dans_le_navigateur_est_DECLAREE_quand_le_captcha_est_branche(
+        envois, monkeypatch, chemin, section) -> None:
+    """Relevé en production le 05/11/2026 avec les vraies clés : aucun cookie, mais une entrée
+    `cf.turnstile.u` dans le stockage du navigateur, posée par le cadre de Cloudflare."""
+    with TestClient(m.app) as client:
+        sans = client.get(chemin).text
+        monkeypatch.setenv("TURNSTILE_SITE_KEY", SITE)
+        avec = client.get(chemin).text
+    assert "cf.turnstile.u" not in sans
+    assert "cf.turnstile.u" in avec.split(section, 1)[1], "dans la section « Cookies et stockage »"
+
+
 # ── Le réglage, dans Système ─────────────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("cle", ["TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"])
