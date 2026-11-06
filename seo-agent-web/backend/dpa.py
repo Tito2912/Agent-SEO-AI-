@@ -1,13 +1,13 @@
-"""L'acceptation en ligne de l'accord de traitement des données (DPA, article 1). 05/11/2026.
+"""L'acceptation en ligne de l'accord de traitement des données (DPA, clause complémentaire B1). 05/11/2026.
 
-L'article 1 du DPA : accepté de façon expresse, en ligne, par une personne habilitée à engager le
+La clause B1 du DPA : accepté de façon expresse, en ligne, par une personne habilitée à engager le
 Client, qui coche une case et DÉCLARE ce pouvoir ; l'acceptation identifie l'organisation
 (dénomination, immatriculation quand elle existe) ; E-Com Shop garde l'organisation, le compte et
 la personne, la date et l'heure, la version EXACTE du texte et la trace de l'action, pendant
 l'accord puis cinq ans ; une nouvelle version s'accepte de nouveau.
 
 Rien de tout cela n'apparaît tant que `legal.DPA_VERSION` vaut None : le texte attend la
-validation d'un juriste (docs/legal/LEGAL-VALIDATION-REQUIRED.md).
+décision de le publier (docs/legal/LEGAL-VALIDATION-REQUIRED.md).
 """
 from __future__ import annotations
 

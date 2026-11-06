@@ -991,7 +991,7 @@ class OwnSupportTicket(Base):
 
 
 class DpaAcceptance(Base):
-    """La preuve d'une acceptation de l'accord de traitement des donnees (DPA, article 1).
+    """La preuve d'une acceptation de l'accord de traitement des donnees (DPA, clause B1).
 
     Gardee pendant l'accord puis cinq ans : elle SURVIT a la suppression du compte (le lien
     devient nul, `termine_le` date la fin de l'accord), ce que le journal d'audit ne permet pas,

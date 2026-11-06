@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""L'acceptation en ligne de l'accord de traitement des données (DPA, article 1 ; 05/11/2026).
+"""L'acceptation en ligne de l'accord de traitement des données (DPA, clause B1 ; 05/11/2026).
 
 Ce que ces tests défendent :
-  * RIEN n'apparaît tant que legal.DPA_VERSION vaut None (le texte attend un juriste) ;
+  * RIEN n'apparaît tant que legal.DPA_VERSION vaut None (le texte attend la décision de le publier) ;
   * publié, l'accord s'accepte par une personne qui DÉCLARE son pouvoir, pour une organisation
     identifiée ; la preuve garde l'organisation, le compte, la personne, l'heure, la version et
     l'empreinte du texte EXACT, et la trace de l'action ;
@@ -99,7 +99,7 @@ def test_NON_publie_rien_n_apparait(titulaire, monkeypatch) -> None:
 
 
 def test_le_depot_ne_publie_PAS_le_brouillon() -> None:
-    assert legal.DPA_VERSION is None, "le DPA attend la validation d'un juriste (LEGAL-VALIDATION-REQUIRED.md)"
+    assert legal.DPA_VERSION is None, "le DPA attend la décision de le publier (LEGAL-VALIDATION-REQUIRED.md)"
 
 
 # ── Publié ───────────────────────────────────────────────────────────────────────────────────

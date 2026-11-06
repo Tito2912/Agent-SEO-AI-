@@ -137,6 +137,21 @@ ouverts. Ils sont inscrits dans le DPA à la place des mentions « À VALIDER »
 Le détail et la raison de chaque choix sont dans `LEGAL-VALIDATION-REQUIRED.md`, section 5, avec les
 informations qui restent à compléter.
 
+## Reconstruction du DPA (6 novembre 2026)
+
+Pour réduire la relecture à payer, le DPA est reconstruit sur les clauses types de la décision d'exécution (UE)
+2021/915, dont le texte officiel a été repris par programme depuis EUR-Lex. La numérotation change : partie A
+(clauses 1 à 10), annexes I à IV, clauses complémentaires B1 à B7, qui reprennent les décisions du 21 octobre.
+
+Correspondance : articles 2 à 6 → annexe II ; 7 → clause 7.1 et B2 ; 8 et 9 → clause 7.4 et annexe III ; 10 →
+clause 7.7 et B3 ; 11 → clause 7.8 et annexe IV ; 12 et 14 → clause 8 et annexe III ; 13 → clause 9 et B4 ; 15 →
+clause 10 d) et B5 ; 16 → clause 7.6 et B6 ; 17 → B7 ; article 1 → annexe I et B1.
+
+Deux écarts au texte officiel, nommés dans la présentation du DPA : clause 7.7 e) non reprise, et remplacement
+urgent à la clause 7.7 a). Engagements nouveaux pour E-Com Shop : voir `LEGAL-VALIDATION-REQUIRED.md`, section 5.
+L'annexe IV retire Google Gemini (désactivé) et Ahrefs (non activé), ajoute PageSpeed et l'usage d'OpenAI pour
+les illustrations, et remplit les garanties de transfert à partir du registre DPF et des contrats.
+
 ## Points en attente
 
 Voir `LEGAL-VALIDATION-REQUIRED.md`. Les messages de l'application qui citaient encore « Comptes

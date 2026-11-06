@@ -16037,7 +16037,7 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
             if email:
                 db.execute(update(AuditLog).where(AuditLog.actor_email == email).values(actor_email=None))
             # Les preuves d'acceptation du DPA SURVIVENT au compte : l'accord prend fin aujourd'hui,
-            # elles sont gardees cinq ans (DPA article 1, backend/dpa.py).
+            # elles sont gardees cinq ans (DPA clause B1, backend/dpa.py).
             if uid:
                 dpa.terminer(db, uid, datetime.now(timezone.utc))
 
@@ -16203,9 +16203,9 @@ def _membre_d_un_autre_compte(user_id: str) -> bool:
 
 @app.get("/settings/dpa", response_class=HTMLResponse)
 def settings_dpa(request: Request, msg: str | None = None, err: str | None = None) -> HTMLResponse:
-    """L'accord de traitement des donnees, et son acceptation en ligne (DPA article 1, 05/11/2026).
+    """L'accord de traitement des donnees, et son acceptation en ligne (DPA clause B1, 05/11/2026).
 
-    N'existe pas tant que `legal.DPA_VERSION` vaut None : le texte attend un juriste."""
+    N'existe pas tant que `legal.DPA_VERSION` vaut None : le texte attend la decision de le publier."""
     if not dpa.version():
         raise HTTPException(status_code=404, detail="not_found")
     user = getattr(request.state, "user", None)
@@ -17465,7 +17465,7 @@ def delete_projects(request: Request, slugs: list[str] = Form(default=[])) -> Re
             db.delete(p)
         db.commit()
     # « La suppression est définitive : elle emporte l'historique des crawls, les rapports… » (doc
-    # « Ajouter un projet », DPA art. 12). Jusqu'au 05/11/2026 seules les lignes partaient : les
+    # « Ajouter un projet », DPA annexe III et clause B5). Jusqu'au 05/11/2026 seules les lignes partaient : les
     # fichiers d'analyse restaient sur le disque et dans S3, et ressortaient dans l'export du compte.
     try:
         dossier_du_compte = _runs_dir_for_user(str(user.id))

@@ -1,7 +1,7 @@
 """La sauvegarde de la base se restaure-t-elle vraiment ? Un essai mensuel, sur Render.
 
-Exigé par l'accord de traitement des données (DPA, article 15 et annexe 2 : « possibilité de
-restauration », à confirmer). Décision du propriétaire, 05/11/2026 : un essai AUTOMATIQUE, une fois
+Exigé par l'accord de traitement des données (DPA, annexe III : la sauvegarde doit pouvoir
+être restaurée). Décision du propriétaire, 05/11/2026 : un essai AUTOMATIQUE, une fois
 par mois, plutôt qu'une copie de la production sur un poste de travail.
 
 La tâche `noyaru-restauration-test` (image Dockerfile.restauration) :

@@ -2,7 +2,7 @@
 
 Décision du propriétaire, 05/11/2026 : un bouton « Télécharger toutes mes données » dans « Mon
 compte ». Il tient deux promesses d'un coup : la RESTITUTION de l'accord de traitement des données
-(DPA, article 15 : remettre au client, à son départ, ce que les rapports et exports ne couvrent
+(DPA, clause B5 : remettre au client, à son départ, ce que les rapports et exports ne couvrent
 pas, dans un format structuré et couramment utilisé) et la PORTABILITÉ du RGPD (article 20).
 
 Le contenu se DÉDUIT DU SCHÉMA : chaque table de la base, en suivant ses clés étrangères depuis le

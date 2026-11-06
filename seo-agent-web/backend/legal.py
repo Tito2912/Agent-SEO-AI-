@@ -67,7 +67,7 @@ UPDATED: dict[str, date] = {
 AUTO_MODE_WARNING_VERSION = "2026-10-21"
 
 # L'accord de traitement des données (DPA) proposé aux clients professionnels (backend/dpa.py) :
-# None tant qu'un juriste ne l'a pas validé (docs/legal/LEGAL-VALIDATION-REQUIRED.md), et alors
+# None tant qu'E-Com Shop n'a pas décidé de le publier (docs/legal/LEGAL-VALIDATION-REQUIRED.md), et alors
 # RIEN n'apparaît. Ensuite, la version publiée (« 1.0 ») : la page « Mon compte → Accord de
 # traitement des données » s'ouvre, et toute nouvelle version demande une nouvelle acceptation.
 DPA_VERSION: str | None = None
