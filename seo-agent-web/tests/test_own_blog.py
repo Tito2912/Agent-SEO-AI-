@@ -421,7 +421,7 @@ def test_two_distinct_decisions_merge_exact_files_and_observe_public_release(
 def served_article(file, release, monkeypatch, tmp_path):
     """Exercise the real public route and template, not a mirrored HTML fixture."""
     path = tmp_path / "article.md"
-    path.write_text(file["text"])
+    path.write_text(file["text"], encoding="utf-8")
     article = m.content_library._load_page(path, collection="blog", lang=file["lang"])
     original = m.content_library.get_article
     monkeypatch.setattr(
@@ -584,7 +584,7 @@ def test_content_is_valid_catalog_markdown_with_literal_prose_and_fixed_sources(
     ident = proposal(x)
     file = row(x, ident).proposal["files"][0]
     path = tmp_path / "article.md"
-    path.write_text(file["text"])
+    path.write_text(file["text"], encoding="utf-8")
     page = m.content_library._load_page(path, collection="blog")
     assert page["slug"] == output()["slug"] and page["source_sha256"] == file["sha256"]
     assert (
