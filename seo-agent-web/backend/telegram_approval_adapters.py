@@ -1,11 +1,10 @@
 """Closed set of owner actions. Telegram text is never executable input."""
 
-import json
 from datetime import timedelta
 from sqlalchemy import select
 
 try:
-    from . import own_seo as s, own_writing as w, seo_watch
+    from . import own_seo as s, own_writing as w, seo_watch, telegram_approval_format as display
     from .models import (
         OwnSeoBrief,
         OwnSeoDraft,
@@ -16,6 +15,7 @@ except ImportError:
     import own_seo as s
     import own_writing as w
     import seo_watch
+    import telegram_approval_format as display
     from models import (
         OwnSeoBrief,
         OwnSeoDraft,
@@ -24,16 +24,37 @@ except ImportError:
     )
 
 
-def document(kind, target, version, title, body, effect, path, ready=True):
-    return dict(
+def document(
+    kind,
+    target,
+    version,
+    title,
+    body,
+    effect,
+    path,
+    ready=True,
+    *,
+    sections=None,
+    summary="",
+    en=False,
+):
+    doc = dict(
         kind=kind,
         target=target,
         version=version,
         title=title,
-        text=title + "\n\n" + effect + "\n\n" + body,
         effect=effect,
         path=path,
         ready=ready,
+    )
+    return display.document(
+        doc,
+        [
+            ("📌 Topic" if en else "📌 Sujet", title),
+            ("🎯 Your decision" if en else "🎯 Ce que tu valides", effect),
+        ]
+        + (sections if sections is not None else [("📄 Dossier", body)]),
+        summary=summary or title,
     )
 
 
@@ -101,6 +122,7 @@ def inspect(db, owner, kind, target, lang):
             effect,
             "/settings/system/seo-knowledge",
             ready,
+            en=en,
         )
     if kind in {"brief", "writing"}:
         workspace, _, row = s.brief_for(db, owner, target)
@@ -125,11 +147,13 @@ def inspect(db, owner, kind, target, lang):
                 target,
                 s.digest(value),
                 row.title,
-                s.export(row),
+                "",
                 "Approve the brief only. Reject discards it. No AI request or publication."
                 if en
                 else "Valider le brief uniquement. Refuser l’abandonne. Aucun appel IA ni publication.",
                 "/settings/system/own-seo",
+                sections=display.brief_sections(row, en),
+                en=en,
             )
         value, fingerprint = w.bundle(db, owner, target)
         previous = db.scalar(
@@ -158,9 +182,11 @@ def inspect(db, owner, kind, target, lang):
             target,
             fingerprint,
             row.title,
-            json.dumps(value, ensure_ascii=False, indent=2),
+            "",
             effect,
             w.PATH + "?brief=" + target,
+            sections=display.writing_sections(value, en),
+            en=en,
         )
     if kind == "draft":
         row = w.row_for(db, owner, target)
@@ -176,13 +202,13 @@ def inspect(db, owner, kind, target, lang):
             target,
             s.digest([row.input_hash, row.content_hash]),
             row.content["title"],
-            w.export(row)
-            + "\n\n"
-            + json.dumps(row.bundle["sources"], ensure_ascii=False, indent=2),
+            "",
             "Confirm that every claim is supported by its sources. Reject cancels the draft. No publication."
             if en
             else "Confirmer que chaque affirmation est étayée par ses sources. Refuser annule le brouillon. Aucune publication.",
             w.PATH + "?brief=" + row.brief_id,
+            sections=display.draft_sections(row, en),
+            en=en,
         )
     raise ValueError("unsupported")
 

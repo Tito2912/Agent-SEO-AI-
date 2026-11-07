@@ -399,7 +399,7 @@ def test_source_exact_version_can_be_approved_or_rejected_without_inventing_guid
     )
     a.deliver_one()
     delivered = bot["messages"][int(row(x, r.id).message_id)]["text"]
-    assert delivered.startswith("Noyaru · Source SEO/GEO ·")
+    assert "Noyaru · Source SEO/GEO" in BeautifulSoup(delivered, "html.parser").get_text()
     decision(x, r.id)
     with x["db"].session() as db:
         source = db.get(SeoKnowledgeSource, "google_essentials")

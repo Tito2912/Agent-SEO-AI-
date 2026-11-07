@@ -1,6 +1,7 @@
 """Durable private owner decisions. No public webhook and no arbitrary tool dispatch."""
 
 from datetime import timedelta
+from html import unescape
 import os
 import re
 import secrets
@@ -17,6 +18,7 @@ try:
         own_writing as w,
         telegram,
         telegram_approval_adapters as adapters,
+        telegram_approval_format as display,
     )
     from .models import (
         TelegramApprovalChannel as Channel,
@@ -29,6 +31,7 @@ except ImportError:
     import own_writing as w
     import telegram
     import telegram_approval_adapters as adapters
+    import telegram_approval_format as display
     from models import (
         TelegramApprovalChannel as Channel,
         TelegramApprovalRequest as Approval,
@@ -220,22 +223,20 @@ def pause(owner):
 
 
 def split_pages(text):
-    # Telegram counts UTF-16 units; keep ample room for the heading and expiry.
-    pages = []
-    part = ""
-    units = 0
-    for char in text:
-        size = len(char.encode("utf-16-le")) // 2
-        if units + size > 2800:
-            pages.append(part)
-            part = ""
-            units = 0
-        part += char
-        units += size
-    if part:
-        pages.append(part)
+    pages = display.split_text(text)
     if not pages or len(pages) > 16:
         raise ValueError("document_too_long")
+    return pages
+
+
+def stored_pages(doc):
+    pages = display.pages(doc)
+    if doc["kind"] in {"support_write", "support_send", "support_review"}:
+        try:
+            from . import own_support_common
+        except ImportError:
+            import own_support_common
+        pages = [own_support_common.seal({"text": page}) for page in pages]
     return pages
 
 
@@ -265,13 +266,7 @@ def register(db, channel, doc):
             )
         # A refusal stays refused. Expiry requires an explicit web resend, not minute-by-minute spam.
         return row
-    pages = split_pages(doc["text"])
-    if doc['kind'] in {'support_write','support_send','support_review'}:
-        try:
-            from . import own_support_common
-        except ImportError:
-            import own_support_common
-        pages = [own_support_common.seal({'text':page}) for page in pages]
+    pages = stored_pages(doc)
     row = Approval(
         id=uuid.uuid4().hex,
         owner_id=channel.owner_id,
@@ -317,6 +312,7 @@ def inspect(db, channel, row):
                 "Approve or reject this test, with no business effect.",
             ),
             PATH,
+            en=channel.lang == "en",
         )
     return adapters.inspect(db, channel.owner_id, row.kind, row.target_id, channel.lang)
 
@@ -406,9 +402,11 @@ def resend(owner, ident):
                 raise ValueError("changed")
             row.state = "pending"
             row.expires_at = now() + timedelta(hours=24)
-        check(db, channel, row)
+        doc = check(db, channel, row)
         if row.delivery not in {"uncertain", "sent"}:
             raise ValueError("receiver_busy")
+        # Only an explicit resend replaces a cached presentation and invalidates old buttons.
+        row.pages = stored_pages(doc)
         row.delivery = "queued"
         row.message_id = None
         row.seen = 0
@@ -424,20 +422,75 @@ def callback_data(row, verb, nonce=None):
 
 def card(channel, row, page=0, doc=None, confirm=False):
     buttons = []
+    icons = {
+        "test": "🧪",
+        "knowledge": "🔎",
+        "brief": "🧭",
+        "writing": "✍️",
+        "draft": "📝",
+        "blog_pr": "📦",
+        "blog_publish": "🚀",
+        "support_write": "💬",
+        "support_send": "📨",
+        "support_review": "🧑‍💼",
+    }
+    heading = (
+        "<b>"
+        + icons[row.kind]
+        + " Noyaru · "
+        + display.escaped(kind_label(channel, row.kind))
+        + "</b>"
+    )
+    path = doc.get("path", PATH) if doc else PATH
+    if not re.fullmatch(
+        r"/settings/system/[a-zA-Z0-9/_-]+(?:\?[a-zA-Z0-9=_&%.-]+)?", path
+    ):
+        path = PATH
+    open_button = [
+        {
+            "text": tr(channel, "Ouvrir dans Noyaru ↗", "Open in Noyaru ↗"),
+            "url": "https://noyaru.com" + path,
+        }
+    ]
     if row.state != "pending":
-        text = (
-            tr(channel, "Décision enregistrée : ", "Decision recorded: ")
-            + row.state
-            + "\n"
-            + row.id[:8]
-        )
-        return {"text": text, "reply_markup": {"inline_keyboard": []}}
-    if confirm:
-        text = tr(channel, "Confirmer : ", "Confirm: ") + tr(
+        labels = {
+            "approved": ("✅ Accord enregistré", "✅ Approval recorded"),
+            "rejected": ("✋ Refus enregistré", "✋ Rejection recorded"),
+            "expired": ("⌛ Demande expirée", "⌛ Request expired"),
+            "stale": ("🔄 Demande à actualiser", "🔄 Request needs refreshing"),
+        }
+        status = tr(
             channel,
-            "APPROUVER" if row.choice == "yes" else "REFUSER",
-            "APPROVE" if row.choice == "yes" else "REJECT",
+            *labels.get(row.state, ("À vérifier dans Noyaru", "Check in Noyaru")),
         )
+        text = heading + "\n\n<b>" + display.escaped(status) + "</b>"
+        if doc:
+            text += "\n" + display.escaped(display.one_line(doc.get("title", "")))
+        if row.state == "approved":
+            text += "\n" + tr(
+                channel,
+                "L’accord est enregistré. Le résultat de l’opération reste à vérifier dans Noyaru.",
+                "Approval is recorded. Check the operation’s outcome in Noyaru.",
+            )
+        text += "\n\n" + tr(channel, "Réf. ", "Ref. ") + row.id[:8]
+        buttons = [open_button]
+    elif confirm:
+        text = (
+            heading
+            + "\n\n<b>"
+            + tr(
+                channel,
+                "Dernière étape · confirmer l’accord"
+                if row.choice == "yes"
+                else "Dernière étape · confirmer le refus",
+                "Last step · confirm approval"
+                if row.choice == "yes"
+                else "Last step · confirm rejection",
+            )
+            + "</b>"
+        )
+        if doc.get("decision_summary"):
+            text += "\n\n" + display.escaped(doc["decision_summary"])
         refusal = {
             "knowledge": tr(
                 channel,
@@ -469,9 +522,21 @@ def card(channel, row, page=0, doc=None, confirm=False):
                 "Refuser la publication. Aucune fusion ; la PR reste en place.",
                 "Reject publication. No merge; the PR is kept.",
             ),
-            "support_write": tr(channel,"Refuser cet appel IA ; garder la demande pour une réponse manuelle.","Reject this AI request; keep the request for a manual reply."),
-            "support_send": tr(channel,"Refuser cet envoi ; conserver le brouillon à corriger. Aucun email envoyé.","Reject sending; keep the draft for revision. No email sent."),
-            "support_review": tr(channel,"Écarter cette demande ou ce rappel d’envoi incertain. Le résultat inconnu reste conservé ; aucun nouvel email ni appel IA.","Dismiss this request or uncertain-send reminder. The unknown result is kept; no new email or AI request."),
+            "support_write": tr(
+                channel,
+                "Refuser cet appel IA ; garder la demande pour une réponse manuelle.",
+                "Reject this AI request; keep the request for a manual reply.",
+            ),
+            "support_send": tr(
+                channel,
+                "Refuser cet envoi ; conserver le brouillon à corriger. Aucun email envoyé.",
+                "Reject sending; keep the draft for revision. No email sent.",
+            ),
+            "support_review": tr(
+                channel,
+                "Écarter cette demande ou ce rappel d’envoi incertain. Le résultat inconnu reste conservé ; aucun nouvel email ni appel IA.",
+                "Dismiss this request or uncertain-send reminder. The unknown result is kept; no new email or AI request.",
+            ),
             "test": tr(
                 channel,
                 "Refuser le test, sans effet métier.",
@@ -479,66 +544,132 @@ def card(channel, row, page=0, doc=None, confirm=False):
             ),
         }
         effect = doc["effect"] if row.choice == "yes" else refusal[row.kind]
-        text += "\n\n" + effect + "\n\n" + row.id[:8]
+        text += (
+            "\n\n"
+            + display.escaped(effect)
+            + "\n\n"
+            + tr(channel, "Réf. ", "Ref. ")
+            + row.id[:8]
+        )
         buttons = [
             [
                 {
-                    "text": tr(channel, "Confirmer la décision", "Confirm decision"),
+                    "text": tr(
+                        channel,
+                        "✅ Confirmer l’accord"
+                        if row.choice == "yes"
+                        else "✋ Confirmer le refus",
+                        "✅ Confirm approval"
+                        if row.choice == "yes"
+                        else "✋ Confirm rejection",
+                    ),
                     "callback_data": callback_data(row, "c", row.confirmation),
                 },
                 {
-                    "text": tr(channel, "Retour", "Back"),
+                    "text": tr(channel, "↩️ Relire", "↩️ Read again"),
                     "callback_data": callback_data(row, "p0"),
                 },
             ]
         ]
     else:
         page = max(0, min(page, len(row.pages) - 1))
-        text = (
-            "Noyaru · "
-            + kind_label(channel, row.kind)
-            + " · "
-            + row.id[:8]
-            + "\n"
-            + str(page + 1)
-            + " / "
-            + str(len(row.pages))
-            + "\n\n"
-            + pages_for(row)[page]
+        shown = row.seen | (1 << page)
+        all_shown = shown == (1 << len(row.pages)) - 1
+        progress = " ".join(
+            "●" if shown & (1 << p) else "○" for p in range(len(row.pages))
         )
+        stage = {
+            "support_write": (
+                "Étape 1/2 · Préparer le brouillon",
+                "Step 1/2 · Prepare the draft",
+            ),
+            "support_send": (
+                "Étape 2/2 · Autoriser l’envoi",
+                "Step 2/2 · Authorize sending",
+            ),
+            "blog_pr": ("Étape 1/2 · Préparer la PR", "Step 1/2 · Prepare the PR"),
+            "blog_publish": (
+                "Étape 2/2 · Autoriser la publication",
+                "Step 2/2 · Authorize publication",
+            ),
+        }.get(row.kind)
+        text = heading
+        if stage:
+            text += "\n<i>" + tr(channel, *stage) + "</i>"
+        if doc:
+            text += "\n" + display.escaped(display.one_line(doc.get("title", "")))
         text += (
             "\n\n"
-            + tr(channel, "Expire (UTC) : ", "Expires (UTC): ")
-            + s.seo_watch.utc(row.expires_at).strftime("%d/%m %H:%M")
+            + tr(channel, "Page ", "Page ")
+            + f"{page + 1}/{len(row.pages)} · "
+            + progress
+        )
+        text += "\n\n" + display.escaped(pages_for(row)[page])
+        if not all_shown:
+            text += "\n\n" + tr(
+                channel,
+                "📖 Parcours toutes les pages, puis choisis ta décision.",
+                "📖 View every page, then choose your decision.",
+            )
+        if doc and not doc["ready"]:
+            text += "\n\n" + tr(
+                channel,
+                "⏸ Cette demande doit d’abord être complétée dans Noyaru.",
+                "⏸ Complete this request in Noyaru first.",
+            )
+        text += (
+            "\n\n"
+            + tr(channel, "⏳ Valable jusqu’au ", "⏳ Valid until ")
+            + s.seo_watch.utc(row.expires_at).strftime("%Y-%m-%d %H:%M UTC")
+            + " · "
+            + tr(channel, "Réf. ", "Ref. ")
+            + row.id[:8]
         )
         nav = []
         if page:
             nav.append(
-                {"text": "←", "callback_data": callback_data(row, "p" + str(page - 1))}
+                {
+                    "text": tr(channel, "← Précédent", "← Previous"),
+                    "callback_data": callback_data(row, "p" + str(page - 1)),
+                }
             )
         if page + 1 < len(row.pages):
             nav.append(
-                {"text": "→", "callback_data": callback_data(row, "p" + str(page + 1))}
+                {
+                    "text": tr(channel, "Suite →", "Next →"),
+                    "callback_data": callback_data(row, "p" + str(page + 1)),
+                }
             )
         if nav:
             buttons.append(nav)
         choices = []
-        if doc is None or doc["ready"]:
+        if all_shown and (doc is None or doc["ready"]):
             choices.append(
                 {
-                    "text": tr(channel, "Approuver", "Approve"),
+                    "text": tr(channel, "✅ Approuver", "✅ Approve"),
                     "callback_data": callback_data(row, "y"),
                 }
             )
         choices.append(
             {
-                "text": tr(channel, "Refuser", "Reject"),
+                "text": tr(channel, "✋ Refuser", "✋ Reject"),
                 "callback_data": callback_data(row, "n"),
             }
         )
         buttons.append(choices)
+        buttons.append(open_button)
+    # All variable text is escaped before HTML formatting; legacy plain pages stay safe too.
+    plain = (
+        text.replace("<b>", "")
+        .replace("</b>", "")
+        .replace("<i>", "")
+        .replace("</i>", "")
+    )
+    if display.units(unescape(plain)) > 4096:
+        raise ValueError("document_too_long")
     return {
         "text": text,
+        "parse_mode": "HTML",
         "reply_markup": {"inline_keyboard": buttons},
         "link_preview_options": {"is_disabled": True},
     }
@@ -706,7 +837,7 @@ def handle_callback(query, lease=None):
                     row.id,
                     {"kind": row.kind, "version": row.version},
                 )
-                body = card(channel, row)
+                body = card(channel, row, doc=doc)
             binding = channel.binding
             body.update(chat_id=channel.chat_id, message_id=int(row.message_id))
             db.commit()

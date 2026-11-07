@@ -471,6 +471,10 @@ def decision_in_session(db, owner, ident, kind, approve, fingerprint):
 
 
 def approval_document(db, owner, ident, kind, lang):
+    try:
+        from . import telegram_approval_format as display
+    except ImportError:
+        import telegram_approval_format as display
     row, _ = scope(db, owner, ident)
     if (
         row.state != ("proposal" if kind == "blog_pr" else "review_ready")
@@ -506,19 +510,26 @@ def approval_document(db, owner, ident, kind, lang):
             "Commit: " + row.receipt["head"],
             "CI: " + row.receipt["checks"]["url"],
         ]
+    sections = [
+        ("🎯 Your decision" if en else "🎯 Ce que tu valides", effect),
+        ("📦 GitHub destination" if en else "📦 Destination GitHub", "\n".join(lines)),
+    ]
     for file in row.proposal["files"]:
-        lines += [file["path"], file["url"], file["text"]]
-    return dict(
+        sections.append(("📄 " + file["path"], file["url"] + "\n\n" + file["text"]))
+    doc = dict(
         kind=kind,
         target=ident,
         version=version(row, kind),
         title=row.slug,
-        text=row.slug + "\n\n" + effect + "\n\n" + "\n\n".join(lines),
         effect=effect,
         path=PATH + "?publication=" + ident,
         ready=True,
         expires_at=row.expires_at,
     )
+    summary = row.slug + "\n" + c.REPO + " · main"
+    if kind == "blog_publish":
+        summary += "\n" + row.receipt["url"] + "\nCommit: " + row.receipt["head"]
+    return display.document(doc, sections, summary=summary)
 
 
 def prepare_pr(worker):

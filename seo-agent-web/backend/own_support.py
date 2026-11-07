@@ -1,7 +1,6 @@
 """Support supervision and closed Telegram actions. No inbound email can grant a mandate."""
 
 from datetime import timedelta
-import json
 import threading
 import uuid
 
@@ -13,12 +12,16 @@ try:
         own_support_gmail as gmail,
         own_support_writing as writing,
         own_support_mail as mail,
+        own_support_copy as support_copy,
+        telegram_approval_format as display,
     )
 except ImportError:
     import own_support_common as c
     import own_support_gmail as gmail
     import own_support_writing as writing
     import own_support_mail as mail
+    import own_support_copy as support_copy
+    import telegram_approval_format as display
 
 PATH = c.PATH
 KINDS = {"support_write", "support_send", "support_review"}
@@ -62,21 +65,28 @@ def approval_document(db, owner, ident, kind, lang):
     )
     if kind not in expected or row.state != expected[kind] and not uncertain:
         raise c.Stop("changed")
-    body = (
+    identity = (
         "Sender identity is not verified. No account access is granted."
         if en
         else "L’identité du correspondant n’est pas vérifiée. Aucun accès au compte n’est accordé."
     )
-    body += "\n" + payload.get("from", "") + "\n" + payload.get("subject", "")
+    contact = ("From: " if en else "De : ") + payload.get("from", "")
+    contact += "\n" + ("Subject: " if en else "Objet : ") + payload.get("subject", "")
+    question = contact + "\n\n" + payload.get("text", "")
+    summary = contact
+    details = []
     ready = True
     expiry = c.now() + timedelta(hours=24)
     if kind == "support_write":
         packet, fingerprint = writing.bundle(db, owner, ident)
-        body += "\n\n" + json.dumps(packet, ensure_ascii=False, indent=2)
         effect = (
-            "Authorize one paid AI text request, up to 2 per rolling 24 hours, for this reduced question and these public sources. Private reply only; no email is sent."
+            "Prepare a private reply draft from this reduced question and these public sources.\n"
+            f"Cost: one paid AI text request. Limit: {c.DAILY_AI} per rolling 24 hours.\n"
+            "Next: review the reply, then approve sending separately. No email is sent at this step."
             if en
-            else "Autoriser un appel IA texte payant, au plus 2 par 24 h glissantes, pour cette question réduite et ces sources publiques. Réponse privée ; aucun email envoyé."
+            else "Préparer un brouillon privé pour cette question réduite, avec ces sources publiques.\n"
+            f"Coût : un appel IA texte payant. Limite : {c.DAILY_AI} par 24 h glissantes.\n"
+            "Ensuite : relire la réponse, puis autoriser son envoi séparément. Aucun email envoyé à cette étape."
         )
         ready = writing.reserved(db, owner) < c.DAILY_AI and c.module()._ai_configured()
         if not ready:
@@ -85,6 +95,10 @@ def approval_document(db, owner, ident, kind, lang):
                 if en
                 else "Vérifier la configuration IA ou le plafond quotidien dans Noyaru."
             )
+        details = [
+            ("💬 Customer message" if en else "💬 Message du client", question),
+            ("🔒 Identity" if en else "🔒 Identité", identity),
+        ] + display.source_sections(packet["sources"], en)
     elif kind == "support_send":
         if not row.draft_encrypted or not writing.current(db, row):
             raise c.Stop("sources_changed")
@@ -102,30 +116,56 @@ def approval_document(db, owner, ident, kind, lang):
                 value,
             ]
         )
-        body += "\n\n" + json.dumps(
-            {k: v for k, v in value.items() if k != "in_reply_to"},
-            ensure_ascii=False,
-            indent=2,
+        summary = "\n".join(
+            label + value[key]
+            for label, key in [
+                ("From: " if en else "Expéditeur : ", "from"),
+                ("To: " if en else "Destinataire : ", "to"),
+                ("Subject: " if en else "Objet : ", "subject"),
+                ("Reply to: " if en else "Répondre à : ", "reply_to"),
+            ]
         )
-        body += "\n\n" + config["provider"]
+        provider = {"brevo": "Brevo", "resend": "Resend", "sendgrid": "SendGrid"}[
+            config["provider"]
+        ]
+        summary += "\n" + ("Sent with: " if en else "Envoi via : ") + provider
+        note = identity
         if config["provider"] == "brevo":
-            body += "\n" + (
-                "Brevo does not guarantee conversation threading with this API."
+            note += "\n" + (
+                "With Brevo, the reply may appear as a new conversation for the recipient."
                 if en
-                else "Cette API Brevo ne garantit pas le regroupement dans le fil du destinataire."
+                else "Avec Brevo, la réponse peut apparaître dans une nouvelle conversation chez le destinataire."
             )
         effect = (
-            "Send this exact reply once, from contact@noyaru.com to the sender above. No CC/BCC, site change or account action. Provider acceptance is not proof of delivery. Unknown result: no automatic resend."
+            "Send this exact reply once to the recipient shown below.\n"
+            f"No new AI request. Limit: {c.DAILY_SENDS} send attempts per rolling 24 hours.\n"
+            "No CC/BCC, site change or account action. Provider acceptance is not proof of delivery. Unknown result: no automatic resend."
             if en
-            else "Envoyer cette réponse exacte une seule fois, depuis contact@noyaru.com au correspondant ci-dessus. Aucun CC/BCC ni action sur un site ou compte. L’acceptation par le fournisseur ne prouve pas la livraison. Résultat inconnu : aucun renvoi automatique."
+            else "Envoyer cette réponse exacte une seule fois au destinataire indiqué ci-dessous.\n"
+            f"Aucun nouvel appel IA. Limite : {c.DAILY_SENDS} tentatives d’envoi par 24 h glissantes.\n"
+            "Aucun CC/BCC ni action sur un site ou compte. L’acceptation par le fournisseur ne prouve pas la livraison. Résultat inconnu : aucun renvoi automatique."
         )
         spent = mail.reserved(db, owner)
         ready = spent < c.DAILY_SENDS and not row.send_intent_at
+        details = [
+            ("📨 Email details" if en else "📨 Destinataire et envoi", summary),
+            ("✉️ Exact reply" if en else "✉️ Réponse exacte", value["text"]),
+            ("ℹ️ Please note" if en else "ℹ️ À savoir", note),
+        ]
     else:
         fingerprint = c.s.digest(
             [row.binding, row.id, row.revision, row.input_hash, row.reason]
         )
-        body += "\n\n" + (row.reason or "unclear")
+        reason = support_copy.strings(lang)["errors"].get(row.reason or "unclear")
+        details = [
+            ("💬 Customer message" if en else "💬 Message du client", question),
+            (
+                "🧑‍💼 Why a person is needed"
+                if en
+                else "🧑‍💼 Pourquoi une reprise humaine",
+                reason or identity,
+            ),
+        ]
         effect = (
             "Acknowledge human handling in Noyaru, or reject and ignore this request. No AI call or email."
             if en
@@ -137,17 +177,21 @@ def approval_document(db, owner, ident, kind, lang):
                 if en
                 else "Confirmer l’investigation humaine de cet envoi incertain. Refuser écarte cette relance uniquement. Le résultat reste inconnu ; aucun renvoi ni affirmation de livraison."
             )
-    return {
+    doc = {
         "kind": kind,
         "target": ident,
         "version": fingerprint,
         "title": payload.get("subject") or ("Support request" if en else "Demande SAV"),
-        "text": effect + "\n\n" + body,
         "effect": effect,
         "path": PATH + "?ticket=" + ident,
         "ready": ready,
         "expires_at": expiry,
     }
+    return display.document(
+        doc,
+        [("🎯 Your decision" if en else "🎯 Ce que tu valides", effect)] + details,
+        summary=summary,
+    )
 
 
 def decide(db, owner, ident, kind, approve, fingerprint):
