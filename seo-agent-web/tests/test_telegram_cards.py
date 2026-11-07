@@ -137,6 +137,7 @@ def test_sections_keep_source_texts_and_do_not_generate_raw_json():
 
 def test_editorial_evidence_uses_labels_and_draft_keeps_every_paragraph_and_reference():
     row = SimpleNamespace(
+        created_at=datetime(2026, 11, 7, 10, tzinfo=timezone.utc),
         bundle={
             "sources": [
                 {
@@ -165,6 +166,7 @@ def test_editorial_evidence_uses_labels_and_draft_keeps_every_paragraph_and_refe
     doc = f.document({}, f.draft_sections(row, en=True))
     text = "\n".join(f.pages(doc))
     assert "Original introduction." in text and "Complete paragraph text." in text
+    assert row.created_at.isoformat() in text and "Historical snapshot" in text
     assert (
         "[1]" in text
         and "Source 1 · Official source" in text

@@ -205,10 +205,19 @@ def brief_sections(row, en=False):
             evidence(row.evidence, en),
         ),
         (
+            "👥 Intended readers" if en else "👥 Lecteurs visés",
+            "Independent professionals and small businesses learning to improve their visibility."
+            if en
+            else "Indépendants et petites entreprises qui apprennent à améliorer leur visibilité.",
+        ),
+        (
             "✍️ Suggested outline" if en else "✍️ Plan proposé",
             "\n".join("• " + item for item in outline),
         ),
-        ("🔎 Before writing" if en else "🔎 Avant rédaction", note),
+        (
+            "🔎 Before writing" if en else "🔎 Avant rédaction",
+            note + "\n\nhttps://noyaru.com/ressources-seo",
+        ),
     ]
 
 
@@ -221,6 +230,17 @@ def draft_sections(row, en=False):
         return value["text"] + "\n" + ("Sources: " if en else "Sources : ") + refs
 
     result = [
+        (
+            "🗂️ Private draft" if en else "🗂️ Brouillon privé",
+            ("Prepared: " if en else "Préparé le : ")
+            + row.created_at.isoformat()
+            + "\n"
+            + (
+                "Historical snapshot. Source references alone do not prove claims are true. Recheck evidence and permissions before publication."
+                if en
+                else "Photographie historique. Les références seules ne prouvent pas les affirmations. Revérifier les preuves et les droits avant publication."
+            ),
+        ),
         ("📝 " + content["title"], content["description"]),
         ("📄 Introduction", paragraph(content["intro"])),
     ]
