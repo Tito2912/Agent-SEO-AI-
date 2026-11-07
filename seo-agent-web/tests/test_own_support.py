@@ -881,3 +881,81 @@ def test_recipient_local_part_is_preserved_and_self_addresses_ignore_case(sav):
     )
     other = receive(x, ident="b1", thread="c1", headers={"From": "CONTACT@NOYARU.COM"})
     assert ticket(x, other).state == "ignored"
+
+
+@pytest.mark.parametrize(
+    ("lang", "question"),
+    [
+        ("fr", "Quel est le forfait le moins cher ?"),
+        ("fr", "Quel plan est le moins cher ?"),
+        ("en", "What is your cheapest option?"),
+        ("en", "How much does Noyaru cost?"),
+        ("fr", "Quel prix pour analyser les scores de mon site connecté à Google ?"),
+    ],
+)
+def test_public_pricing_question_supplies_current_prices_before_paid_draft(
+    sav, lang, question
+):
+    from backend import own_support_writing as writing
+
+    x = sav
+    ident = receive(x, text=question)
+    with x["db"].session() as db:
+        row = db.get(c.Ticket, ident)
+        row.lang = lang
+        db.commit()
+        packet, _ = writing.bundle(db, x["owner"].id, ident)
+        prices = m._content_tokens(lang)
+    assert packet["sources"][0]["id"] == "plans-et-quotas"
+    text = packet["sources"][0]["text"]
+    for name in ("free", "solo", "pro", "business"):
+        assert prices["price_" + name] in text
+    assert "Solo" in text and "{{" not in text
+    assert len(text) <= 1800
+    assert not x["remote"].ai and not x["remote"].sends
+
+    body = (
+        "Bonjour, le plan Free permet de commencer gratuitement. "
+        "Le tarif public Solo est " + prices["price_solo"] + ". "
+        "La page Abonnement permet de comparer les formules et leurs limites."
+    )
+    x["remote"].ai_result = {
+        "needs_human": False,
+        "body": body,
+        "sources": ["plans-et-quotas"],
+    }
+    decide(x, ident, "support_write")
+    support.run(ident)
+    assert ticket(x, ident).state == "draft"
+    assert c.reveal(ticket(x, ident).draft_encrypted)["body"] == body
+    assert len(x["remote"].ai) == 1 and not x["remote"].sends
+
+
+@pytest.mark.parametrize("reason", ["account", "billing", "security", "unclear"])
+def test_human_escalation_is_kept_after_authorized_drafting(sav, reason):
+    x = sav
+    ident = receive(x)
+    x["remote"].ai_result = {"needs_human": True, "reason": reason}
+    decide(x, ident, "support_write")
+    support.run(ident)
+    support.run(ident)
+    row = ticket(x, ident)
+    assert row.state == "review_required" and row.reason == reason
+    assert row.provider_calls == 1 and len(x["remote"].ai) == 1
+    assert not row.draft_encrypted and not x["remote"].sends
+
+
+def test_public_price_change_invalidates_approval_before_any_paid_call(sav, monkeypatch):
+    x = sav
+    ident = receive(x, text="Quel est le forfait le moins cher ?")
+    decide(x, ident, "support_write")
+    tokens = m._content_tokens
+    monkeypatch.setattr(
+        m,
+        "_content_tokens",
+        lambda lang: {**tokens(lang), "price_solo": "Nouveau tarif public"},
+    )
+    support.run(ident)
+    row = ticket(x, ident)
+    assert row.state == "review_required" and row.error_code == "sources_changed"
+    assert not row.provider_calls and not x["remote"].ai and not x["remote"].sends

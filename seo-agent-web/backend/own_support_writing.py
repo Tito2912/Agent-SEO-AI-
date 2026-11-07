@@ -4,13 +4,17 @@ from datetime import timedelta
 import json
 import re
 
-from bs4 import BeautifulSoup
 from sqlalchemy import select, func, or_, and_
 
 try:
-    from . import own_support_common as c, correction_execution as execution
+    from . import (
+        own_support_common as c,
+        own_support_sources as sources,
+        correction_execution as execution,
+    )
 except ImportError:
     import own_support_common as c
+    import own_support_sources as sources
     import correction_execution as execution
 
 MAX_TOKENS = 2000
@@ -21,6 +25,10 @@ You have NO tools or account access. Use only supplied public documentation. Nev
 to have inspected, changed or fixed the customer's account, billing or site. Do not invent
 prices, quotas, functionality or promises. Do not repeat private data or secrets. No code,
 attachments, email addresses or URLs. A human will read the reply before any email is sent.
+Published plans, prices, quotas and general subscription instructions are public product
+information, not private account facts. Answer these questions when the supplied sources
+support the answer. Distinguish free plans from paid plans when comparing prices. Questions
+about a particular bill, charge, entitlement or account action still require human handling.
 If the question is sensitive, needs account facts or lacks sufficient evidence, return
 exactly {"needs_human":true,"reason":"account|billing|security|unclear"} with one reason.
 Otherwise return exactly {"needs_human":false,"body":"plain useful reply, 80-2200 characters",
@@ -35,53 +43,34 @@ def bundle(db, owner, ident, *, manual=False):
     question = payload.get("text", "")
     if not question or row.reason and not manual:
         raise c.Stop("human_required")
-    selected = ["depannage", "demarrer"]
-    choices = [
-        (r"google|search console", "connecter-search-console"),
-        (r"github", "connecter-github"),
-        (r"analys|crawl", "lancer-un-crawl"),
-        (r"rapport|report|score", "lire-le-rapport"),
-        (r"corr|fix|vérif|verif", "verifier-une-correction"),
-        (r"plan|quota|abonn|subscript", "plans-et-quotas"),
-    ]
-    matches = [slug for pattern, slug in choices if re.search(pattern, question, re.I)]
-    selected = list(dict.fromkeys(matches + selected))[:3]
-    sources = []
+    selected = sources.select_docs(question)
+    evidence = []
     m = c.module()
     for slug in selected:
         page = m.content_library.get_doc(slug, row.lang)
         if not page:
             raise c.Stop("sources_required")
         page = m.content_library.resolve(page, m._content_tokens(row.lang))
-        parsed = BeautifulSoup(page["body_html"], "html.parser")
-        paragraphs = []
-        length = 0
-        for node in parsed.select("h2,p,li"):
-            text = " ".join(node.get_text(" ", strip=True).split())
-            if text and length + len(text) <= 1800:
-                paragraphs.append(text)
-                length += len(text)
-            elif text:
-                break
-        if not paragraphs:
+        text, limited = sources.excerpt(page["body_html"])
+        if not text:
             raise c.Stop("sources_required")
-        sources.append(
+        evidence.append(
             {
                 "id": slug,
                 "title": page["title"],
                 "url": "https://noyaru.com" + page["path"],
-                "text": "\n".join(paragraphs),
+                "text": text,
                 "fingerprint": c.s.digest(
                     [page["title"], page["description"], page["body_html"]]
                 ),
-                "excerpt_limited": len(parsed.get_text()) > length,
+                "excerpt_limited": limited,
             }
         )
     packet = {
         "version": 1,
         "language": row.lang,
         "question": question,
-        "sources": sources,
+        "sources": evidence,
         "mode": "manual" if manual else "assisted",
         "limits": "Public documentation only. No authenticated account facts, prices or quotas beyond source evidence.",
     }
