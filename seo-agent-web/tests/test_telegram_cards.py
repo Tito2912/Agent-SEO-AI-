@@ -98,6 +98,7 @@ def test_action_cards_escape_data_keep_context_and_do_not_claim_completion(
 @pytest.mark.parametrize(
     "text",
     ["🧭" * 4000, ("Un paragraphe avec des mots.\n\n" * 200), "x" * 4000, "<&>" * 1500],
+    ids=["emojis", "paragraphes", "ascii", "echappements"],
 )
 def test_soft_pagination_preserves_all_characters_and_utf16_budget(text):
     pieces = a.split_pages(text)
