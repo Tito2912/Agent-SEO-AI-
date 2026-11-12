@@ -290,7 +290,8 @@ without reducing the overall level of security.
   SameSite, Secure over HTTPS); access control by account and by project; protection of forms against
   request forgery (CSRF); rate limiting; anti-bot check on sign-up; operations screens reserved for the
   owner of the platform; two-factor authentication on E-Com Shop's GitHub, Render, AWS and Stripe
-  accounts.
+  accounts; Amazon S3 storage access key belonging to a dedicated user, without console access, and
+  limited to the service's single bucket (list, read, write, delete).
 - **Application protection**: content security policy (CSP) and a ban on embedding pages in an external
   frame (X-Frame-Options).
 - **Event logging**: audit log of sensitive actions.
@@ -320,7 +321,7 @@ without reducing the overall level of security.
   under their own measures.
 
 **TO BE CONFIRMED by E-Com Shop before publication, only measures actually applied being listed**:
-limited rights on the AWS access keys; actual deletion of backups at 30 days.
+actual deletion of backups at 30 days.
 
 ### Assistance to the controller (Clauses 8 and 9)
 

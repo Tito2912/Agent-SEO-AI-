@@ -302,7 +302,9 @@ Ces mesures sont celles réellement appliquées à la date du présent accord. E
   SameSite, Secure en HTTPS) ; contrôle d'accès par compte et par projet ; protection des formulaires
   contre la falsification de requêtes (CSRF) ; limitation du nombre de demandes ; vérification
   anti-robots de l'inscription ; écrans d'exploitation réservés au propriétaire de la plateforme ;
-  authentification à deux facteurs sur les comptes d'E-Com Shop chez GitHub, Render, AWS et Stripe.
+  authentification à deux facteurs sur les comptes d'E-Com Shop chez GitHub, Render, AWS et Stripe ;
+  clé d'accès au stockage Amazon S3 rattachée à un utilisateur dédié, sans accès à la console, et
+  limitée au seul compartiment du service (lister, lire, écrire, supprimer).
 - **Protection de l'application** : politique de sécurité du contenu (CSP) et interdiction d'intégrer
   les pages dans un cadre externe (X-Frame-Options).
 - **Enregistrement des événements** : journal d'audit des actions sensibles.
@@ -332,8 +334,7 @@ Ces mesures sont celles réellement appliquées à la date du présent accord. E
   centres de données relèvent de leurs propres mesures.
 
 **À CONFIRMER par E-Com Shop avant publication, seules les mesures réellement appliquées étant
-inscrites** : droits limités des clés d'accès AWS ; suppression effective des sauvegardes à
-30 jours.
+inscrites** : suppression effective des sauvegardes à 30 jours.
 
 ### Assistance au responsable du traitement (clauses 8 et 9)
 

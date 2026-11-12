@@ -76,12 +76,14 @@ sont dans `QUESTIONS-AVOCAT.md`.
 | Contrat de SerpApi, demandé le 06/11/2026 (les autres sont rangés dans `documents prestataires`) | Annexe IV |
 | Mécanisme de transfert de SerpApi ; accès de Sentry depuis un pays tiers. Registre DPF relevé le 06/11/2026 pour les autres (14 captures rangées) : à revérifier avant publication, Render et Netlify arrivant à échéance en décembre 2026 | Annexe IV |
 | Conditions applicables à l'API PageSpeed de Google | Annexe IV |
-| Droits limités des clés d'accès AWS : la clé appartient à un utilisateur IAM dédié, sans accès à la console, avec une seule politique gérée par le client (constaté le 12/11/2026) ; reste à lire ce que cette politique autorise | Annexe III |
-| Suppression effective des sauvegardes à 30 jours (dans la console S3 : date de la plus ancienne sauvegarde, et gestion des versions du compartiment désactivée, sinon les versions effacées restent stockées) | Annexe III |
+| Suppression effective des sauvegardes à 30 jours (dans la console S3 : date de la plus ancienne sauvegarde, et gestion des versions du compartiment désactivée : la clé n'a pas le droit d'effacer les anciennes versions, qui resteraient stockées) | Annexe III |
 
 **Réglé le 12/11/2026** (réponses du propriétaire) :
 - authentification à deux facteurs sur les comptes GitHub, Render, AWS et Stripe d'E-Com Shop, et disque
   du poste de travail du dirigeant chiffré (annexe III) ;
+- clé d'accès AWS : utilisateur IAM dédié, sans accès à la console, dont la seule politique (lue le
+  12/11/2026) n'autorise que `s3:ListBucket` sur le compartiment du service et `s3:GetObject`,
+  `s3:PutObject`, `s3:DeleteObject` sur ses objets (annexe III) ;
 - région d'Amazon S3 : us-east-1, Virginie du Nord, déjà affichée par la confidentialité ;
 - délégué à la protection des données : aucun désigné. À notre lecture de l'article 37 du RGPD, il n'est
   pas obligatoire : E-Com Shop n'est pas un organisme public, et ses activités de base ne consistent ni en
