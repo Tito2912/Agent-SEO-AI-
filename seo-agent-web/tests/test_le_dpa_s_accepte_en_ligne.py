@@ -41,8 +41,8 @@ from backend import auth, dpa, export_compte, legal  # noqa: E402
 from backend.db import Database  # noqa: E402
 from backend.models import AccountMember, AuditLog, DpaAcceptance, User  # noqa: E402
 
-FORMULAIRE = {"organisation": "Boutique Exemple SAS", "immatriculation": "934 934 308", "signataire": "Camille Martin",
-              "fonction": "Gérante", "habilite": "oui"}
+FORMULAIRE = {"organisation": "Boutique Exemple SAS", "adresse": "12 rue de l'Exemple, 75001 Paris",
+              "immatriculation": "934 934 308", "signataire": "Camille Martin", "fonction": "Gérante", "habilite": "oui"}
 
 
 @pytest.fixture()
@@ -110,16 +110,20 @@ def test_publie_la_page_montre_le_texte_et_la_case(titulaire, publie) -> None:
         compte = client.get("/settings/accounts").text
     assert "Accord de traitement des données personnelles (DPA)" in page, "le texte du DPA"
     assert 'name="habilite" type="checkbox" value="oui" required' in page
+    assert 'name="adresse" type="text" required' in page, "l'adresse de l'organisation (annexe I)"
     assert 'href="/settings/dpa"' in compte.split('id="dpa"', 1)[1]
 
 
 @pytest.mark.parametrize("champs, raison", [
     ({"habilite": ""}, "habilitée"),
     ({"organisation": " "}, "dénomination"),
+    ({"adresse": "  "}, "adresse"),
+    ({"adresse": "Pa"}, "adresse"),
     ({"signataire": "X"}, "votre nom"),
     ({"fonction": ""}, "fonction"),
     ({"immatriculation": "<script>"}, "immatriculation"),
-], ids=["sans-declaration", "sans-organisation", "nom-trop-court", "sans-fonction", "immatriculation-invalide"])
+], ids=["sans-declaration", "sans-organisation", "sans-adresse", "adresse-trop-courte", "nom-trop-court",
+        "sans-fonction", "immatriculation-invalide"])
 def test_un_formulaire_INCOMPLET_n_engage_rien(titulaire, publie, champs, raison) -> None:
     with _client(titulaire["id"]) as client:
         reponse = _accepter(client, **champs)
@@ -131,13 +135,14 @@ def test_l_acceptation_garde_TOUTE_sa_preuve(titulaire, publie, monkeypatch) -> 
     # Sous TestClient, l'adresse du client (« testclient ») n'est pas une IP : on fixe celle que lit le site.
     monkeypatch.setattr(m, "_request_client_ip", lambda request: "203.0.113.9")
     with _client(titulaire["id"], noyaru_lang="fr") as client:
-        reponse = _accepter(client, organisation="  Boutique   Exemple SAS ")
+        reponse = _accepter(client, organisation="  Boutique   Exemple SAS ",
+                            adresse="12 rue de l'Exemple,\n  75001   Paris ")
         apres = client.get("/settings/dpa").text
     assert reponse.status_code == 303 and "msg=" in reponse.headers["location"]
     (preuve,) = _preuves(titulaire["id"])
     attendu = hashlib.sha256((WEB_ROOT / "docs" / "legal" / "DPA-fr.md").read_bytes()).hexdigest()
-    assert (preuve.organisation, preuve.immatriculation, preuve.signataire, preuve.fonction) == (
-        "Boutique Exemple SAS", "934 934 308", "Camille Martin", "Gérante")
+    assert (preuve.organisation, preuve.adresse, preuve.immatriculation, preuve.signataire, preuve.fonction) == (
+        "Boutique Exemple SAS", "12 rue de l'Exemple, 75001 Paris", "934 934 308", "Camille Martin", "Gérante")
     assert preuve.email == titulaire["email"] and preuve.version == "1.0" and preuve.langue == "fr"
     assert preuve.texte_sha256 == attendu and preuve.accepte_le is not None
     assert preuve.ip_address == "203.0.113.9" and preuve.user_agent and preuve.termine_le is None
@@ -245,33 +250,82 @@ def test_l_export_du_client_contient_ses_acceptations(titulaire, publie) -> None
 
 # ── La migration ─────────────────────────────────────────────────────────────────────────────
 
-def test_la_migration_cree_la_table_et_repart_SANS_RIEN_ABIMER(tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv("DATABASE_URL", "sqlite:///" + str(tmp_path / "dpa.db"))
-    base = Database(data_dir=tmp_path / "data")
+def _alembic(*arguments: str) -> str:
+    r = subprocess.run([sys.executable, "-m", "alembic", "-c", str(WEB_ROOT / "alembic.ini"), *arguments],
+                       cwd=WEB_ROOT, env=os.environ.copy(), capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    return r.stdout
 
-    def migrer(sens, revision):
-        r = subprocess.run([sys.executable, "-m", "alembic", "-c", str(WEB_ROOT / "alembic.ini"), sens, revision],
-                           cwd=WEB_ROOT, env=os.environ.copy(), capture_output=True, text=True, timeout=60)
-        assert r.returncode == 0, r.stderr
 
-    migrer("upgrade", "20261104_0025")
+def _colonnes(base) -> set[str]:
+    return {c["name"] for c in inspect(base.engine).get_columns("dpa_acceptances")}
+
+
+def _ligne_d_avant(db, uid) -> str:
+    """Une preuve écrite colonne par colonne : avant la révision 0030, la table n'a pas l'adresse,
+    que l'ORM écrirait et relirait."""
+    identifiant = str(uuid.uuid4())
+    db.execute(DpaAcceptance.__table__.insert().values(
+        id=identifiant, user_id=uid, email="migration-dpa@example.invalid", organisation="O", signataire="S S",
+        fonction="F", version="1.0", langue="fr", texte_sha256="0" * 64))
+    db.commit()
+    return identifiant
+
+
+def _nouvel_utilisateur(base) -> str:
     with base.session() as db:
         user = User(email="migration-dpa@example.invalid", password_hash="x")
         db.add(user)
         db.commit()
-        uid = user.id
-    migrer("upgrade", "20261105_0026")
-    migrer("upgrade", "20261105_0026")
-    colonnes = {c["name"] for c in inspect(base.engine).get_columns("dpa_acceptances")}
-    assert colonnes == {c.name for c in DpaAcceptance.__table__.columns}
+        return user.id
+
+
+def test_la_migration_cree_la_table_et_repart_SANS_RIEN_ABIMER(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///" + str(tmp_path / "dpa.db"))
+    base = Database(data_dir=tmp_path / "data")
+    _alembic("upgrade", "20261104_0025")
+    uid = _nouvel_utilisateur(base)
+    _alembic("upgrade", "20261105_0026")
+    _alembic("upgrade", "20261105_0026")
+    assert _colonnes(base) == {c.name for c in DpaAcceptance.__table__.columns} - {"adresse"}, (
+        "0026 crée la table d'origine ; l'adresse arrive avec 0030")
     with base.session() as db:
-        db.add(DpaAcceptance(user_id=uid, email="migration-dpa@example.invalid", organisation="O", signataire="S S",
-                             fonction="F", version="1.0", langue="fr", texte_sha256="0" * 64))
-        db.commit()
-        assert db.scalar(select(func.count()).select_from(DpaAcceptance)) == 1
-    migrer("downgrade", "20261104_0025")
+        _ligne_d_avant(db, uid)
+        assert db.scalar(select(func.count()).select_from(DpaAcceptance.__table__)) == 1
+    _alembic("downgrade", "20261104_0025")
     assert not inspect(base.engine).has_table("dpa_acceptances")
     with base.session() as db:
         assert db.get(User, uid).email == "migration-dpa@example.invalid"
-    migrer("upgrade", "20261105_0026")
+    _alembic("upgrade", "20261105_0026")
     base.engine.dispose()
+
+
+def test_la_migration_0030_ajoute_l_ADRESSE_sans_rien_abimer(tmp_path, monkeypatch) -> None:
+    """12/11/2026 : l'adresse de l'organisation (annexe I). Une preuve d'avant garde tout, avec une
+    adresse vide ; la migration se rejoue ; elle repart sans emporter la preuve."""
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///" + str(tmp_path / "dpa-adresse.db"))
+    base = Database(data_dir=tmp_path / "data")
+    _alembic("upgrade", "20261105_0029")
+    uid = _nouvel_utilisateur(base)
+    with base.session() as db:
+        identifiant = _ligne_d_avant(db, uid)
+    _alembic("upgrade", "20261112_0030")
+    _alembic("upgrade", "20261112_0030")
+    assert _colonnes(base) == {c.name for c in DpaAcceptance.__table__.columns}
+    with base.session() as db:
+        preuve = db.get(DpaAcceptance, identifiant)
+        assert (preuve.organisation, preuve.adresse, preuve.user_id) == ("O", None, uid)
+    _alembic("downgrade", "20261105_0029")
+    assert "adresse" not in _colonnes(base)
+    with base.session() as db:
+        assert db.scalar(select(DpaAcceptance.organisation).where(DpaAcceptance.id == identifiant)) == "O"
+    _alembic("upgrade", "head")
+    assert "adresse" in _colonnes(base)
+    base.engine.dispose()
+
+
+def test_les_migrations_n_ont_qu_UNE_tete() -> None:
+    """Deux migrations posées sur la même révision font deux têtes : `alembic upgrade head`
+    échoue alors au déploiement (journal commun, C003, 12/11/2026)."""
+    tetes = [ligne for ligne in _alembic("heads").splitlines() if ligne.strip()]
+    assert len(tetes) == 1, tetes

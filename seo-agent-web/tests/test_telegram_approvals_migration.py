@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import uuid
 
 import pytest
 from sqlalchemy import inspect, select, func
@@ -55,7 +56,11 @@ def test_upgrade_has_no_binding_or_request_and_downgrade_preserves_owner(
         db.add(owner)
         db.commit()
         uid = owner.id
-        acceptance = DpaAcceptance(
+        # Écrite colonne par colonne : à la révision 0026, la table n'a pas encore les colonnes
+        # ajoutées plus tard au modèle (l'adresse, 0030), que l'ORM écrirait et relirait.
+        acceptance_id = str(uuid.uuid4())
+        db.execute(DpaAcceptance.__table__.insert().values(
+            id=acceptance_id,
             user_id=uid,
             email=owner.email,
             organisation="Fixture",
@@ -64,10 +69,8 @@ def test_upgrade_has_no_binding_or_request_and_downgrade_preserves_owner(
             version="fixture",
             langue="fr",
             texte_sha256="a" * 64,
-        )
-        db.add(acceptance)
+        ))
         db.commit()
-        acceptance_id = acceptance.id
     migrate("upgrade", "20261105_0027")
     migrate("upgrade", "20261105_0027")
     with database.session() as db:
@@ -78,6 +81,7 @@ def test_upgrade_has_no_binding_or_request_and_downgrade_preserves_owner(
     assert not inspect(database.engine).has_table("telegram_approval_requests")
     with database.session() as db:
         assert db.get(User, uid).is_admin
-        assert db.get(DpaAcceptance, acceptance_id).texte_sha256 == "a" * 64
+        assert db.scalar(select(DpaAcceptance.texte_sha256).where(
+            DpaAcceptance.id == acceptance_id)) == "a" * 64
     migrate("upgrade", "20261105_0027")
     database.engine.dispose()

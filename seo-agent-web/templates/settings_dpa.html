@@ -44,6 +44,8 @@
           <input name="organisation" type="text" required minlength="2" maxlength="200" autocomplete="organization" /></label>
         <label>{{ tr("Numéro d’immatriculation (SIREN, RCS…)") }} <span class="muted small">{{ tr("(s’il existe)") }}</span>
           <input name="immatriculation" type="text" maxlength="40" /></label>
+        <label>{{ tr("Adresse de votre organisation") }} <span class="muted small">{{ tr("(siège ou établissement qui accepte l’accord)") }}</span>
+          <input name="adresse" type="text" required minlength="5" maxlength="300" autocomplete="street-address" /></label>
         <label>{{ tr("Votre nom") }}
           <input name="signataire" type="text" required minlength="2" maxlength="120" autocomplete="name" /></label>
         <label>{{ tr("Votre fonction dans l’organisation") }}

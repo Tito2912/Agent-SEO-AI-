@@ -1004,6 +1004,9 @@ class DpaAcceptance(Base):
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     organisation: Mapped[str] = mapped_column(String(200), nullable=False)
     immatriculation: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # L'adresse de l'organisation (annexe I du DPA, demandee par les clauses de la Commission ;
+    # 12/11/2026). Obligatoire dans le formulaire ; nulle seulement pour une preuve d'avant.
+    adresse: Mapped[str | None] = mapped_column(String(300), nullable=True)
     signataire: Mapped[str] = mapped_column(String(120), nullable=False)
     fonction: Mapped[str] = mapped_column(String(120), nullable=False)
     version: Mapped[str] = mapped_column(String(40), nullable=False)

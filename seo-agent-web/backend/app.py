@@ -16228,6 +16228,7 @@ def settings_dpa(request: Request, msg: str | None = None, err: str | None = Non
 def settings_dpa_accepter(
     request: Request,
     organisation: str = Form(default=""),
+    adresse: str = Form(default=""),
     immatriculation: str = Form(default=""),
     signataire: str = Form(default=""),
     fonction: str = Form(default=""),
@@ -16242,8 +16243,9 @@ def settings_dpa_accepter(
     if _membre_d_un_autre_compte(str(user.id)):
         return RedirectResponse(url=_path_with_flash(
             back, err="Seul le titulaire du compte peut accepter l’accord pour son organisation."), status_code=303)
-    valeurs, erreur = dpa.lire_formulaire({"organisation": organisation, "immatriculation": immatriculation,
-                                           "signataire": signataire, "fonction": fonction, "habilite": habilite})
+    valeurs, erreur = dpa.lire_formulaire({"organisation": organisation, "adresse": adresse,
+                                           "immatriculation": immatriculation, "signataire": signataire,
+                                           "fonction": fonction, "habilite": habilite})
     if erreur:
         return RedirectResponse(url=_path_with_flash(back, err=erreur), status_code=303)
     langue = i18n.current_lang()

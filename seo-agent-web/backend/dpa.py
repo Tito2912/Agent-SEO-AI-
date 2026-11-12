@@ -2,7 +2,7 @@
 
 La clause B1 du DPA : accepté de façon expresse, en ligne, par une personne habilitée à engager le
 Client, qui coche une case et DÉCLARE ce pouvoir ; l'acceptation identifie l'organisation
-(dénomination, immatriculation quand elle existe) ; E-Com Shop garde l'organisation, le compte et
+(dénomination, adresse, immatriculation quand elle existe) ; E-Com Shop garde l'organisation, le compte et
 la personne, la date et l'heure, la version EXACTE du texte et la trace de l'action, pendant
 l'accord puis cinq ans ; une nouvelle version s'accepte de nouveau.
 
@@ -31,10 +31,13 @@ import markdown as _markdown
 TEXTES = Path(__file__).resolve().parents[1] / "docs" / "legal"
 CONSERVATION_ANS = 5
 # (minimum, maximum) de caractères ; l'immatriculation est facultative (une association n'en a pas).
-CHAMPS = {"organisation": (2, 200), "signataire": (2, 120), "fonction": (2, 120), "immatriculation": (0, 40)}
+# L'adresse (12/11/2026) : l'annexe I du DPA la demande, comme les clauses de la Commission.
+CHAMPS = {"organisation": (2, 200), "adresse": (5, 300), "signataire": (2, 120), "fonction": (2, 120),
+          "immatriculation": (0, 40)}
 IMMATRICULATION = re.compile(r"[A-Za-z0-9 .\-/]*")
 ERREURS = {
     "organisation": "Indiquez la dénomination de votre organisation.",
+    "adresse": "Indiquez l’adresse de votre organisation.",
     "signataire": "Indiquez votre nom.",
     "fonction": "Indiquez votre fonction dans l’organisation.",
     "immatriculation": "Le numéro d’immatriculation ne peut contenir que des lettres, des chiffres et des espaces.",
@@ -84,7 +87,8 @@ def accepter(db: Any, user: Any, valeurs: dict[str, str], *, langue: str, ip: st
              user_agent: str = "") -> DpaAcceptance:
     acceptation = DpaAcceptance(
         user_id=str(user.id), email=str(user.email), organisation=valeurs["organisation"],
-        immatriculation=valeurs["immatriculation"] or None, signataire=valeurs["signataire"],
+        immatriculation=valeurs["immatriculation"] or None, adresse=valeurs["adresse"],
+        signataire=valeurs["signataire"],
         fonction=valeurs["fonction"], version=str(version()), langue="en" if langue == "en" else "fr",
         texte_sha256=texte(langue)[1], ip_address=(ip or None) and ip[:64],
         user_agent=(user_agent or None) and user_agent[:512],
