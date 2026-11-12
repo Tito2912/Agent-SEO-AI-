@@ -1,0 +1,211 @@
+{
+  "scope": "Local actual Noyaru routes/templates; fictional SQLite and simulated providers",
+  "observations": [
+    {
+      "lang": "fr",
+      "scene": "ignored",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "ignored",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "ignored",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "ignored",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "ignored",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "reconnect",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "reconnect",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "reconnect",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "reconnect",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "reconnect",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "flow": "blocked",
+      "consent_required": true,
+      "no_ai_or_email": true
+    },
+    {
+      "lang": "fr",
+      "flow": "ignored",
+      "consent_required": true,
+      "no_ai_or_email": true
+    },
+    {
+      "lang": "en",
+      "scene": "ignored",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "ignored",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "ignored",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "ignored",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "ignored",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "reconnect",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "reconnect",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "reconnect",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "reconnect",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "reconnect",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "flow": "blocked",
+      "consent_required": true,
+      "no_ai_or_email": true
+    },
+    {
+      "lang": "en",
+      "flow": "ignored",
+      "consent_required": true,
+      "no_ai_or_email": true
+    }
+  ],
+  "javascript_errors": [],
+  "real_google_or_telegram_or_email": false
+}
