@@ -243,7 +243,7 @@ d) À la suite de la résiliation du contrat, le sous-traitant supprime, selon l
 
 - Adresse : 60 rue François 1er, 75008 Paris, France ; 934 934 308 R.C.S. Paris.
 - Personne de contact : Tony Caron, dirigeant, contact@noyaru.com.
-- Délégué à la protection des données : **À CONFIRMER** (aucune désignation connue à ce jour).
+- Délégué à la protection des données : aucun désigné.
 - Signature et date d'adhésion : la mise à disposition du présent accord dans le service vaut
   engagement d'E-Com Shop à la date de l'acceptation par le Client.
 
@@ -305,6 +305,9 @@ Ces mesures sont celles réellement appliquées à la date du présent accord. E
 - **Protection de l'application** : politique de sécurité du contenu (CSP) et interdiction d'intégrer
   les pages dans un cadre externe (X-Frame-Options).
 - **Enregistrement des événements** : journal d'audit des actions sensibles.
+- **Gestion des violations de données** : procédure écrite du 12/11/2026 ; registre de tous les
+  incidents, y compris ceux qui ne sont pas notifiés ; mesures de confinement ; notification du
+  Client selon la clause complémentaire B4.
 - **Disponibilité et rétablissement** : sauvegarde quotidienne de la base, conservée 30 jours. Un
   essai automatique restaure chaque mois la dernière sauvegarde dans une base jetable et en contrôle
   le contenu ; premier essai réussi le 06/11/2026.
@@ -329,7 +332,7 @@ Ces mesures sont celles réellement appliquées à la date du présent accord. E
 **À CONFIRMER par E-Com Shop avant publication, seules les mesures réellement appliquées étant
 inscrites** : authentification à deux facteurs sur les comptes d'administration (GitHub, Render,
 AWS, Stripe) ; droits limités des clés d'accès AWS ; chiffrement du poste de travail du dirigeant ;
-procédure interne de traitement des incidents ; suppression effective des sauvegardes à 30 jours.
+suppression effective des sauvegardes à 30 jours.
 
 ### Assistance au responsable du traitement (clauses 8 et 9)
 
@@ -348,16 +351,16 @@ procédure interne de traitement des incidents ; suppression effective des sauve
 ## Annexe IV — Sous-traitants ultérieurs
 
 La clause 7.7 retenant l'autorisation générale, le présent tableau constitue la liste convenue. Il
-indique ce qui est confirmé au 06/11/2026 ; un transfert dont le mécanisme n'est pas confirmé n'est
+indique ce qui est confirmé au 12/11/2026 ; un transfert dont le mécanisme n'est pas confirmé n'est
 pas présenté comme couvert. La certification au cadre de protection des données UE–États-Unis
-(« DPF ») a été relevée sur le registre officiel (dataprivacyframework.gov).
+(« DPF ») a été relevée le 06/11/2026 sur le registre officiel (dataprivacyframework.gov).
 
 | Sous-traitant ultérieur | Objet et données | Lieu | Garantie de transfert | Contrat et fin des services |
 | --- | --- | --- | --- | --- |
 | Render Services, Inc. | Hébergement de l'application et de la base : toutes les données traitées pour le Client | États-Unis (Oregon) | DPF actif (échéance 10/12/2026) ; clauses types modules 2 et 3 du contrat | render.com/dpa ; restitution ou suppression au choix |
-| Amazon Web Services | Sauvegardes de la base et stockage des rapports d'analyse : toutes les données de la base, rapports d'analyse | États-Unis ; région **À CONFIRMER** | DPF actif, Amazon.com, Inc. couvrant Amazon Web Services, Inc. (échéance 02/01/2027) ; clauses types du contrat | d1.awsstatic.com/legal/aws-dpa/aws-dpa.pdf ; sauvegardes supprimées par E-Com Shop à 30 jours |
+| Amazon Web Services | Sauvegardes de la base et stockage des rapports d'analyse : toutes les données de la base, rapports d'analyse | États-Unis (Virginie du Nord, région us-east-1) | DPF actif, Amazon.com, Inc. couvrant Amazon Web Services, Inc. (échéance 02/01/2027) ; clauses types du contrat | d1.awsstatic.com/legal/aws-dpa/aws-dpa.pdf ; sauvegardes supprimées par E-Com Shop à 30 jours |
 | Anthropic (services dans l'UE : Anthropic Ireland Limited) | Modèles d'IA pour les corrections, la rédaction et l'assistant : contenu des pages analysées, extraits des fichiers du dépôt concernés, questions posées à l'assistant | États-Unis | Absent du registre DPF ; clauses types modules 2 et 3 du contrat | anthropic.com/legal/data-processing-addendum ; suppression dans les 30 jours après la fin du contrat |
-| OpenAI (données de l'EEE : OpenAI Ireland Limited) | Modèles d'IA en secours d'Anthropic : les mêmes données ; génération d'illustrations d'articles : consigne de l'illustration | États-Unis | Absent du registre DPF ; clauses types modules 2 et 3 du contrat | openai.com/policies/data-processing-addendum ; restitution ou suppression sur instruction |
+| OpenAI (données de l'EEE : OpenAI Ireland Limited) | Modèles d'IA en secours d'Anthropic : les mêmes données ; génération d'illustrations d'articles : courte description de l'image, rédigée à partir du sujet de l'article | États-Unis | Absent du registre DPF ; clauses types modules 2 et 3 du contrat | openai.com/policies/data-processing-addendum ; restitution ou suppression sur instruction |
 | Sentry (Functional Software, Inc.) | Suivi des erreurs : traces d'erreur filtrées (annexe III). À apprécier : en principe aucune donnée personnelle du Client ; le texte d'une erreur peut exceptionnellement en contenir | Union européenne (Allemagne), d'après la configuration du service ; accès depuis un pays tiers **À CONFIRMER** | DPF actif, au nom de Sentry.io (échéance 28/05/2027) ; clauses types du contrat | sentry.io/legal/dpa, accepté le 05/11/2026 ; suppression en fin de contrat |
 | SerpApi | Recherches Google pour les concurrents et les opportunités de liens : recherches courtes générées à partir des titres des pages, sans le nom ni la marque du site, ou mots-clés saisis par le Client. À apprécier : en principe aucune donnée personnelle ; une recherche saisie par le Client peut en contenir | États-Unis ; **À CONFIRMER** | Absent du registre DPF ; **À CONFIRMER** : contrat et clauses types demandés le 06/11/2026 | Réponse attendue ; recherches gardées 31 jours d'après sa politique |
 | Google (PageSpeed Insights) | Mesure de performance : adresse publique de la page. À apprécier : en principe aucune donnée personnelle | États-Unis | DPF actif, Google LLC (échéance 13/09/2027) | **À CONFIRMER** : conditions applicables à cette API |

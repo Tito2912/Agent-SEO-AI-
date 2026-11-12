@@ -152,6 +152,19 @@ urgent à la clause 7.7 a). Engagements nouveaux pour E-Com Shop : voir `LEGAL-V
 L'annexe IV retire Google Gemini (désactivé) et Ahrefs (non activé), ajoute PageSpeed et l'usage d'OpenAI pour
 les illustrations, et remplit les garanties de transfert à partir du registre DPF et des contrats.
 
+## Confidentialité, sauvegardes et DPA (12 novembre 2026)
+
+- **Politique de confidentialité**, avec l'accord du propriétaire : OpenAI n'est plus présenté comme le
+  seul secours d'Anthropic. La ligne OpenAI et le § 6 disent aussi qu'il génère les illustrations
+  d'articles, à partir d'une courte description de l'image. Date de la page : 12 novembre 2026.
+- **Sauvegardes** : une purge des sauvegardes de plus de 30 jours que S3 refuse n'est plus comptée comme
+  faite. Elle fait échouer la tâche de sauvegarde, après la sauvegarde du jour.
+- **DPA**, encore non publié :
+  - annexe I : aucun délégué à la protection des données désigné ;
+  - annexe III : procédure écrite de gestion des violations (`PROCEDURE-VIOLATION-DONNEES.md`) ;
+  - annexe IV : région d'Amazon S3 (us-east-1) ; description de ce qu'OpenAI reçoit pour une
+    illustration, alignée sur la confidentialité.
+
 ## Points en attente
 
 Voir `LEGAL-VALIDATION-REQUIRED.md`. Les messages de l'application qui citaient encore « Comptes

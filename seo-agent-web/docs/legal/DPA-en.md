@@ -235,7 +235,7 @@ The Parties shall set out in Annex III all other elements to be provided by the 
 
 - Address: 60 rue François 1er, 75008 Paris, France; 934 934 308 R.C.S. Paris.
 - Contact person: Tony Caron, company director, contact@noyaru.com.
-- Data protection officer: **TO BE CONFIRMED** (no appointment known to date).
+- Data protection officer: none appointed.
 - Signature and accession date: making this agreement available in the service constitutes E-Com
   Shop's commitment on the date of the Customer's acceptance.
 
@@ -293,6 +293,9 @@ without reducing the overall level of security.
 - **Application protection**: content security policy (CSP) and a ban on embedding pages in an external
   frame (X-Frame-Options).
 - **Event logging**: audit log of sensitive actions.
+- **Handling of data breaches**: written procedure of 12 November 2026; register of all incidents,
+  including those that are not notified; containment measures; notification of the Customer under
+  supplementary clause B4.
 - **Availability and restoration**: daily database backup, kept for 30 days. An automatic test restores
   the latest backup into a disposable database every month and checks its content; first successful test
   on 6 November 2026.
@@ -316,8 +319,7 @@ without reducing the overall level of security.
 
 **TO BE CONFIRMED by E-Com Shop before publication, only measures actually applied being listed**:
 two-factor authentication on administration accounts (GitHub, Render, AWS, Stripe); limited rights on the
-AWS access keys; encryption of the director's workstation; internal incident handling procedure; actual
-deletion of backups at 30 days.
+AWS access keys; encryption of the director's workstation; actual deletion of backups at 30 days.
 
 ### Assistance to the controller (Clauses 8 and 9)
 
@@ -336,16 +338,16 @@ deletion of backups at 30 days.
 ## Annex IV — Sub-processors
 
 As Clause 7.7 uses general authorisation, this table is the agreed list. It states what is confirmed as
-of 6 November 2026; a transfer whose mechanism is not confirmed is not presented as covered. Certification
+of 12 November 2026; a transfer whose mechanism is not confirmed is not presented as covered. Certification
 under the EU-U.S. Data Privacy Framework (“DPF”) was read from the official register
-(dataprivacyframework.gov).
+(dataprivacyframework.gov) on 6 November 2026.
 
 | Sub-processor | Subject matter and data | Location | Transfer safeguard | Contract and end of services |
 | --- | --- | --- | --- | --- |
 | Render Services, Inc. | Hosting of the application and database: all data processed for the Customer | United States (Oregon) | DPF active (due 10 December 2026); SCC modules 2 and 3 in the contract | render.com/dpa; return or deletion at the customer's choice |
-| Amazon Web Services | Database backups and storage of analysis reports: all database data, analysis reports | United States; region **TO BE CONFIRMED** | DPF active, Amazon.com, Inc. covering Amazon Web Services, Inc. (due 2 January 2027); SCCs in the contract | d1.awsstatic.com/legal/aws-dpa/aws-dpa.pdf; backups deleted by E-Com Shop at 30 days |
+| Amazon Web Services | Database backups and storage of analysis reports: all database data, analysis reports | United States (Northern Virginia, region us-east-1) | DPF active, Amazon.com, Inc. covering Amazon Web Services, Inc. (due 2 January 2027); SCCs in the contract | d1.awsstatic.com/legal/aws-dpa/aws-dpa.pdf; backups deleted by E-Com Shop at 30 days |
 | Anthropic (services in the EU: Anthropic Ireland Limited) | AI models for fixes, writing and the assistant: content of analysed pages, relevant extracts of repository files, questions asked to the assistant | United States | Not in the DPF register; SCC modules 2 and 3 in the contract | anthropic.com/legal/data-processing-addendum; deletion within 30 days of the end of the contract |
-| OpenAI (EEA data: OpenAI Ireland Limited) | AI models as a fallback for Anthropic: the same data; generation of article illustrations: the illustration prompt | United States | Not in the DPF register; SCC modules 2 and 3 in the contract | openai.com/policies/data-processing-addendum; return or deletion on instruction |
+| OpenAI (EEA data: OpenAI Ireland Limited) | AI models as a fallback for Anthropic: the same data; generation of article illustrations: a short description of the image, written from the subject of the article | United States | Not in the DPF register; SCC modules 2 and 3 in the contract | openai.com/policies/data-processing-addendum; return or deletion on instruction |
 | Sentry (Functional Software, Inc.) | Error tracking: filtered error traces (Annex III). To be assessed: in principle no personal data of the Customer; the text of an error may exceptionally contain some | European Union (Germany), according to the service configuration; access from a third country **TO BE CONFIRMED** | DPF active, under the name Sentry.io (due 28 May 2027); SCCs in the contract | sentry.io/legal/dpa, accepted on 5 November 2026; deletion at the end of the contract |
 | SerpApi | Google searches for competitors and link opportunities: short searches generated from page titles, without the site's name or brand, or keywords entered by the Customer. To be assessed: in principle no personal data; a search entered by the Customer may contain some | United States; **TO BE CONFIRMED** | Not in the DPF register; **TO BE CONFIRMED**: contract and SCCs requested on 6 November 2026 | Reply awaited; searches kept for 31 days according to its policy |
 | Google (PageSpeed Insights) | Performance measurement: public address of the page. To be assessed: in principle no personal data | United States | DPF active, Google LLC (due 13 September 2027) | **TO BE CONFIRMED**: terms applicable to this API |

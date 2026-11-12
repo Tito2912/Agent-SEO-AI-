@@ -74,16 +74,24 @@ sont dans `QUESTIONS-AVOCAT.md`.
 | Information | Article du DPA |
 | --- | --- |
 | Contrat de SerpApi, demandé le 06/11/2026 (les autres sont rangés dans `documents prestataires`) | Annexe IV |
-| Mécanisme de transfert de SerpApi ; région d'Amazon S3 ; accès de Sentry depuis un pays tiers. Registre DPF relevé le 06/11/2026 pour les autres (14 captures rangées) : à revérifier avant publication, Render et Netlify arrivant à échéance en décembre 2026 | Annexe IV |
+| Mécanisme de transfert de SerpApi ; accès de Sentry depuis un pays tiers. Registre DPF relevé le 06/11/2026 pour les autres (14 captures rangées) : à revérifier avant publication, Render et Netlify arrivant à échéance en décembre 2026 | Annexe IV |
 | Conditions applicables à l'API PageSpeed de Google | Annexe IV |
-| Droits limités des clés d'accès AWS ; suppression effective des sauvegardes à 30 jours (date de la plus ancienne dans la console S3) | Annexe III |
-| Mesures organisationnelles réellement appliquées : authentification à deux facteurs, poste de travail chiffré, procédure d'incident ; désignation d'un délégué à la protection des données | Annexes I et III |
+| Droits limités des clés d'accès AWS ; suppression effective des sauvegardes à 30 jours (dans la console S3 : date de la plus ancienne sauvegarde, et gestion des versions du compartiment désactivée, sinon les versions effacées restent stockées) | Annexe III |
+| Mesures organisationnelles réellement appliquées : authentification à deux facteurs sur tous les comptes d'administration, poste de travail chiffré | Annexe III |
+
+**Réglé le 12/11/2026** (réponses du propriétaire) :
+- région d'Amazon S3 : us-east-1, Virginie du Nord, déjà affichée par la confidentialité ;
+- délégué à la protection des données : aucun désigné. À notre lecture de l'article 37 du RGPD, il n'est
+  pas obligatoire : E-Com Shop n'est pas un organisme public, et ses activités de base ne consistent ni en
+  un suivi régulier et systématique de personnes à grande échelle, ni en un traitement à grande échelle
+  de données sensibles ;
+- procédure de gestion des violations de données : écrite, voir `PROCEDURE-VIOLATION-DONNEES.md` (annexe III).
 
 ### Faits à confirmer
 
 | Fait | Article du DPA |
 | --- | --- |
-| La sauvegarde quotidienne et sa suppression à 30 jours fonctionnent en production, et une restauration est possible. Elles sont configurées dans `render.yaml` (tâche `noyaru-db-backup`, `BACKUP_RETENTION_DAYS=30`), sans preuve de leur fonctionnement. **Depuis le 05/11/2026**, un essai automatique la vérifie chaque mois (tâche `noyaru-restauration-test`, `backend/restauration.py`) : la dernière sauvegarde est restaurée dans une base jetable, son empreinte et ses tables contrôlées, le rapport gardé au journal d'audit (`backup.restore_check`) et envoyé au propriétaire. **Premier essai réussi le 06/11/2026** : sauvegarde du 06/11/2026 à 02:01 UTC restaurée, 42 tables, 1 988 lignes, 7 comptes, 4,5 s (recoupé avec le code et la production). La suppression à 30 jours reste à constater. | Annexe III |
+| La sauvegarde quotidienne et sa suppression à 30 jours fonctionnent en production, et une restauration est possible. Elles sont configurées dans `render.yaml` (tâche `noyaru-db-backup`, `BACKUP_RETENTION_DAYS=30`), sans preuve de leur fonctionnement. **Depuis le 05/11/2026**, un essai automatique la vérifie chaque mois (tâche `noyaru-restauration-test`, `backend/restauration.py`) : la dernière sauvegarde est restaurée dans une base jetable, son empreinte et ses tables contrôlées, le rapport gardé au journal d'audit (`backup.restore_check`) et envoyé au propriétaire. **Premier essai réussi le 06/11/2026** : sauvegarde du 06/11/2026 à 02:01 UTC restaurée, 42 tables, 1 988 lignes, 7 comptes, 4,5 s (recoupé avec le code et la production). La suppression à 30 jours reste à constater. **Depuis le 12/11/2026**, une purge que S3 refuse n'est plus comptée comme faite : elle fait échouer la tâche (code 3), ce que Render affiche comme un échec, au lieu d'une simple ligne de journal (`backend/backup.py`, `tests/test_la_purge_des_sauvegardes_dit_vrai.py`). | Annexe III |
 | Les traces d'erreur envoyées à Sentry contiennent-elles des données personnelles des clients ? **Constaté le 05/11/2026 : OUI jusqu'à ce jour** (variables du code, formulaires reçus, paramètres d'adresse, e-mails dans les journaux, aucun filtre). **Corrigé le même jour** (`backend/sentry_filtre.py`, testé avec le vrai SDK) : ni variables, ni formulaires, ni cookies, ni paramètres d'adresse ; e-mails et jeton Telegram masqués. Reste possible : un nom écrit dans le texte d'une erreur. | Annexe IV |
 | SerpAPI et Ahrefs ne reçoivent-ils vraiment aucune donnée personnelle ? **Constaté le 05/11/2026 (lecture du code)** : SerpAPI reçoit des recherches courtes générées à partir des titres des pages, sans le nom ni la marque du site, ou les mots-clés que le Client saisit lui-même (recherche d'opportunités de liens) ; une recherche saisie par le Client peut donc contenir une donnée personnelle. Ahrefs n'est pas activé ; il recevrait le domaine analysé. | Annexe IV |
 | Google PageSpeed Insights, appelé avec la clé d'E-Com Shop sur les adresses des pages du client : ne reçoit-il vraiment aucune donnée personnelle ? **Constaté le 05/11/2026 (lecture du code)** : il reçoit l'adresse publique de la page, la stratégie (mobile ou ordinateur) et la catégorie mesurée, rien d'autre ; Google charge lui-même la page publique. | Annexe IV |
@@ -110,7 +118,7 @@ juridiquement. Ce sont des choix courants et équilibrés ; ils sont repris dans
 
 | Engagement | Article du DPA | Ce qu'il suppose |
 | --- | --- | --- |
-| Notifier une violation de données dans les 48 heures, dans la mesure du possible | B4 | Lire contact@noyaru.com et les alertes du service chaque jour ouvré. |
+| Notifier une violation de données dans les 48 heures, dans la mesure du possible | B4 | Lire contact@noyaru.com et les alertes du service chaque jour ouvré ; suivre `PROCEDURE-VIOLATION-DONNEES.md` et tenir son registre (12/11/2026). |
 | Rembourser au prorata un client qui résilie après une objection | B3 | Un remboursement manuel dans Stripe, comme pour une rétractation. |
 | Restituer en 30 jours les données que les exports ne couvrent pas | B5 | Le client les télécharge lui-même depuis « Mon compte → Mes données » (05/11/2026) ; au-delà de 300 Mo de fichiers d'analyse, les fichiers laissés de côté sont listés dans le ZIP et remis sur demande. |
 | Prévenir les clients 30 jours avant un nouveau sous-traitant ultérieur | 7.7 a), B3 | Une annonce « Politique de confidentialité, et liste des prestataires » depuis l'écran « Annonces aux clients ». |
@@ -160,9 +168,11 @@ Telegram reçoit aussi, depuis la PR #75, le correspondant et sa demande SAV ré
 avec le point ci-dessus. Ghost, PrestaShop, Wix et Webflow sont nommés depuis le 06/11/2026 dans « Services
 connectés par le Client » (annexe IV du DPA).
 
-**À corriger avec l'accord du propriétaire** : la confidentialité présente OpenAI comme « en secours
-d'Anthropic », alors qu'il génère aussi les illustrations d'articles du plan Business (`gpt-image-2`).
-L'annexe IV du DPA dit déjà les deux.
+**Corrigé le 12/11/2026, avec l'accord du propriétaire** : la confidentialité présentait OpenAI comme
+« en secours d'Anthropic », alors qu'il génère aussi les illustrations d'articles (`gpt-image-2`). La
+ligne OpenAI et le § 6 disent désormais les deux, sans nommer de plan, et précisent qu'une illustration
+ne lui transmet qu'une courte description de l'image. Un test lit le code et la ligne, en français et
+en anglais. L'annexe IV du DPA dit la même chose.
 
 ### Points à faire valider par un juriste
 
