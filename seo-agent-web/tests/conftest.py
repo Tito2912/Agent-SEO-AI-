@@ -47,6 +47,42 @@ _TEST_ACCOUNT_PATTERNS = (
 )
 
 
+def _ajouter_les_colonnes_absentes(engine) -> list[str]:
+    """TROISIEME residu (12/11/2026) : le SCHEMA de la base locale retarde sur le modele.
+
+    `create_tables()` (create_all) cree les tables absentes, jamais une colonne absente d'une
+    table existante ; en production, c'est la migration qui l'ajoute. La base SQLite locale,
+    creee par create_all lors des passages precedents, n'avait donc pas `dpa_acceptances.adresse`
+    (migration 0030) : 26 echecs « no such column » sur la barriere locale, aucun en CI.
+
+    Ajoute seulement les colonnes FACULTATIVES sans valeur par defaut du serveur, comme le ferait
+    une migration additive. Rien n'est supprime ni modifie ; une colonne obligatoire absente
+    reste absente, et le test qui en depend le dira."""
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+    from sqlalchemy import Column, inspect
+
+    from backend.models import Base
+
+    if engine.dialect.name != "sqlite":
+        return []
+    ajoutees: list[str] = []
+    with engine.begin() as connexion:
+        inspecteur = inspect(connexion)
+        existantes = set(inspecteur.get_table_names())
+        operations = Operations(MigrationContext.configure(connexion))
+        for table in Base.metadata.sorted_tables:
+            if table.name not in existantes:
+                continue
+            presentes = {c["name"] for c in inspecteur.get_columns(table.name)}
+            for colonne in table.columns:
+                if colonne.name in presentes or not colonne.nullable or colonne.server_default is not None:
+                    continue
+                operations.add_column(table.name, Column(colonne.name, colonne.type, nullable=True))
+                ajoutees.append("%s.%s" % (table.name, colonne.name))
+    return ajoutees
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _reset_accumulated_test_state() -> None:
     """Rendre la base locale equivalente a celle, vierge, de la CI.
@@ -66,6 +102,11 @@ def _reset_accumulated_test_state() -> None:
         from backend import app as app_module
     except Exception:
         return
+    try:
+        _ajouter_les_colonnes_absentes(app_module.DB.engine)
+    except Exception:
+        # Meme regle que ci-dessous : un confort, jamais une condition.
+        pass
     try:
         with app_module.DB.session() as db:
             db.execute(text("DELETE FROM rate_limit_buckets WHERE key LIKE 'auth\\_%' ESCAPE '\\'"))
