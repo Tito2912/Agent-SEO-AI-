@@ -157,6 +157,8 @@ les illustrations, et remplit les garanties de transfert à partir du registre D
 - **Politique de confidentialité**, avec l'accord du propriétaire : OpenAI n'est plus présenté comme le
   seul secours d'Anthropic. La ligne OpenAI et le § 6 disent aussi qu'il génère les illustrations
   d'articles, à partir d'une courte description de l'image. Date de la page : 12 novembre 2026.
+  Le même jour, avec son accord : la localisation de Sentry devient « Union européenne
+  (Allemagne) ; traitement possible aux États-Unis » (article 6.1 de son contrat).
 - **Sauvegardes** : une purge des sauvegardes de plus de 30 jours que S3 refuse n'est plus comptée comme
   faite. Elle fait échouer la tâche de sauvegarde, après la sauvegarde du jour.
 - **DPA**, encore non publié :

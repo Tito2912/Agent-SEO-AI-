@@ -167,12 +167,22 @@ def test_un_tiers_CONDITIONNEL_n_apparait_que_s_il_est_branche(monkeypatch, hote
 
 @pytest.mark.parametrize("dsn, attendu", [
     ("", "Non utilisé actuellement"),
-    ("https://abc@o1.ingest.de.sentry.io/2", "Union européenne (Allemagne)"),
+    ("https://abc@o1.ingest.de.sentry.io/2", "Union européenne (Allemagne) ; traitement possible aux États-Unis"),
     ("https://abc@o1.ingest.us.sentry.io/2", "États-Unis"),
 ])
 def test_la_region_Sentry_se_LIT_dans_le_DSN(monkeypatch, dsn, attendu) -> None:
     monkeypatch.setenv("SENTRY_DSN", dsn)
     assert m._localisation_sentry() == attendu
+
+
+def test_Sentry_en_Europe_dit_aussi_le_traitement_aux_Etats_Unis_dans_les_DEUX_langues(monkeypatch) -> None:
+    """12/11/2026 : stocké en Allemagne, mais traitable aux États-Unis (article 6.1 de son contrat).
+    La page anglaise traduit la mention ; une traduction manquante y laisserait le français."""
+    monkeypatch.setenv("SENTRY_DSN", "https://abc@o1.ingest.de.sentry.io/2")
+    client = TestClient(m.app)
+    assert "traitement possible aux États-Unis" in _ligne_du_tableau(client.get("/privacy").text, "Sentry")
+    anglaise = _ligne_du_tableau(client.get("/en/privacy").text, "Sentry")
+    assert "processing possible in the United States" in anglaise and "traitement" not in anglaise
 
 
 def test_l_identite_legale_vient_de_LEGAL_PY_et_les_sauvegardes_sont_DECLAREES(monkeypatch) -> None:

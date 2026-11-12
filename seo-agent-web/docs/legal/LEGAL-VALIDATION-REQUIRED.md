@@ -94,7 +94,8 @@ sont dans `QUESTIONS-AVOCAT.md`.
 - procédure de gestion des violations de données : écrite, voir `PROCEDURE-VIOLATION-DONNEES.md` (annexe III) ;
 - Sentry : stockage dans l'Union européenne (Allemagne), mais l'article 6.1 de son contrat lui permet, ainsi
   qu'à ses sous-traitants, de traiter les données aux États-Unis et dans d'autres pays ; transfert couvert
-  par sa certification DPF, et par les clauses types à défaut (annexe 3 de son contrat) (annexe IV) ;
+  par sa certification DPF, et par les clauses types à défaut (annexe 3 de son contrat) (annexe IV).
+  La confidentialité le dit aussi depuis le 12/11/2026, avec l'accord du propriétaire ;
 - API PageSpeed de Google : régie par les conditions des API Google (developers.google.com/terms, article
   2 i), qui renvoient aux conditions de Google entre responsables du traitement. Google n'y est donc pas
   sous-traitant ultérieur : l'API sort du tableau de l'annexe IV et fait l'objet d'un paragraphe à part.

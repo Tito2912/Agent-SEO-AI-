@@ -58,7 +58,8 @@ UPDATED: dict[str, date] = {
     # ses cles est configuree, avec la donnee qu'il garde dans le navigateur (cf.turnstile.u) ;
     # l'acces et la portabilite par « Mon compte -> Mes donnees » (export ZIP).
     # 12/11/2026 : OpenAI dessine aussi les illustrations d'articles (il n'en recoit que la
-    # description) ; il n'etait presente que comme le secours d'Anthropic.
+    # description) ; il n'etait presente que comme le secours d'Anthropic. Le meme jour, Sentry :
+    # stocke en Allemagne, traitement possible aux Etats-Unis (article 6.1 de son contrat).
     "privacy": date(2026, 11, 12),
     "legal_notice": date(2026, 10, 21),
 }

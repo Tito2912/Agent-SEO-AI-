@@ -14701,12 +14701,18 @@ def terms_public(request: Request) -> HTMLResponse:
 def _localisation_sentry() -> str:
     """Ou Sentry recoit les traces d'erreur, LU dans le DSN : la region est dans l'hote
     (`…ingest.de.sentry.io` pour l'Union europeenne, sinon les Etats-Unis). Sans DSN, Sentry
-    n'est pas branche et la ligne le dit."""
+    n'est pas branche et la ligne le dit.
+
+    12/11/2026 : la region EU dit ou les traces sont STOCKEES, pas ou elles peuvent etre
+    traitees. L'article 6.1 du contrat de Sentry lui permet, ainsi qu'a ses sous-traitants, de
+    les traiter aux Etats-Unis : la page le dit (accord du proprietaire ; DPA, annexe IV)."""
     dsn = _safe_env("SENTRY_DSN")
     if not dsn:
         return "Non utilisé actuellement"
     hote = urlsplit(dsn).hostname or ""
-    return "Union européenne (Allemagne)" if ".de.sentry.io" in hote else "États-Unis"
+    if ".de.sentry.io" in hote:
+        return "Union européenne (Allemagne) ; traitement possible aux États-Unis"
+    return "États-Unis"
 
 
 def _localisation_sauvegardes() -> str:
