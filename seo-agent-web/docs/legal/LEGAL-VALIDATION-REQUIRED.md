@@ -74,8 +74,7 @@ sont dans `QUESTIONS-AVOCAT.md`.
 | Information | Article du DPA |
 | --- | --- |
 | Contrat de SerpApi, demandé le 06/11/2026 (les autres sont rangés dans `documents prestataires`) | Annexe IV |
-| Mécanisme de transfert de SerpApi ; accès de Sentry depuis un pays tiers. Registre DPF relevé le 06/11/2026 pour les autres (14 captures rangées) : à revérifier avant publication, Render et Netlify arrivant à échéance en décembre 2026 | Annexe IV |
-| Conditions applicables à l'API PageSpeed de Google | Annexe IV |
+| Mécanisme de transfert de SerpApi. Registre DPF relevé le 06/11/2026 pour les autres (14 captures rangées) : à revérifier avant publication, Render et Netlify arrivant à échéance en décembre 2026 | Annexe IV |
 
 **Réglé le 12/11/2026** (réponses du propriétaire) :
 - authentification à deux facteurs sur les comptes GitHub, Render, AWS et Stripe d'E-Com Shop, et disque
@@ -92,7 +91,14 @@ sont dans `QUESTIONS-AVOCAT.md`.
   pas obligatoire : E-Com Shop n'est pas un organisme public, et ses activités de base ne consistent ni en
   un suivi régulier et systématique de personnes à grande échelle, ni en un traitement à grande échelle
   de données sensibles ;
-- procédure de gestion des violations de données : écrite, voir `PROCEDURE-VIOLATION-DONNEES.md` (annexe III).
+- procédure de gestion des violations de données : écrite, voir `PROCEDURE-VIOLATION-DONNEES.md` (annexe III) ;
+- Sentry : stockage dans l'Union européenne (Allemagne), mais l'article 6.1 de son contrat lui permet, ainsi
+  qu'à ses sous-traitants, de traiter les données aux États-Unis et dans d'autres pays ; transfert couvert
+  par sa certification DPF, et par les clauses types à défaut (annexe 3 de son contrat) (annexe IV) ;
+- API PageSpeed de Google : régie par les conditions des API Google (developers.google.com/terms, article
+  2 i), qui renvoient aux conditions de Google entre responsables du traitement. Google n'y est donc pas
+  sous-traitant ultérieur : l'API sort du tableau de l'annexe IV et fait l'objet d'un paragraphe à part.
+  Question ajoutée au point 4 de `QUESTIONS-AVOCAT.md`.
 
 ### Faits à confirmer
 
@@ -189,10 +195,11 @@ B (acceptation, frais d'audit, plafond de responsabilité). Le texte officiel de
 
 ### Développements nécessaires avant de proposer le DPA
 
-Ceux qui restent sont marqués « À METTRE EN ŒUVRE » dans le DPA.
+Il n'en reste aucun au 12/11/2026 : le DPA ne contient plus de mention « À METTRE EN ŒUVRE ».
 
-- L'adresse du Client dans le formulaire d'acceptation (annexe I du DPA, ajoutée le 06/11/2026 : les clauses
-  de la Commission la demandent).
+- ~~L'adresse du Client dans le formulaire d'acceptation (annexe I du DPA, ajoutée le 06/11/2026 : les
+  clauses de la Commission la demandent).~~ **Réalisée le 12/11/2026** : champ obligatoire, gardé dans la
+  preuve (colonne `adresse` de `dpa_acceptances`, migration `20261112_0030`).
 
 - ~~La case à cocher de l'article 1 et la conservation des preuves.~~ **Réalisée le 05/11/2026**
   (`backend/dpa.py`, table `dpa_acceptances`) : organisation, immatriculation, personne et

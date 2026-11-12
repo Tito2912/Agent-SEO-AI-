@@ -227,7 +227,7 @@ The Parties shall set out in Annex III all other elements to be provided by the 
 
 - Name and registration: the name of the organisation and, where one exists, its registration number,
   as entered on acceptance.
-- Address: as entered on acceptance. **TO BE IMPLEMENTED**: add this field to the acceptance form.
+- Address: as entered on acceptance.
 - Contact person: the person accepting, with their name, position and the account's email address.
 - Signature and accession date: the online acceptance described in supplementary clause B1.
 
@@ -348,9 +348,8 @@ under the EU-U.S. Data Privacy Framework (“DPF”) was read from the official 
 | Amazon Web Services | Database backups and storage of analysis reports: all database data, analysis reports | United States (Northern Virginia, region us-east-1) | DPF active, Amazon.com, Inc. covering Amazon Web Services, Inc. (due 2 January 2027); SCCs in the contract | d1.awsstatic.com/legal/aws-dpa/aws-dpa.pdf; backups deleted by E-Com Shop at 30 days |
 | Anthropic (services in the EU: Anthropic Ireland Limited) | AI models for fixes, writing and the assistant: content of analysed pages, relevant extracts of repository files, questions asked to the assistant | United States | Not in the DPF register; SCC modules 2 and 3 in the contract | anthropic.com/legal/data-processing-addendum; deletion within 30 days of the end of the contract |
 | OpenAI (EEA data: OpenAI Ireland Limited) | AI models as a fallback for Anthropic: the same data; generation of article illustrations: a short description of the image, written from the subject of the article | United States | Not in the DPF register; SCC modules 2 and 3 in the contract | openai.com/policies/data-processing-addendum; return or deletion on instruction |
-| Sentry (Functional Software, Inc.) | Error tracking: filtered error traces (Annex III). To be assessed: in principle no personal data of the Customer; the text of an error may exceptionally contain some | European Union (Germany), according to the service configuration; access from a third country **TO BE CONFIRMED** | DPF active, under the name Sentry.io (due 28 May 2027); SCCs in the contract | sentry.io/legal/dpa, accepted on 5 November 2026; deletion at the end of the contract |
+| Sentry (Functional Software, Inc.) | Error tracking: filtered error traces (Annex III). To be assessed: in principle no personal data of the Customer; the text of an error may exceptionally contain some | Storage in the European Union (Germany), according to the service configuration; the contract allows Sentry and its sub-processors to process data in the United States and other countries (section 6.1) | DPF active, under the name Sentry.io (due 28 May 2027); SCCs in the contract | sentry.io/legal/dpa, accepted on 5 November 2026; deletion at the end of the contract |
 | SerpApi | Google searches for competitors and link opportunities: short searches generated from page titles, without the site's name or brand, or keywords entered by the Customer. To be assessed: in principle no personal data; a search entered by the Customer may contain some | United States; **TO BE CONFIRMED** | Not in the DPF register; **TO BE CONFIRMED**: contract and SCCs requested on 6 November 2026 | Reply awaited; searches kept for 31 days according to its policy |
-| Google (PageSpeed Insights) | Performance measurement: public address of the page. To be assessed: in principle no personal data | United States | DPF active, Google LLC (due 13 September 2027) | **TO BE CONFIRMED**: terms applicable to this API |
 
 **Services connected by the Customer.** The status of GitHub, of WordPress, Ghost, PrestaShop, Wix and
 Webflow and their hosts, of Google Search Console, Bing Webmaster Tools and Netlify depends on the
@@ -359,6 +358,13 @@ subscribed to one of these services and E-Com Shop accesses it with the Customer
 credentials, E-Com Shop regards it as a provider of the Customer and not as its sub-processor. If E-Com
 Shop entrusted Customer data to one of these services on its own account, that service would be added to
 the list under Clause 7.7.
+
+**Performance measurement (Google PageSpeed Insights).** The service sends Google's PageSpeed Insights
+API only the public address of the pages to measure; Google loads the public page itself. In principle,
+no personal data is involved. This API is governed by the Google APIs Terms of Service
+(developers.google.com/terms, section 2(i)), which refer to Google's controller-controller data
+protection terms (privacy.google.com/businesses/gdprcontrollerterms): Google does not act there as a
+sub-processor of E-Com Shop. Google LLC is certified under the DPF (due 13 September 2027).
 
 **Services not enabled.** Google (Gemini) and Ahrefs are not used on the date of this agreement. Enabling
 them would follow Clause 7.7.

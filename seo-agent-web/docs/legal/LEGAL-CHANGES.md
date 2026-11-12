@@ -164,6 +164,12 @@ les illustrations, et remplit les garanties de transfert à partir du registre D
   - annexe III : procédure écrite de gestion des violations (`PROCEDURE-VIOLATION-DONNEES.md`) ;
   - annexe IV : région d'Amazon S3 (us-east-1) ; description de ce qu'OpenAI reçoit pour une
     illustration, alignée sur la confidentialité.
+  - annexe III : mesures confirmées par le propriétaire (double authentification, poste chiffré, clé
+    AWS limitée au compartiment, suppression des sauvegardes à 30 jours constatée).
+  - annexe I : l'adresse du Client est demandée et gardée à l'acceptation (champ obligatoire).
+  - annexe IV : Sentry peut traiter les données hors de l'Union (article 6.1 de son contrat) ;
+    l'API PageSpeed de Google sort du tableau des sous-traitants ultérieurs, ses conditions la plaçant
+    entre responsables du traitement.
 
 ## Points en attente
 

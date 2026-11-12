@@ -23,7 +23,9 @@ EUR-Lex : il n'a pas à être relu. Seuls comptent les deux écarts, les annexes
    des correspondants. Hors de ce contrat, mais à risque : que devons-nous faire ?
 4. **Les services connectés par le client (annexe IV).** Nous traitons GitHub, WordPress, Search Console, etc.
    comme ses prestataires, et non comme nos sous-traitants ultérieurs, lorsqu'il les a souscrits et que nous y
-   accédons avec son autorisation. Cette qualification tient-elle ?
+   accédons avec son autorisation. Cette qualification tient-elle ? De même, nous sortons de la liste l'API
+   PageSpeed de Google, qui ne reçoit que l'adresse publique des pages : ses conditions renvoient aux conditions
+   de Google entre responsables du traitement. Est-ce juste ?
 5. **Les sauvegardes (clause 10 d) et B5).** Après suppression, les données subsistent dans les sauvegardes
    jusqu'à 30 jours. Nous certifions la suppression sur demande, en indiquant cette échéance. Est-ce acceptable ?
 6. **Les clauses ajoutées (partie B).** Ne contredisent-elles pas les clauses types, au sens de leur clause 2 b) ?

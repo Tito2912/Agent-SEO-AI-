@@ -233,8 +233,7 @@ d) À la suite de la résiliation du contrat, le sous-traitant supprime, selon l
 
 - Nom et immatriculation : la dénomination de l'organisation et, lorsqu'il existe, son numéro
   d'immatriculation, indiqués lors de l'acceptation.
-- Adresse : celle indiquée lors de l'acceptation. **À METTRE EN ŒUVRE** : ajouter ce champ au
-  formulaire d'acceptation.
+- Adresse : celle indiquée lors de l'acceptation.
 - Personne de contact : la personne qui accepte, avec son nom, sa fonction et l'adresse e-mail du
   compte.
 - Signature et date d'adhésion : l'acceptation en ligne décrite à la clause complémentaire B1.
@@ -361,9 +360,8 @@ pas présenté comme couvert. La certification au cadre de protection des donné
 | Amazon Web Services | Sauvegardes de la base et stockage des rapports d'analyse : toutes les données de la base, rapports d'analyse | États-Unis (Virginie du Nord, région us-east-1) | DPF actif, Amazon.com, Inc. couvrant Amazon Web Services, Inc. (échéance 02/01/2027) ; clauses types du contrat | d1.awsstatic.com/legal/aws-dpa/aws-dpa.pdf ; sauvegardes supprimées par E-Com Shop à 30 jours |
 | Anthropic (services dans l'UE : Anthropic Ireland Limited) | Modèles d'IA pour les corrections, la rédaction et l'assistant : contenu des pages analysées, extraits des fichiers du dépôt concernés, questions posées à l'assistant | États-Unis | Absent du registre DPF ; clauses types modules 2 et 3 du contrat | anthropic.com/legal/data-processing-addendum ; suppression dans les 30 jours après la fin du contrat |
 | OpenAI (données de l'EEE : OpenAI Ireland Limited) | Modèles d'IA en secours d'Anthropic : les mêmes données ; génération d'illustrations d'articles : courte description de l'image, rédigée à partir du sujet de l'article | États-Unis | Absent du registre DPF ; clauses types modules 2 et 3 du contrat | openai.com/policies/data-processing-addendum ; restitution ou suppression sur instruction |
-| Sentry (Functional Software, Inc.) | Suivi des erreurs : traces d'erreur filtrées (annexe III). À apprécier : en principe aucune donnée personnelle du Client ; le texte d'une erreur peut exceptionnellement en contenir | Union européenne (Allemagne), d'après la configuration du service ; accès depuis un pays tiers **À CONFIRMER** | DPF actif, au nom de Sentry.io (échéance 28/05/2027) ; clauses types du contrat | sentry.io/legal/dpa, accepté le 05/11/2026 ; suppression en fin de contrat |
+| Sentry (Functional Software, Inc.) | Suivi des erreurs : traces d'erreur filtrées (annexe III). À apprécier : en principe aucune donnée personnelle du Client ; le texte d'une erreur peut exceptionnellement en contenir | Stockage dans l'Union européenne (Allemagne), d'après la configuration du service ; le contrat permet à Sentry et à ses sous-traitants de traiter les données aux États-Unis et dans d'autres pays (article 6.1) | DPF actif, au nom de Sentry.io (échéance 28/05/2027) ; clauses types du contrat | sentry.io/legal/dpa, accepté le 05/11/2026 ; suppression en fin de contrat |
 | SerpApi | Recherches Google pour les concurrents et les opportunités de liens : recherches courtes générées à partir des titres des pages, sans le nom ni la marque du site, ou mots-clés saisis par le Client. À apprécier : en principe aucune donnée personnelle ; une recherche saisie par le Client peut en contenir | États-Unis ; **À CONFIRMER** | Absent du registre DPF ; **À CONFIRMER** : contrat et clauses types demandés le 06/11/2026 | Réponse attendue ; recherches gardées 31 jours d'après sa politique |
-| Google (PageSpeed Insights) | Mesure de performance : adresse publique de la page. À apprécier : en principe aucune donnée personnelle | États-Unis | DPF actif, Google LLC (échéance 13/09/2027) | **À CONFIRMER** : conditions applicables à cette API |
 
 **Services connectés par le Client.** La qualification de GitHub, de WordPress, Ghost, PrestaShop, Wix
 et Webflow et de leurs hébergeurs, de Google Search Console, de Bing Webmaster Tools et de Netlify
@@ -372,6 +370,14 @@ lui-même souscrit un de ces services et qu'E-Com Shop y accède avec son autori
 identifiants, E-Com Shop le considère comme un prestataire du Client et non comme son sous-traitant
 ultérieur. Si E-Com Shop confiait des données du Client à l'un de ces services pour son propre
 compte, ce service serait ajouté à la liste selon la clause 7.7.
+
+**Mesure de performance (Google PageSpeed Insights).** Le service transmet à l'API PageSpeed Insights
+de Google la seule adresse publique des pages à mesurer ; Google charge lui-même la page publique. En
+principe, aucune donnée personnelle n'est concernée. Cette API relève des conditions des API Google
+(developers.google.com/terms, article 2 i), qui renvoient aux conditions de protection des données de
+Google entre responsables du traitement (privacy.google.com/businesses/gdprcontrollerterms) : Google n'y
+agit pas comme sous-traitant ultérieur d'E-Com Shop. Google LLC est certifiée au DPF (échéance
+13/09/2027).
 
 **Services non activés.** Google (Gemini) et Ahrefs ne sont pas utilisés à la date du présent accord.
 Leur activation suivrait la clause 7.7.
