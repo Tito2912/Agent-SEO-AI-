@@ -21,7 +21,10 @@
    20/10/2026 : corrections de l'audit juridique (docs/legal/LEGAL-CHANGES.md) — roles RGPD,
    mecanismes de transfert, IA, conservation, securite, reclamations, cookies releves dans le code
    (seo_agent_session, seo_agent_csrf, noyaru_lang ; aucun cookie Google). La version anglaise
-   (privacy_public_en.html) porte les memes informations. #}
+   (privacy_public_en.html) porte les memes informations.
+   12/11/2026 : OpenAI n'est pas seulement le secours d'Anthropic, il dessine aussi les
+   illustrations d'articles (`_openai_generer_une_image`, /images/generations) ; il ne recoit
+   alors que la description de l'image ecrite par le modele de texte. Accord du proprietaire. #}
 {% include "_legal_styles.html" %}
 {% endblock %}
 
@@ -91,7 +94,7 @@
         <tr><th scope="row">SendGrid (Twilio)</th><td>Si configuré à la place du transport existant pour le SAV : envoi de la réponse validée</td><td>Adresse du correspondant, objet, texte de la réponse et références du fil</td><td>États-Unis, infrastructure mondiale (API globale)</td></tr>
         <tr><th scope="row">Stripe</th><td>Paiement et facturation</td><td>E-mail, facturation, moyen de paiement</td><td>Irlande, États-Unis</td></tr>
         <tr><th scope="row">Anthropic</th><td>Intelligence artificielle : corrections, rédaction, assistant</td><td>Contenu public des pages analysées, extraits des fichiers de votre dépôt concernés, questions posées à l'assistant ; question SAV réduite et documentation publique si une rédaction est autorisée</td><td>États-Unis</td></tr>
-        <tr><th scope="row">OpenAI</th><td>Intelligence artificielle, en secours d'Anthropic</td><td>Les mêmes</td><td>États-Unis</td></tr>
+        <tr><th scope="row">OpenAI</th><td>Intelligence artificielle : en secours d'Anthropic, et génération des illustrations d'articles sur les plans qui les incluent</td><td>En secours : les mêmes qu'Anthropic. Illustrations : une courte description de l'image, rédigée à partir du sujet de l'article</td><td>États-Unis</td></tr>
         <tr><th scope="row">GitHub</th><td>Lecture et écriture de votre dépôt, sur votre autorisation</td><td>Contenu du dépôt connecté</td><td>États-Unis</td></tr>
         <tr><th scope="row">Google</th><td>Connexion avec Google, Search Console, mesure PageSpeed ; réception Gmail du SAV si activée</td><td>Identité Google, données Search Console, adresses des pages mesurées ; messages et métadonnées SAV du libellé confirmé</td><td>États-Unis</td></tr>
         <tr><th scope="row">Microsoft Bing</th><td>Données Bing Webmaster, avec votre clé</td><td>Données de performance de votre site</td><td>États-Unis</td></tr>
@@ -129,8 +132,8 @@
   <p>
     Nous transmettons au modèle les données nécessaires à la fonction que vous utilisez : pour écrire
     une correction ou une page, le contenu public des pages concernées et les extraits de fichiers de
-    votre dépôt nécessaires ; pour l'assistant, votre question et les données de votre projet qui s'y
-    rapportent. Selon leurs conditions applicables aux API à la date de mise à jour de cette
+    votre dépôt nécessaires ; pour une illustration d'article, une courte description de l'image ;
+    pour l'assistant, votre question et les données de votre projet qui s'y rapportent. Selon leurs conditions applicables aux API à la date de mise à jour de cette
     politique, Anthropic et OpenAI n'utilisent pas, par défaut, les données transmises par leurs API
     pour entraîner leurs modèles{% if gemini_actif %} ; pour Google Gemini, cette exclusion dépend de l'offre utilisée{% endif %}.
     Ces conditions relèvent de chaque fournisseur et peuvent évoluer. N'écrivez pas de données

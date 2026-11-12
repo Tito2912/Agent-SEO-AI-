@@ -80,7 +80,7 @@
         <tr><th scope="row">SendGrid (Twilio)</th><td>If configured instead of the existing support transport: sending the approved reply</td><td>Correspondent email address, subject, reply text and conversation references</td><td>United States, global infrastructure (global API)</td></tr>
         <tr><th scope="row">Stripe</th><td>Payment and invoicing</td><td>Email, billing, means of payment</td><td>Ireland, United States</td></tr>
         <tr><th scope="row">Anthropic</th><td>Artificial intelligence: fixes, writing, assistant</td><td>Public content of the analyzed pages, relevant excerpts of the files in your repository, questions asked to the assistant; reduced support question and public documentation if writing is authorized</td><td>United States</td></tr>
-        <tr><th scope="row">OpenAI</th><td>Artificial intelligence, as a backup to Anthropic</td><td>The same</td><td>United States</td></tr>
+        <tr><th scope="row">OpenAI</th><td>Artificial intelligence: as a backup to Anthropic, and generating article illustrations on the plans that include them</td><td>As a backup: the same as Anthropic. Illustrations: a short description of the image, written from the subject of the article</td><td>United States</td></tr>
         <tr><th scope="row">GitHub</th><td>Reading and writing your repository, with your authorization</td><td>Content of the connected repository</td><td>United States</td></tr>
         <tr><th scope="row">Google</th><td>Sign-in with Google, Search Console, PageSpeed measurement; support Gmail receiving if enabled</td><td>Google identity, Search Console data, addresses of the measured pages; support messages and metadata from the confirmed label</td><td>United States</td></tr>
         <tr><th scope="row">Microsoft Bing</th><td>Bing Webmaster data, with your key</td><td>Performance data of your site</td><td>United States</td></tr>
@@ -117,8 +117,9 @@
   <h2>6. What is sent to artificial intelligence models</h2>
   <p>
     We send the model the data needed for the feature you use: to write a fix or a page, the public
-    content of the pages concerned and the necessary excerpts of files from your repository; for the
-    assistant, your question and the data of your project relating to it. Under their API terms
+    content of the pages concerned and the necessary excerpts of files from your repository; for an
+    article illustration, a short description of the image; for the assistant, your question and the
+    data of your project relating to it. Under their API terms
     applicable on the date this policy was last updated, Anthropic and OpenAI do not, by default, use
     data sent through their APIs to train their models{% if gemini_actif %}; for Google Gemini, this exclusion depends on the plan used{% endif %}.
     These terms are set by each provider and may change. Do not write personal data in your

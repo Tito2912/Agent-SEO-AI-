@@ -131,6 +131,25 @@ def test_chaque_tiers_appele_est_NOMME_sur_la_page() -> None:
     assert "Sentry" in page
 
 
+def _ligne_du_tableau(page: str, nom: str) -> str:
+    trouve = re.search(r'<tr><th scope="row">%s</th>(.*?)</tr>' % re.escape(nom), page, re.S)
+    return trouve.group(1) if trouve else ""
+
+
+def test_chaque_USAGE_d_OpenAI_est_decrit_dans_sa_ligne() -> None:
+    """Nommer le tiers ne suffit pas, il faut dire ce qu'il fait (12/11/2026) : OpenAI n'était
+    présenté que comme le secours d'Anthropic, alors que le code lui fait aussi dessiner les
+    illustrations d'articles. Si le code cesse de le faire, retirer la mention de la page, puis
+    ce test."""
+    code = (WEB_ROOT / "backend" / "app.py").read_text(encoding="utf-8")
+    assert "/images/generations" in code, "le témoin : le code fait dessiner des illustrations"
+    client = TestClient(m.app)
+    for chemin in ("/privacy", "/en/privacy"):
+        ligne = _ligne_du_tableau(client.get(chemin).text, "OpenAI")
+        assert ligne, (chemin, "ligne OpenAI introuvable")
+        assert "illustration" in ligne.lower(), (chemin, ligne)
+
+
 def test_un_tiers_INEXISTANT_n_est_pas_nomme() -> None:
     assert "Reddit" not in _page(), "Reddit n'est jamais appelé : ses recherches passent par SerpAPI"
 

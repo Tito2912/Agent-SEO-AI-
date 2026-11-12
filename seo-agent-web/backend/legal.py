@@ -57,7 +57,9 @@ UPDATED: dict[str, date] = {
     # 05/11/2026 : Cloudflare Turnstile (captcha du formulaire d'inscription), nomme quand l'une de
     # ses cles est configuree, avec la donnee qu'il garde dans le navigateur (cf.turnstile.u) ;
     # l'acces et la portabilite par « Mon compte -> Mes donnees » (export ZIP).
-    "privacy": date(2026, 11, 5),
+    # 12/11/2026 : OpenAI dessine aussi les illustrations d'articles (il n'en recoit que la
+    # description) ; il n'etait presente que comme le secours d'Anthropic.
+    "privacy": date(2026, 11, 12),
     "legal_notice": date(2026, 10, 21),
 }
 
