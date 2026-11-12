@@ -13,6 +13,7 @@ try:
         own_support as support,
         own_support_common as c,
         own_support_gmail as gmail,
+        own_support_recovery as recovery,
     )
     from . import (
         own_support_mail as mail,
@@ -25,6 +26,7 @@ except ImportError:
     import own_support as support
     import own_support_common as c
     import own_support_gmail as gmail
+    import own_support_recovery as recovery
     import own_support_mail as mail
     import own_support_writing as writing
     import own_seo_routes
@@ -104,6 +106,7 @@ def page(request: Request, ticket: str = "", err: str = ""):
                     "current": False,
                     "problem": "",
                     "binding_current": bool(cfg and cfg["binding"] == row.binding),
+                    "recheckable": recovery.eligible(row),
                 }
                 try:
                     item["payload"] = c.reveal(row.payload_encrypted)
@@ -161,6 +164,17 @@ def page(request: Request, ticket: str = "", err: str = ""):
             base=c.PATH,
             cfg=cfg,
             connected=connected,
+            reconnect_required=bool(
+                cfg
+                and cfg.get("error_code")
+                in {
+                    "connection_required",
+                    "connection_denied",
+                    "scope_changed",
+                    "gmail_reconnect_required",
+                    "oauth_client_rejected",
+                }
+            ),
             sender=sender,
             items=items,
             selected=ticket,
@@ -315,6 +329,8 @@ def ticket_action(
             support.manual_draft(user.id, ident, body, sources, confirm)
         elif action == "cancel":
             support.cancel(user.id, ident)
+        elif action == "recheck":
+            recovery.recheck(user.id, ident, confirm)
         elif action == "resume":
             with c.module().DB.session() as db:
                 c.ticket(db, user.id, ident)

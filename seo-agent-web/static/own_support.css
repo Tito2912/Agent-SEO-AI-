@@ -5,3 +5,7 @@
 .own-support .support-code {font-family:monospace;overflow-wrap:anywhere;}
 .own-support .support-text {white-space:pre-wrap;overflow-wrap:anywhere;}
 .own-support form>button {margin-block:12px;}
+.own-support .support-recovery {border-top:1px solid var(--border, #39423c);margin-top:20px;padding-top:16px;}
+.own-support .support-recovery h4 {margin:0 0 10px;font-size:1rem;}
+.own-support .support-help {margin-top:16px;}
+.own-support .support-help summary {min-height:44px;padding-block:10px;cursor:pointer;}

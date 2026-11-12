@@ -252,7 +252,7 @@ class Reader:
         if valid:
             self.access = credentials["access_token"]
             return cfg
-        _, value, _ = c.http(
+        status, value, _ = c.http(
             "POST",
             TOKEN,
             data={
@@ -261,7 +261,15 @@ class Reader:
                 "client_id": credentials["client_id"],
                 "client_secret": credentials["client_secret"],
             },
+            statuses=(200, 400, 401, 403),
         )
+        if status != 200:
+            # Keep only a fixed reason; Google's response can contain private details.
+            if value.get("error") == "invalid_grant":
+                raise c.Stop("gmail_reconnect_required")
+            if value.get("error") in {"invalid_client", "unauthorized_client"}:
+                raise c.Stop("oauth_client_rejected")
+            raise c.Stop("provider_refused")
         if (
             value.get("token_type") != "Bearer"
             or not value.get("access_token")
@@ -292,12 +300,17 @@ class Reader:
             "/messages/[a-f0-9]{1,40}", path
         ):
             raise c.Stop("tool_forbidden")
-        return c.http(
-            "GET",
-            API + path,
-            headers={"Authorization": "Bearer " + self.access},
-            params=params,
-        )[1]
+        try:
+            return c.http(
+                "GET",
+                API + path,
+                headers={"Authorization": "Bearer " + self.access},
+                params=params,
+            )[1]
+        except c.Stop as exc:
+            if str(exc) == "not_found" and path.startswith("/messages/"):
+                raise c.Stop("message_missing") from None
+            raise
 
     def verify(self):
         cfg = self.token()
@@ -379,6 +392,7 @@ def claim(owner, *, paused=False):
 
 
 def release(reader, error=None):
+    notice = None
     with c.module().DB.session() as db:
         c.s.locked(db)
         cfg = db.get(c.Channel, c.KEY)
@@ -394,13 +408,56 @@ def release(reader, error=None):
                 "connection_required",
                 "scope_changed",
                 "cursor_changed",
+                "gmail_reconnect_required",
+                "oauth_client_rejected",
             }:
+                if cfg.active:
+                    c.audit(
+                        db, cfg.owner_id, "connection_paused", meta={"reason": error}
+                    )
+                    notice = connection_notice(db, cfg.owner_id, error)
                 cfg.active = False
         else:
             cfg.error_code = None
         cfg.lease_token = None
         cfg.lease_until = None
         db.commit()
+    if notice:
+        try:
+            from . import telegram
+        except ImportError:
+            import telegram
+        telegram.notifier(notice)
+
+
+def connection_notice(db, owner, reason):
+    """A fixed, private operator alert; never includes Google responses or mail data."""
+    try:
+        from . import telegram_approvals, own_support_copy, telegram
+    except ImportError:
+        import telegram_approvals
+        import own_support_copy
+        import telegram
+    try:
+        channel = telegram_approvals.active(db)
+    except ValueError:
+        return None
+    if channel.owner_id != owner:
+        return None
+    en = channel.lang == "en"
+    copy = own_support_copy.strings(channel.lang)
+    return (
+        (
+            "⚠️ <b>Noyaru · Support receiving is paused</b>"
+            if en
+            else "⚠️ <b>Noyaru · La réception SAV est en pause</b>"
+        )
+        + "\n\n"
+        + telegram.echapper(copy["errors"].get(reason, copy["errors"]["unavailable"]))
+        + '\n\n<a href="https://noyaru.com/settings/system/support">'
+        + ("Open support in Noyaru ↗" if en else "Ouvrir le SAV dans Noyaru ↗")
+        + "</a>"
+    )
 
 
 def activate(owner, confirm):
@@ -441,6 +498,30 @@ def pause(owner):
         cfg.lease_until = None
         c.audit(db, owner, "pause")
         db.commit()
+
+
+def intake_reserved(db, owner):
+    """Re-reading a known request shares the existing daily intake budget."""
+    since = c.now() - timedelta(hours=24)
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(c.Ticket)
+            .where(c.Ticket.owner_id == owner, c.Ticket.created_at >= since)
+        )
+        or 0
+    ) + (
+        db.scalar(
+            select(func.count())
+            .select_from(c.AuditLog)
+            .where(
+                c.AuditLog.actor_user_id == owner,
+                c.AuditLog.action == "own_support.recheck",
+                c.AuditLog.created_at >= since,
+            )
+        )
+        or 0
+    )
 
 
 def poll(owner):
@@ -494,17 +575,7 @@ def poll(owner):
                         c.Ticket.binding == reader.binding, c.Ticket.google_id == ident
                     )
                 )
-                count = (
-                    db.scalar(
-                        select(func.count())
-                        .select_from(c.Ticket)
-                        .where(
-                            c.Ticket.owner_id == owner,
-                            c.Ticket.created_at >= c.now() - timedelta(hours=24),
-                        )
-                    )
-                    or 0
-                )
+                count = intake_reserved(db, owner)
             if not existing:
                 if count >= c.DAILY_IMPORT:
                     raise c.Stop("import_limit")
@@ -518,6 +589,7 @@ def poll(owner):
                         "sender_unconfirmed",
                         "outside_window",
                         "not_found",
+                        "message_missing",
                         "message_limit",
                     }:
                         raise
@@ -539,6 +611,7 @@ def poll(owner):
                         "loop_blocked",
                         "outside_window",
                         "not_found",
+                        "message_missing",
                         "sender_unconfirmed",
                     }
                     row = c.Ticket(

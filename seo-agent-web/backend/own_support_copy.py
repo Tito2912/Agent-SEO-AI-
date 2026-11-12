@@ -16,8 +16,8 @@ def strings(lang):
         bot=t("Validations Telegram", "Telegram approvals"),
         privacy_title=t("Confidentialité et périmètre", "Privacy and scope"),
         limits=t(
-            "Pilote : 20 messages importés, 2 rédactions IA payantes et 10 tentatives d’envoi au plus par 24 h glissantes. Aucun crédit SEO du client n’est utilisé. Le plafond d’appels IA n’est pas un plafond en euros.",
-            "Pilot: up to 20 imported messages, 2 paid AI drafts and 10 send attempts per rolling 24 hours. No customer SEO credit is used. The AI request cap is not a monetary cap.",
+            "Pilote : 20 imports et reprises de messages, 2 rédactions IA payantes et 10 tentatives d’envoi au plus par 24 h glissantes. Aucun crédit SEO du client n’est utilisé. Le plafond d’appels IA n’est pas un plafond en euros.",
+            "Pilot: up to 20 message imports and rereads, 2 paid AI drafts and 10 send attempts per rolling 24 hours. No customer SEO credit is used. The AI request cap is not a monetary cap.",
         ),
         privacy=t(
             "Les copies réduites des demandes et réponses sont chiffrées et retirées de Noyaru après 30 jours. La réduction masque certains secrets ; elle ne garantit pas l’anonymat. Les originaux Gmail et les messages déjà transmis au bot ou au fournisseur suivent leurs propres règles de conservation.",
@@ -52,7 +52,18 @@ def strings(lang):
             "I use a dedicated support account and Google project. I understand Google mailbox access and Noyaru’s restriction to the chosen label. This replaces the previous binding and sends no email.",
         ),
         save=t("Enregistrer cette configuration", "Save configuration"),
-        connected=t("Compte Google relié", "Google account connected"),
+        connected=t("Accès Google enregistré", "Google access saved"),
+        connection_hint=t(
+            "L’accès est contrôlé lors de chaque relevé. Une réception activée ne prouve pas que de nouveaux emails sont arrivés.",
+            "Access is checked on every inbox check. Enabled receiving does not prove new emails have arrived.",
+        ),
+        durable_title=t("Garder la connexion Gmail active", "Keep Gmail connected"),
+        durable_help=t(
+            "Dans Google Cloud, un projet externe resté en mode « Test » délivre pour Gmail une autorisation de renouvellement valable 7 jours. Noyaru ne peut pas déterminer ce statut depuis la connexion. Pour une utilisation durable, vérifier le statut du projet SAV et les exigences de validation de Google. Une autorisation expirée ou révoquée exige une nouvelle connexion ; changer le statut du projet ne réactive pas à lui seul cet ancien accès.",
+            "In Google Cloud, an external project left in Testing issues a Gmail refresh grant valid for 7 days. Noyaru cannot infer that status from the connection. For ongoing use, check the support project's publishing status and Google's verification requirements. An expired or revoked grant needs a new connection; changing project status alone does not reactivate that old grant.",
+        ),
+        durable_link=t("Lire les explications de Google", "Read Google's guidance"),
+        reconnect_title=t("Reconnecter la boîte SAV", "Reconnect support inbox"),
         connect=t("Se connecter à Gmail", "Connect Gmail"),
         connect_ack=t(
             "Autoriser la connexion Google en lecture seule pour cette boîte SAV. Aucun email ni changement Gmail.",
@@ -65,7 +76,7 @@ def strings(lang):
         ),
         pause=t("Mettre le SAV en pause", "Pause support"),
         poll=t("Relever les nouvelles demandes", "Check new requests"),
-        active=t("Actif", "Active"),
+        active=t("Réception activée", "Receiving enabled"),
         paused=t("En pause", "Paused"),
         connection=t("Connexion et réception", "Connection and receiving"),
         sender=t("Envoi depuis contact@noyaru.com", "Sending from contact@noyaru.com"),
@@ -132,6 +143,16 @@ def strings(lang):
             "A person must take over through the support inbox or normal procedures. Acknowledging this does not mark the request resolved.",
         ),
         gmail=t("Ouvrir Gmail", "Open Gmail"),
+        recheck_title=t("Reprendre un message écarté", "Recover an ignored message"),
+        recheck_help=t(
+            "Dans Gmail, retrouvez le message à cette date, vérifiez qu’il s’agit d’une vraie demande SAV, sortez-le du spam ou de la corbeille et appliquez le libellé SAV. Revenez ensuite ici : Noyaru relira uniquement ce message connu. Ne désactivez pas le filtrage du spam pour tous les expéditeurs.",
+            "In Gmail, find the message at this date, check it is a genuine support request, move it out of Spam or Trash and apply the support label. Then return here: Noyaru will reread only this known message. Do not disable spam filtering for all senders.",
+        ),
+        recheck_ack=t(
+            "J’ai vérifié ce message et corrigé son classement dans Gmail. Autoriser sa relecture seule, comptée dans le plafond de réception ; aucun appel IA ni envoi d’email.",
+            "I checked this message and fixed its Gmail labels. Authorize only its reread, counted in the receiving limit; no AI request or email send.",
+        ),
+        recheck=t("Revérifier ce message dans Gmail", "Recheck this message in Gmail"),
         states={
             k: t(fr, en)
             for k, fr, en in [
@@ -185,6 +206,16 @@ def strings(lang):
                     "connection_required",
                     "Terminer la connexion Google de la boîte SAV.",
                     "Complete the support inbox Google connection.",
+                ),
+                (
+                    "gmail_reconnect_required",
+                    "Google demande une nouvelle autorisation. La réception est en pause ; reconnectez la même boîte ci-dessous, puis reprenez le SAV. Les demandes et le point de suivi sont conservés.",
+                    "Google requires fresh authorization. Receiving is paused; reconnect the same inbox below, then resume support. Requests and the tracking cursor are kept.",
+                ),
+                (
+                    "oauth_client_rejected",
+                    "Google refuse les identifiants du projet SAV. Vérifiez le client et son secret dans Google Cloud avant de reconnecter cette boîte.",
+                    "Google rejected the support project's credentials. Check its client and secret in Google Cloud before reconnecting this inbox.",
                 ),
                 (
                     "oauth_changed",
@@ -248,8 +279,18 @@ def strings(lang):
                 ),
                 (
                     "outside_label",
-                    "Message hors du libellé SAV autorisé.",
-                    "Message outside the authorized support label.",
+                    "Libellé SAV absent, ou message classé dans le spam, la corbeille ou un dossier sortant exclu.",
+                    "Support label missing, or message in Spam, Trash or an excluded outgoing folder.",
+                ),
+                (
+                    "message_missing",
+                    "Ce message n’est plus disponible dans Gmail. Aucun import ni envoi ; le suivi des autres messages est conservé.",
+                    "This message is no longer available in Gmail. No import or send; other message tracking is kept.",
+                ),
+                (
+                    "recheck_unavailable",
+                    "Cette demande ne peut pas être reprise par cette action : elle a déjà été traitée ou son état a changé. Relisez son suivi.",
+                    "This request cannot be recovered with this action: it was already processed or its state changed. Review its status.",
                 ),
                 (
                     "outside_support",
