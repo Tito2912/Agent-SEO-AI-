@@ -289,7 +289,8 @@ without reducing the overall level of security.
 - **Identification and authorisation**: individual accounts; protected session cookies (HttpOnly,
   SameSite, Secure over HTTPS); access control by account and by project; protection of forms against
   request forgery (CSRF); rate limiting; anti-bot check on sign-up; operations screens reserved for the
-  owner of the platform.
+  owner of the platform; two-factor authentication on E-Com Shop's GitHub, Render, AWS and Stripe
+  accounts.
 - **Application protection**: content security policy (CSP) and a ban on embedding pages in an external
   frame (X-Frame-Options).
 - **Event logging**: audit log of sensitive actions.
@@ -314,12 +315,12 @@ without reducing the overall level of security.
 - **Staff access**: on the date of this agreement, only the director of E-Com Shop accesses the data
   processed for the Customer, and remains bound to confidentiality under this agreement. Before any other person
   has access, E-Com Shop has them sign a confidentiality undertaking.
+- **Workstation**: the disk of the director's workstation is encrypted.
 - **Physical security**: the data is hosted by Render and Amazon Web Services, whose data centres fall
   under their own measures.
 
 **TO BE CONFIRMED by E-Com Shop before publication, only measures actually applied being listed**:
-two-factor authentication on administration accounts (GitHub, Render, AWS, Stripe); limited rights on the
-AWS access keys; encryption of the director's workstation; actual deletion of backups at 30 days.
+limited rights on the AWS access keys; actual deletion of backups at 30 days.
 
 ### Assistance to the controller (Clauses 8 and 9)
 

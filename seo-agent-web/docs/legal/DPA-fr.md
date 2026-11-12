@@ -301,7 +301,8 @@ Ces mesures sont celles réellement appliquées à la date du présent accord. E
 - **Identification et autorisation** : comptes individuels ; cookies de session protégés (HttpOnly,
   SameSite, Secure en HTTPS) ; contrôle d'accès par compte et par projet ; protection des formulaires
   contre la falsification de requêtes (CSRF) ; limitation du nombre de demandes ; vérification
-  anti-robots de l'inscription ; écrans d'exploitation réservés au propriétaire de la plateforme.
+  anti-robots de l'inscription ; écrans d'exploitation réservés au propriétaire de la plateforme ;
+  authentification à deux facteurs sur les comptes d'E-Com Shop chez GitHub, Render, AWS et Stripe.
 - **Protection de l'application** : politique de sécurité du contenu (CSP) et interdiction d'intégrer
   les pages dans un cadre externe (X-Frame-Options).
 - **Enregistrement des événements** : journal d'audit des actions sensibles.
@@ -326,13 +327,13 @@ Ces mesures sont celles réellement appliquées à la date du présent accord. E
 - **Accès du personnel** : à la date du présent accord, seul le dirigeant d'E-Com Shop accède aux
   données traitées pour le Client, et reste tenu à la confidentialité au titre du présent accord.
   Avant tout accès d'une autre personne, E-Com Shop lui fait signer un engagement de confidentialité.
+- **Poste de travail** : le disque du poste de travail du dirigeant est chiffré.
 - **Sécurité physique** : les données sont hébergées chez Render et Amazon Web Services, dont les
   centres de données relèvent de leurs propres mesures.
 
 **À CONFIRMER par E-Com Shop avant publication, seules les mesures réellement appliquées étant
-inscrites** : authentification à deux facteurs sur les comptes d'administration (GitHub, Render,
-AWS, Stripe) ; droits limités des clés d'accès AWS ; chiffrement du poste de travail du dirigeant ;
-suppression effective des sauvegardes à 30 jours.
+inscrites** : droits limités des clés d'accès AWS ; suppression effective des sauvegardes à
+30 jours.
 
 ### Assistance au responsable du traitement (clauses 8 et 9)
 
