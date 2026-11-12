@@ -325,16 +325,14 @@ Ces mesures sont celles réellement appliquées à la date du présent accord. E
   Un nom écrit dans le texte d'une erreur reste possible.
 - **Conservation limitée et effacement** : la suppression d'un projet ou d'un compte efface les
   données correspondantes de la base active et ses fichiers d'analyse, sur le disque et dans le
-  stockage distant ; les sauvegardes disparaissent 30 jours après leur création.
+  stockage distant ; les sauvegardes de plus de 30 jours sont supprimées chaque jour (constaté le
+  12/11/2026 ; un échec de cette suppression fait échouer la tâche de sauvegarde).
 - **Accès du personnel** : à la date du présent accord, seul le dirigeant d'E-Com Shop accède aux
   données traitées pour le Client, et reste tenu à la confidentialité au titre du présent accord.
   Avant tout accès d'une autre personne, E-Com Shop lui fait signer un engagement de confidentialité.
 - **Poste de travail** : le disque du poste de travail du dirigeant est chiffré.
 - **Sécurité physique** : les données sont hébergées chez Render et Amazon Web Services, dont les
   centres de données relèvent de leurs propres mesures.
-
-**À CONFIRMER par E-Com Shop avant publication, seules les mesures réellement appliquées étant
-inscrites** : suppression effective des sauvegardes à 30 jours.
 
 ### Assistance au responsable du traitement (clauses 8 et 9)
 

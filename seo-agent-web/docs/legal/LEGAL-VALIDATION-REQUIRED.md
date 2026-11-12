@@ -76,7 +76,6 @@ sont dans `QUESTIONS-AVOCAT.md`.
 | Contrat de SerpApi, demandé le 06/11/2026 (les autres sont rangés dans `documents prestataires`) | Annexe IV |
 | Mécanisme de transfert de SerpApi ; accès de Sentry depuis un pays tiers. Registre DPF relevé le 06/11/2026 pour les autres (14 captures rangées) : à revérifier avant publication, Render et Netlify arrivant à échéance en décembre 2026 | Annexe IV |
 | Conditions applicables à l'API PageSpeed de Google | Annexe IV |
-| Suppression effective des sauvegardes à 30 jours (dans la console S3 : date de la plus ancienne sauvegarde, et gestion des versions du compartiment désactivée : la clé n'a pas le droit d'effacer les anciennes versions, qui resteraient stockées) | Annexe III |
 
 **Réglé le 12/11/2026** (réponses du propriétaire) :
 - authentification à deux facteurs sur les comptes GitHub, Render, AWS et Stripe d'E-Com Shop, et disque
@@ -84,6 +83,10 @@ sont dans `QUESTIONS-AVOCAT.md`.
 - clé d'accès AWS : utilisateur IAM dédié, sans accès à la console, dont la seule politique (lue le
   12/11/2026) n'autorise que `s3:ListBucket` sur le compartiment du service et `s3:GetObject`,
   `s3:PutObject`, `s3:DeleteObject` sur ses objets (annexe III) ;
+- suppression des sauvegardes à 30 jours, constatée : journal Render de la tâche `noyaru-db-backup` du
+  12/11/2026 (`retention deleted=2 days=30`), 60 fichiers dans `backups/noyaru-prod/` (30 sauvegardes
+  quotidiennes, base et manifeste), gestion des versions du compartiment désactivée, donc les fichiers
+  effacés ne sont pas conservés (annexe III) ;
 - région d'Amazon S3 : us-east-1, Virginie du Nord, déjà affichée par la confidentialité ;
 - délégué à la protection des données : aucun désigné. À notre lecture de l'article 37 du RGPD, il n'est
   pas obligatoire : E-Com Shop n'est pas un organisme public, et ses activités de base ne consistent ni en
@@ -95,7 +98,7 @@ sont dans `QUESTIONS-AVOCAT.md`.
 
 | Fait | Article du DPA |
 | --- | --- |
-| La sauvegarde quotidienne et sa suppression à 30 jours fonctionnent en production, et une restauration est possible. Elles sont configurées dans `render.yaml` (tâche `noyaru-db-backup`, `BACKUP_RETENTION_DAYS=30`), sans preuve de leur fonctionnement. **Depuis le 05/11/2026**, un essai automatique la vérifie chaque mois (tâche `noyaru-restauration-test`, `backend/restauration.py`) : la dernière sauvegarde est restaurée dans une base jetable, son empreinte et ses tables contrôlées, le rapport gardé au journal d'audit (`backup.restore_check`) et envoyé au propriétaire. **Premier essai réussi le 06/11/2026** : sauvegarde du 06/11/2026 à 02:01 UTC restaurée, 42 tables, 1 988 lignes, 7 comptes, 4,5 s (recoupé avec le code et la production). La suppression à 30 jours reste à constater. **Depuis le 12/11/2026**, une purge que S3 refuse n'est plus comptée comme faite : elle fait échouer la tâche (code 3), ce que Render affiche comme un échec, au lieu d'une simple ligne de journal (`backend/backup.py`, `tests/test_la_purge_des_sauvegardes_dit_vrai.py`). | Annexe III |
+| La sauvegarde quotidienne et sa suppression à 30 jours fonctionnent en production, et une restauration est possible. Elles sont configurées dans `render.yaml` (tâche `noyaru-db-backup`, `BACKUP_RETENTION_DAYS=30`), sans preuve de leur fonctionnement. **Depuis le 05/11/2026**, un essai automatique la vérifie chaque mois (tâche `noyaru-restauration-test`, `backend/restauration.py`) : la dernière sauvegarde est restaurée dans une base jetable, son empreinte et ses tables contrôlées, le rapport gardé au journal d'audit (`backup.restore_check`) et envoyé au propriétaire. **Premier essai réussi le 06/11/2026** : sauvegarde du 06/11/2026 à 02:01 UTC restaurée, 42 tables, 1 988 lignes, 7 comptes, 4,5 s (recoupé avec le code et la production). **Suppression à 30 jours constatée le 12/11/2026** (voir « Réglé le 12/11/2026 » ci-dessus). **Depuis le 12/11/2026**, une purge que S3 refuse n'est plus comptée comme faite : elle fait échouer la tâche (code 3), ce que Render affiche comme un échec, au lieu d'une simple ligne de journal (`backend/backup.py`, `tests/test_la_purge_des_sauvegardes_dit_vrai.py`). | Annexe III |
 | Les traces d'erreur envoyées à Sentry contiennent-elles des données personnelles des clients ? **Constaté le 05/11/2026 : OUI jusqu'à ce jour** (variables du code, formulaires reçus, paramètres d'adresse, e-mails dans les journaux, aucun filtre). **Corrigé le même jour** (`backend/sentry_filtre.py`, testé avec le vrai SDK) : ni variables, ni formulaires, ni cookies, ni paramètres d'adresse ; e-mails et jeton Telegram masqués. Reste possible : un nom écrit dans le texte d'une erreur. | Annexe IV |
 | SerpAPI et Ahrefs ne reçoivent-ils vraiment aucune donnée personnelle ? **Constaté le 05/11/2026 (lecture du code)** : SerpAPI reçoit des recherches courtes générées à partir des titres des pages, sans le nom ni la marque du site, ou les mots-clés que le Client saisit lui-même (recherche d'opportunités de liens) ; une recherche saisie par le Client peut donc contenir une donnée personnelle. Ahrefs n'est pas activé ; il recevrait le domaine analysé. | Annexe IV |
 | Google PageSpeed Insights, appelé avec la clé d'E-Com Shop sur les adresses des pages du client : ne reçoit-il vraiment aucune donnée personnelle ? **Constaté le 05/11/2026 (lecture du code)** : il reçoit l'adresse publique de la page, la stratégie (mobile ou ordinateur) et la catégorie mesurée, rien d'autre ; Google charge lui-même la page publique. | Annexe IV |
