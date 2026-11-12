@@ -182,9 +182,18 @@ def _retention_days() -> int:
         return 0
 
 
-def _cleanup_old_backups(*, client: Any, bucket: str, prefix: str, retention_days: int) -> int:
+def _cleanup_old_backups(
+    *, client: Any, bucket: str, prefix: str, retention_days: int
+) -> tuple[int, list[str]]:
+    """Efface les objets plus vieux que `retention_days`. Rend (effaces, refus).
+
+    `delete_objects` REPOND 200 MEME QUAND S3 REFUSE D'EFFACER : les refus sont dans `Errors`,
+    objet par objet (droits de la cle, verrou d'objet). Jusqu'au 12/11/2026 la boucle comptait
+    tout le lot comme efface : le journal pouvait dire « retention deleted=N » pour une purge qui
+    n'avait rien efface, alors que la confidentialite et le DPA promettent 30 jours.
+    """
     if retention_days <= 0:
-        return 0
+        return 0, []
     cutoff = _now_utc() - dt.timedelta(days=int(retention_days))
     token: str | None = None
     to_delete: list[dict[str, str]] = []
@@ -214,13 +223,17 @@ def _cleanup_old_backups(*, client: Any, bucket: str, prefix: str, retention_day
             break
 
     deleted = 0
+    refus: list[str] = []
     for idx in range(0, len(to_delete), 1000):
         chunk = to_delete[idx : idx + 1000]
         if not chunk:
             continue
-        client.delete_objects(Bucket=bucket, Delete={"Objects": chunk, "Quiet": True})
-        deleted += len(chunk)
-    return deleted
+        resp = client.delete_objects(Bucket=bucket, Delete={"Objects": chunk, "Quiet": True}) or {}
+        erreurs = resp.get("Errors") or []
+        for erreur in erreurs:
+            refus.append(f"{erreur.get('Key') or '?'} ({erreur.get('Code') or 'refus'})")
+        deleted += len(chunk) - len(erreurs)
+    return deleted, refus
 
 
 def main() -> int:
@@ -322,18 +335,33 @@ def main() -> int:
         print(f"[BACKUP] uploaded manifest key={manifest_key}", flush=True)
 
     # 5) Retention cleanup (optional)
+    # Une purge qui echoue fait ECHOUER la tache (code 3), apres la sauvegarde : seul un echec se
+    # voit sur Render. Une ligne de journal que personne ne lit laissait des sauvegardes au-dela
+    # des 30 jours promis sans que personne le sache.
     retention_days = _retention_days()
+    purge_incomplete = False
     if retention_days > 0:
         try:
-            deleted = _cleanup_old_backups(
+            deleted, refus = _cleanup_old_backups(
                 client=client, bucket=bucket, prefix=f"{prefix}/", retention_days=retention_days
             )
             if deleted:
                 print(f"[BACKUP] retention deleted={deleted} days={retention_days}", flush=True)
+            if refus:
+                purge_incomplete = True
+                print(f"[BACKUP] retention refused={len(refus)} first={refus[0]}", flush=True)
         except Exception as exc:
+            purge_incomplete = True
             print(f"[BACKUP] retention cleanup error: {type(exc).__name__}: {exc}", flush=True)
 
     print("[BACKUP] done", flush=True)
+    if purge_incomplete:
+        print(
+            f"[BACKUP] sauvegarde faite, mais la purge a echoue : des sauvegardes de plus de "
+            f"{retention_days} jours peuvent rester dans le bucket",
+            file=sys.stderr, flush=True,
+        )
+        return 3
     return 0
 
 
