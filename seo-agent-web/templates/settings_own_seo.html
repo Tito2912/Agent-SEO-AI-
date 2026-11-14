@@ -15,7 +15,7 @@
 <nav class="own-actions" aria-label="{{ copy.title }}"><a class="btn" href="/settings/system">{{ copy.back }}</a><a class="btn" href="/settings/system/seo-knowledge">{{ copy.watch }}</a><a class="btn" href="/settings/system/own-seo/writing">{{ copy.writing }}</a><a class="btn" href="{{ base }}">{{ copy.reload }}</a></nav>
 {% if unavailable %}<p class="alert error" role="alert">{{ copy.unavailable }}</p>{% else %}
 {% if msg %}<p class="alert ok" role="status">{{ msg }}</p>{% endif %}{% if err %}<p class="alert error" role="alert">{{ err }}</p>{% endif %}
-<section class="card"><p>{{ copy.bound_scope if state.project else copy.scope }}</p></section>
+<section class="card"><p>{{ copy.bound_scope if state.project else copy.scope }}</p><p><a class="btn" href="/settings/system/social">{{ 'Create for Instagram and TikTok' if current_lang() == 'en' else 'Créer pour Instagram et TikTok' }}</a></p></section>
 <section class="card" aria-labelledby="own-seo-binding-title">
 {% if state.project %}
 <h2 id="own-seo-binding-title">{{ copy.bound_title }}</h2>

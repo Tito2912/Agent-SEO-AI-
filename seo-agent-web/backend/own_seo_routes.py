@@ -103,3 +103,11 @@ def download(request:Request,brief_id:str):
         text=service.export(brief)
     return Response(text,media_type='text/markdown; charset=utf-8',headers={
         'Content-Disposition':'attachment; filename="noyaru-brief-'+brief.id+'.md"','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
+
+
+# The own-site administration workspace also hosts native social planning.
+try:
+    from .own_social_routes import router as own_social_router
+except ImportError:
+    from own_social_routes import router as own_social_router
+router.include_router(own_social_router)

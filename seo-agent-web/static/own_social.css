@@ -1,0 +1,29 @@
+.social-studio {max-width:1120px;margin-inline:auto;}
+.social-studio .card {margin-block:20px;min-width:0;}
+.social-studio p,.social-studio blockquote {line-height:1.65;}
+.social-studio h1 {font-size:clamp(1.6rem,3vw,2.25rem);}
+.social-studio h2 {font-size:clamp(1.25rem,2vw,1.6rem);line-height:1.4;}
+.social-studio h3 {font-size:1.1rem;line-height:1.5;}
+.social-studio h4 {font-size:1rem;line-height:1.5;margin-block:0 10px;}
+.social-studio p,.social-studio a,.social-studio h1,.social-studio h2,.social-studio h3 {overflow-wrap:break-word;}
+.social-studio .social-eyebrow {color:#b4d4bf;font-weight:650;letter-spacing:.02em;}
+.social-studio .social-note {color:#b4d4bf;padding-block:6px;}
+.social-studio .social-actions {display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.social-studio .btn {min-height:44px;max-width:100%;padding-block:12px;white-space:normal;text-align:center;}
+.social-studio .social-filters {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:end;}
+.social-studio label {display:block;min-width:0;line-height:1.5;}
+.social-studio select {display:block;width:100%;min-height:48px;margin-top:8px;max-width:100%;}
+.social-studio .social-filters .btn {justify-self:start;grid-column:1/-1;}
+.social-studio .social-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));gap:20px;}
+.social-studio .social-idea {display:flex;flex-direction:column;margin:0;}
+.social-studio .social-idea .btn {margin-top:auto;align-self:start;}
+.social-studio .social-idea .social-note {font-size:.9rem;}
+.social-studio summary {cursor:pointer;min-height:44px;padding-block:12px;line-height:1.5;}
+.social-studio .social-pack {border-color:var(--accent,#7fba98);}
+.social-studio .social-sequence {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-left:24px;}
+.social-studio .social-sequence li {padding:16px;border:1px solid var(--border);border-radius:12px;}
+.social-studio blockquote {margin-inline:0;padding:16px 20px;border-left:4px solid var(--accent,#7fba98);background:rgba(127,186,152,.08);font-size:1.15rem;}
+.social-studio :focus-visible {outline:3px solid var(--accent,#7fba98);outline-offset:4px;}
+.social-studio [id] {scroll-margin-top:110px;}
+@media(max-width:740px){.social-studio .social-filters,.social-studio .social-sequence {grid-template-columns:1fr;}.social-studio .social-filters .btn {justify-self:stretch;}.social-studio .social-actions>* {flex:1 1 100%;}}
+@media(prefers-reduced-motion:reduce){.social-studio * {scroll-behavior:auto;}}

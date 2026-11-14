@@ -408,28 +408,39 @@ ne suffit pas à démontrer l'identité d'un titulaire de compte.
 
 ## Lot 6 : Instagram et TikTok
 
-Les comptes n'existent pas encore. Tony choisira/créera les comptes et connectera
-les accès officiels appropriés. Vérifier alors les capacités disponibles des API,
-les types de comptes, les autorisations, quotas et contraintes de publication.
-Ne pas simuler une intégration disponible avant cette vérification.
+Premier lot éditorial natif du 14 novembre 2026 : studio propriétaire
+`/settings/system/social`, en français et en anglais. Objectif et public choisis,
+pistes distinctes par réseau, accroche, quatre cartes Instagram ou déroulé vidéo
+TikTok, texte d’accompagnement, consignes de réalisation, références et indicateurs
+à observer. Les cinq pistes de départ sont relues avec cette version ; leur ordre
+est une règle éditoriale explicite, pas une tendance mesurée ou une prédiction.
 
-Vérification du 2 novembre 2026 : les règles TikTok Direct Post excluent les outils
-réservés à ses propres comptes ou à une équipe interne ; un client non audité ne
-dispose pas de publication publique par cette voie. Pour les seuls comptes Noyaru,
-prévoir un service de publication compatible ou une remise de contenus à publier,
-puis valider le connecteur choisi. Ne pas promettre l'autopublication par une app
-interne dédiée. Les exigences de prévisualisation et de consentement restent à
-respecter dans le parcours retenu.
-[Règles officielles TikTok](https://developers.tiktok.com/docs/en/content-sharing-guidelines).
+Le blog est facultatif : une seule piste peut renvoyer au guide du même sujet,
+si sa page existe réellement dans la langue demandée. Aucun article le plus récent
+n’est transformé par défaut. Aucune donnée SAV, privée ou de projet client utilisée.
+Les repères officiels doivent rester actuels et correspondre aux résumés relus ;
+une modification des résumés ou de la documentation produit met les pistes
+concernées à l’écart jusqu’à relecture du contenu. L’export revérifie la version.
 
-Établir une charte de marque, les sujets/publics cibles, les preuves acceptées,
-le calendrier et les objectifs. Adapter les articles validés en scripts et médias
-propres à chaque plateforme. Contrôler les faits, la lisibilité et les droits des
-médias ; conserver les variantes, validations et identifiants de publication.
+Ce lot prépare du texte et un dossier téléchargeable sans appel IA, création de
+média, décision Telegram, envoi ou publication. Aucun accord de diffusion n’est
+créé par une consultation ou un export. Aucun calendrier durable ni collecte de
+performances sociales n’est activé. Prochaines étapes : production/validation des
+médias, comptes et connecteurs, décisions Telegram puis observation des résultats.
+Détails, audit et validations : [SOCIAL_EDITORIAL_NOYARU.md](SOCIAL_EDITORIAL_NOYARU.md).
 
-Commencer par des propositions prêtes à relire. L'autopublication viendra par
-canal, fréquence et mandat explicites, avec file d'attente et arrêt immédiat.
-Aucun démarchage en masse, achat publicitaire ou budget réel n'est activé par ce plan.
+Les comptes n’existent pas encore selon Tony. Les connexions sont à choisir avec
+lui. Capacités officielles relues le 14 novembre 2026 :
+
+- [Instagram Content Publishing](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/content-publishing) :
+  comptes professionnels, autorisations de publication et accès appropriés requis.
+- [TikTok Content Sharing Guidelines](https://developers.tiktok.com/docs/en/content-sharing-guidelines) :
+  Direct Post exclut les utilitaires destinés aux seuls comptes de leur équipe.
+  Pour les comptes Noyaru, prévoir une remise de contenu ou un service compatible,
+  dont les capacités et confirmations seront vérifiées avant connexion. Aucune
+  autopublication par une app interne n’est promise.
+
+Aucun démarchage en masse, achat publicitaire ou budget réel activé par ce lot.
 
 ## Mandats et supervision communs
 

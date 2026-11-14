@@ -1,0 +1,355 @@
+{
+  "scope": "Local fictional owner, real routes and Chromium; no production access, AI or external requests",
+  "observations": [
+    {
+      "lang": "fr",
+      "scene": "ideas",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "ideas",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "ideas",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "ideas",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "instagram",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "instagram",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "instagram",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "instagram",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "tiktok",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "tiktok",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "tiktok",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "tiktok",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "blocked",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "blocked",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "blocked",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "blocked",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "empty",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "empty",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "empty",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "empty",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "unavailable",
+      "width": 1440,
+      "status": 503,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "unavailable",
+      "width": 768,
+      "status": 503,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "unavailable",
+      "width": 390,
+      "status": 503,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "unavailable",
+      "width": 360,
+      "status": 503,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "no-javascript",
+      "width": 360,
+      "download": true
+    },
+    {
+      "lang": "en",
+      "scene": "ideas",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "ideas",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "ideas",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "ideas",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "instagram",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "instagram",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "instagram",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "instagram",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "tiktok",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "tiktok",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "tiktok",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "tiktok",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "blocked",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "blocked",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "blocked",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "blocked",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "empty",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "empty",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "empty",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "empty",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "unavailable",
+      "width": 1440,
+      "status": 503,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "unavailable",
+      "width": 768,
+      "status": 503,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "unavailable",
+      "width": 390,
+      "status": 503,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "unavailable",
+      "width": 360,
+      "status": 503,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "no-javascript",
+      "width": 360,
+      "download": true
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": []
+}
