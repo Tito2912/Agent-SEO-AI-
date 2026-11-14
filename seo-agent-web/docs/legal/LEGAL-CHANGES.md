@@ -137,6 +137,41 @@ ouverts. Ils sont inscrits dans le DPA à la place des mentions « À VALIDER »
 Le détail et la raison de chaque choix sont dans `LEGAL-VALIDATION-REQUIRED.md`, section 5, avec les
 informations qui restent à compléter.
 
+## Évolutions du 2 au 5 novembre 2026 (consignées le 14 novembre)
+
+Publiées au fil des fonctions, sans être reportées ici à l'époque ; reconstituées depuis l'historique
+du dépôt (commit entre parenthèses).
+
+**Conditions générales** (date de la page : 4 novembre 2026)
+
+- 03/11 (`238fbe7`) — articles 1, 3 et 6 : Ghost et PrestaShop nommés à côté de WordPress. Objet du
+  service (correction « dans votre CMS »), correction décomptée (texte proposé pour le site dans le
+  CMS), accès confié (clé Admin API, clé Webservice), modification enregistrée seulement à la demande du
+  client et rétablissable depuis son suivi.
+- 04/11 (`f68d983`, `abe0f4e`) — mêmes articles : Wix (clé API) puis Webflow (jeton de site).
+- Publiées sans le préavis de 30 jours de l'article 13 : ajouts jugés non substantiels, à confirmer
+  (question 8 de `QUESTIONS-AVOCAT.md`).
+
+**Politique de confidentialité**
+
+- 02/11 (`73aa0e4`) — Telegram : notifications internes à l'éditeur (création de compte, abonnement,
+  suppression), ligne affichée quand le service est configuré ; pays indiqué : Émirats arabes unis.
+- 02/11 (`d47f7ff`) — Google Analytics 4 sur le site public, seulement après « Accepter » : données,
+  finalité, prestataire, durées (cookies 13 mois, données 14 mois, choix gardé 6 mois), cookies
+  `noyaru_consentement` et `_ga`.
+- 02/11 (`5986346`, `1101b8c`) et 04/11 (`f68d983`, `abe0f4e`) — clés d'accès aux CMS chiffrées au
+  repos (Ghost, PrestaShop, Wix, Webflow) ; Wix (Israël, États-Unis, Irlande, Japon) et Webflow
+  (États-Unis) parmi les prestataires quand le client connecte son site.
+- 05/11 (`645d226`, `c1c7d33`) — Cloudflare Turnstile sur le formulaire d'inscription (adresse IP,
+  caractéristiques du navigateur et de la connexion ; États-Unis) et la donnée `cf.turnstile.u` qu'il
+  garde dans le navigateur.
+- 05/11 (`c71ffdb`) — accès et portabilité par « Mon compte → Mes données » (fichier ZIP).
+- 05/11 (`4c34d98`, Codex) — Telegram reçoit aussi les demandes privées de validation du propriétaire
+  (briefs éditoriaux, résumés de sources, brouillons, décisions).
+- 05/11 (`4eefea6`, Codex) — SAV par e-mail : données traitées, Gmail réservée au SAV, envoi par Brevo
+  (ou Resend, SendGrid s'ils sont configurés), question réduite transmise à l'IA si une rédaction est
+  autorisée, paragraphe SAV en section 6, copies SAV chiffrées et retirées après 30 jours.
+
 ## Reconstruction du DPA (6 novembre 2026)
 
 Pour réduire la relecture à payer, le DPA est reconstruit sur les clauses types de la décision d'exécution (UE)

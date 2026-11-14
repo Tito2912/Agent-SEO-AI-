@@ -43,6 +43,8 @@ Les valeurs de l'éditeur sont dans `seo-agent-web/backend/legal.py` ; une valeu
 | Compétence des tribunaux de Paris pour les professionnels | CGU article 12 | Conservée, et désormais limitée aux cas où elle est valable et opposable. |
 | Rôle de sous-traitant d'E-Com Shop et services du client (GitHub, WordPress, Search Console…) | Confidentialité § 1, DPA annexe IV | Le DPA ne les exclut plus d'office des sous-traitants ultérieurs : leur qualification dépend des contrats et des opérations de traitement, à confirmer service par service (section 5). |
 | Cookie de langue `noyaru_lang` (1 an) | Confidentialité § 8 | Présenté comme un cookie de préférence choisie, sans consentement. À confirmer. |
+| CGU complétées les 3 et 4 novembre 2026 (Ghost, PrestaShop, Wix, Webflow) | CGU articles 1, 3, 6 et 13 | Ajouts publiés sans le préavis de 30 jours, jugés non substantiels : à confirmer (question 8 de `QUESTIONS-AVOCAT.md` ; détail dans `LEGAL-CHANGES.md`). |
+| Contenus produits par IA, dont les illustrations (règlement (UE) 2024/1689, article 50) | CGU article 7 | Marquage IPTC lisible par machine sur chaque illustration générée, aucune mention visible, aucun marquage des textes. Rôle de Noyaru, suffisance du marquage et information du client et de ses lecteurs à confirmer (question 9). |
 | DPA dans son ensemble | `DPA-fr.md`, `DPA-en.md` | Brouillon reconstruit le 06/11/2026 sur les clauses de la Commission. Points soumis : `QUESTIONS-AVOCAT.md`. |
 
 ## 5. Contrat de traitement des données (DPA)
@@ -193,6 +195,8 @@ en anglais. L'annexe IV du DPA dit la même chose.
 Depuis le 06/11/2026, seulement ce que liste `QUESTIONS-AVOCAT.md` : les deux écarts, les transferts sans
 certification, Telegram, la qualification des services connectés, les sauvegardes, et les clauses de la partie
 B (acceptation, frais d'audit, plafond de responsabilité). Le texte officiel de la partie A n'a pas à être relu.
+Le même document pose, hors du DPA, deux questions ajoutées le 14/11/2026 : les CGU complétées sans préavis
+(question 8) et les contenus produits par IA (question 9) ; voir la section 4.
 
 ### Développements nécessaires avant de proposer le DPA
 
