@@ -1,21 +1,33 @@
 {% extends "layout.html" %}
 {% block title %}{{ copy.title }} - {{ app_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/own_seo.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/own_seo.css?v=2" />{% endblock %}
 {% block crumbs %}<a href="/settings/system">{{ copy.back }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
 {% block content %}
 {% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
+{% macro binding_form() %}
+{% if projects %}<form method="post" action="{{ base }}/bind">{{ csrf() }}<input type="hidden" name="token" value="{{ state.workspace.token if state.workspace else '' }}" />
+<label>{{ copy.choose }}<select name="project_id" required>{% for p in projects %}<option value="{{ p.id }}" {{ 'selected' if state.project and p.id == state.project.id else '' }}>{{ p.site_name }} · {{ p.base_url }}</option>{% endfor %}</select></label>
+<label class="own-check"><input type="checkbox" name="confirm" value="true" required /><span>{{ copy.consent }}</span></label><button class="btn" type="submit">{{ copy.save_binding if state.project else copy.bind }}</button></form>
+{% else %}<p>{{ copy.no_project }}</p><a class="btn" href="/">{{ copy.projects }}</a>{% endif %}
+{% endmacro %}
 <div class="own-seo">
 <header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
 <nav class="own-actions" aria-label="{{ copy.title }}"><a class="btn" href="/settings/system">{{ copy.back }}</a><a class="btn" href="/settings/system/seo-knowledge">{{ copy.watch }}</a><a class="btn" href="/settings/system/own-seo/writing">{{ copy.writing }}</a><a class="btn" href="{{ base }}">{{ copy.reload }}</a></nav>
 {% if unavailable %}<p class="alert error" role="alert">{{ copy.unavailable }}</p>{% else %}
 {% if msg %}<p class="alert ok" role="status">{{ msg }}</p>{% endif %}{% if err %}<p class="alert error" role="alert">{{ err }}</p>{% endif %}
-<section class="card"><p>{{ copy.scope }}</p></section>
-<section class="card"><h2>{{ copy.binding }}</h2><p>{{ copy.bind_info }}</p>
-{% if projects %}<form method="post" action="{{ base }}/bind">{{ csrf() }}<input type="hidden" name="token" value="{{ state.workspace.token if state.workspace else '' }}" />
-<label>{{ copy.choose }}<select name="project_id" required>{% for p in projects %}<option value="{{ p.id }}" {{ 'selected' if state.project and p.id == state.project.id else '' }}>{{ p.site_name }} · {{ p.base_url }}</option>{% endfor %}</select></label>
-<label class="own-check"><input type="checkbox" name="confirm" value="true" required /><span>{{ copy.consent }}</span></label><button class="btn" type="submit">{{ copy.bind }}</button></form>
-{% else %}<p>{{ copy.no_project }}</p><a class="btn" href="/">{{ copy.projects }}</a>{% endif %}
-{% if not state.project %}<p role="status">{{ copy.unbound }}</p>{% endif %}
+<section class="card"><p>{{ copy.bound_scope if state.project else copy.scope }}</p></section>
+<section class="card" aria-labelledby="own-seo-binding-title">
+{% if state.project %}
+<h2 id="own-seo-binding-title">{{ copy.bound_title }}</h2>
+<p class="own-badge" role="status"><span aria-hidden="true">✓ </span>{{ copy.linked }}</p>
+<p><strong>{{ state.project.site_name }}</strong><br /><a href="/projects/{{ state.project.slug }}">{{ state.project.base_url }}</a></p>
+<p>{{ copy.bound_next }}</p>
+<p><a class="btn primary" href="#own-seo-plan">{{ copy.next_topics }}</a></p>
+<details><summary>{{ copy.change_binding }}</summary><p>{{ copy.bind_info }}</p><p>{{ copy.rebind_info }}</p>{{ binding_form() }}</details>
+{% else %}
+<h2 id="own-seo-binding-title">{{ copy.binding }}</h2><p>{{ copy.bind_info }}</p>
+{{ binding_form() }}<p role="status">{{ copy.unbound }}</p>
+{% endif %}
 </section>
 {% if state.project %}{% set p = state.project %}
 <nav class="own-actions"><a class="btn" href="/projects/{{ p.slug }}">{{ copy.project }}</a><a class="btn" href="/projects/{{ p.slug }}/settings/search">{{ copy.connections }}</a><a class="btn" href="{{ '/en' if current_lang() == 'en' else '' }}/ressources-seo">{{ copy.blog }}</a>
@@ -25,7 +37,7 @@
 {% for source in state.sources %}<p>{{ copy.gsc if source.source == 'gsc_api' else copy.bing }} : {{ copy.usable if source.valid else copy.excluded }}{% if source.valid %} · {{ source.start }} → {{ source.end }}{% endif %}</p>{% endfor %}
 <h3>{{ copy.technical }}</h3>{% for row in state.technical %}<div class="own-technical"><p>{{ tr(row.label) }} · {{ row.count }}</p><a href="/projects/{{ p.slug }}/issues/{{ row.key }}?crawl={{ state.crawl }}">{{ copy.open_issue }}</a></div>{% else %}<p>{{ copy.none_technical }}</p>{% endfor %}
 </section>
-<section class="card"><h2>{{ copy.plan }}</h2><p>{{ copy.measured }}</p><p class="muted">{{ copy.limit }}</p>
+<section class="card" id="own-seo-plan"><h2>{{ copy.plan }}</h2><p>{{ copy.measured }}</p><p class="muted">{{ copy.limit }}</p>
 <div class="own-grid">{% for item in state.candidates %}<article class="own-candidate" data-own-candidate="{{ item.kind }}"><p class="own-badge">{{ copy.kinds[item.kind] }}</p><h3>{{ item.title }}</h3>
 {% if item.evidence.source != 'editorial' %}<p>{{ copy.source }} : {{ copy.gsc if item.evidence.source == 'gsc_api' else copy.bing }}</p><p>{{ item.evidence.start }} → {{ item.evidence.end }}</p>
 <dl><div><dt>{{ copy.impressions }}</dt><dd>{{ item.evidence.impressions }}</dd></div><div><dt>{{ copy.clicks }}</dt><dd>{{ item.evidence.clicks }}</dd></div><div><dt>{{ copy.position }}</dt><dd>{{ item.evidence.position }}</dd></div></dl>{% else %}{% for ref in item.evidence.references %}<p><a href="{{ ref.url }}" target="_blank" rel="noopener noreferrer">{{ ref.title }}</a> · {{ ref.checked_at[:10] }}</p>{% endfor %}{% endif %}
