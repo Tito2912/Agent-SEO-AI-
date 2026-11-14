@@ -1,0 +1,276 @@
+{
+  "scope": "Local Noyaru routes and templates, fictional SQLite, all external requests blocked",
+  "observations": [
+    {
+      "lang": "fr",
+      "scene": "unbound",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "unbound",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "unbound",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "unbound",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "unbound",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "bound",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "bound",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "bound",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "bound",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "bound",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "paused",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "paused",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "paused",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "paused",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "paused",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "long",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "flow": "native-bind-reload",
+      "width": 1440,
+      "required_confirmation": true,
+      "binding_preserved": true
+    },
+    {
+      "lang": "fr",
+      "flow": "native-bind-reload",
+      "width": 390,
+      "required_confirmation": true,
+      "binding_preserved": true
+    },
+    {
+      "lang": "en",
+      "scene": "unbound",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "unbound",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "unbound",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "unbound",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "unbound",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "bound",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "bound",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "bound",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "bound",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "bound",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "paused",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "paused",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "paused",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "paused",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "paused",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 1024,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "long",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "flow": "native-bind-reload",
+      "width": 1440,
+      "required_confirmation": true,
+      "binding_preserved": true
+    },
+    {
+      "lang": "en",
+      "flow": "native-bind-reload",
+      "width": 390,
+      "required_confirmation": true,
+      "binding_preserved": true
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "production_session": false
+}
