@@ -990,6 +990,30 @@ class OwnSupportTicket(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class OwnSocialMedia(Base):
+    """Owner-only fixed demo assets. No client data or social publishing authority."""
+    __tablename__ = 'own_social_media'
+    __table_args__ = (UniqueConstraint('owner_id', 'authorization_key', name='uq_own_social_media_authorization'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), index=True, nullable=False)
+    authorization_key: Mapped[str] = mapped_column(String(32), nullable=False)
+    binding: Mapped[str] = mapped_column(String(64), nullable=False)
+    connection_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    packet: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    result: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    state: Mapped[str] = mapped_column(String(24), nullable=False, default='proposal')
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    provider_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    render_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    provider_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lease_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class DpaAcceptance(Base):
     """La preuve d'une acceptation de l'accord de traitement des donnees (DPA, clause B1).
 

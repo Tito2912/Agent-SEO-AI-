@@ -70,6 +70,8 @@ def kind_label(channel, kind):
         "support_write": ("Préparer une réponse SAV", "Prepare a support reply"),
         "support_send": ("Envoyer une réponse SAV", "Send a support reply"),
         "support_review": ("Reprendre une demande SAV", "Handle a support request"),
+        "social_render": ("Fabriquer la vidéo", "Produce the video"),
+        "social_review": ("Relire la vidéo", "Review the video"),
     }
     return tr(channel, *labels[kind])
 
@@ -433,6 +435,8 @@ def card(channel, row, page=0, doc=None, confirm=False):
         "support_write": "💬",
         "support_send": "📨",
         "support_review": "🧑‍💼",
+        "social_render": "🎬",
+        "social_review": "▶️",
     }
     label = kind_label(channel, row.kind)
     if doc and doc.get('stage') == 2:
@@ -495,6 +499,8 @@ def card(channel, row, page=0, doc=None, confirm=False):
         if doc.get("decision_summary"):
             text += "\n\n" + display.escaped(doc["decision_summary"])
         refusal = {
+            "social_render": tr(channel, "Refuser la fabrication. Aucun nouvel appel vocal autorisé.", "Reject production. No new audio call authorized."),
+            "social_review": tr(channel, "Refuser et retirer ce rendu. Aucune diffusion sociale.", "Reject and remove this output. No social distribution."),
             "knowledge": tr(
                 channel,
                 "Écarter cette demande. Cette version reste non validée.",
@@ -915,6 +921,13 @@ def handle_callback(query, lease=None):
 
 
 def run_result(kind, ident):
+    if kind == 'social_render':
+        try:
+            from . import own_social_media
+        except ImportError:
+            import own_social_media
+        own_social_media.run(ident)
+        return
     if kind in {'support_write','support_send','support_review'}:
         try:
             from . import own_support
@@ -1079,6 +1092,11 @@ def cycle():
         deliver_one()
         resume_writing()
         resume_article_proposal()
+        try:
+            from . import own_social_media
+        except ImportError:
+            import own_social_media
+        own_social_media.resume()
         with s.module().DB.session() as db:
             s.locked(db)
             channel = active(db)

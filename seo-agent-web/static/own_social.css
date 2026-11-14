@@ -25,5 +25,12 @@
 .social-studio blockquote {margin-inline:0;padding:16px 20px;border-left:4px solid var(--accent,#7fba98);background:rgba(127,186,152,.08);font-size:1.15rem;}
 .social-studio :focus-visible {outline:3px solid var(--accent,#7fba98);outline-offset:4px;}
 .social-studio [id] {scroll-margin-top:110px;}
+.social-studio .social-frames {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+.social-studio .social-frames figure {margin:0;min-width:0;}
+.social-studio .social-frames img {display:block;width:100%;height:auto;border-radius:16px;border:1px solid var(--border);}
+.social-studio .social-frames figcaption {padding-block:12px;line-height:1.5;}
+.social-studio .social-video {display:block;max-width:100%;width:360px;max-height:75vh;background:#101311;margin-block:20px;}
+.social-studio form button {margin-top:16px;}
+@media(max-width:600px){.social-studio .social-frames {grid-template-columns:1fr;}.social-studio .social-frames img {max-width:340px;margin-inline:auto;}}
 @media(max-width:740px){.social-studio .social-filters,.social-studio .social-sequence {grid-template-columns:1fr;}.social-studio .social-filters .btn {justify-self:stretch;}.social-studio .social-actions>* {flex:1 1 100%;}}
 @media(prefers-reduced-motion:reduce){.social-studio * {scroll-behavior:auto;}}

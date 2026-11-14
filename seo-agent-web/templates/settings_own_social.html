@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}{{ copy.title }} - {{ app_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/own_social.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/own_social.css?v=2" />{% endblock %}
 {% block crumbs %}<a href="/settings/system">{{ copy.system }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
 {% block content %}
 <div class="social-studio">
@@ -22,6 +22,7 @@
 <h3>{{ copy.hook }}</h3><blockquote>{{ selected.hook }}</blockquote>
 <h3>{{ copy.sequence }}</h3><ol class="social-sequence">{% for part in selected.sequence %}<li><h4>{{ part[0] }}</h4>{% for text in part[1:] %}<p>{{ text }}</p>{% endfor %}</li>{% endfor %}</ol>
 <h3>{{ copy.caption }}</h3><p>{{ selected.caption }}</p><h3>{{ copy.cta }}</h3><p>{{ selected.cta }}</p>
+{% if state.network == 'tiktok' and selected.key == 'score' %}<p><a class="btn primary" href="/settings/system/social/media?lang={{ state.lang }}&amp;goal={{ state.goal }}&amp;audience={{ state.audience }}">{{ 'Preview the video production' if state.lang == 'en' else 'Découvrir la fabrication vidéo' }}</a></p>{% endif %}
 <details><summary>{{ copy.make }}</summary>{% for text in selected.production %}<p>{{ text }}</p>{% endfor %}</details>
 <details><summary>{{ copy.proof }}</summary>{% for ref in selected.sources %}<p><a href="{{ ref.url }}" target="_blank" rel="noopener noreferrer">{{ ref.title }}</a><br />{{ copy.source_product if ref.kind == 'product' else copy.source_official }}{% if ref.checked_at %} · {{ copy.checked }} {{ ref.checked_at[:10] }}{% endif %}</p>{% endfor %}</details>
 {% if selected.blog %}<details><summary>{{ copy.blog_optional }}</summary><p>{{ copy.blog_info }}</p><a href="{{ selected.blog.url }}" target="_blank" rel="noopener noreferrer">{{ selected.blog.title }}</a></details>{% endif %}
