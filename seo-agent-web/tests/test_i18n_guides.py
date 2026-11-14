@@ -6,6 +6,7 @@ dans une autre langue, et un guide sans traduction reste servi en francais.
 from __future__ import annotations
 
 import re
+import shutil
 from collections import Counter
 
 import pytest
@@ -16,13 +17,60 @@ from backend import content_library as cl
 
 TOKEN = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
 TRANSLATED = cl.translated_pages("blog", "en")
+# Published translations remain required. New owner-blog articles may be French-only,
+# as the publication form explicitly allows; absence must not invent an English URL.
+PUBLISHED_TRANSLATIONS = {
+    "audit-seo-technique-checklist-priorites",
+    "ce-que-vos-concurrents-publient-et-pas-vous",
+    "connecter-google-search-console-audit-mensuel",
+    "core-web-vitals-lire-signaux-seo",
+    "corriger-le-seo-dans-le-code-pas-dans-un-rapport",
+    "corriger-title-meta-description-grande-echelle",
+    "frequence-crawl-seo-site-vitrine-ecommerce-blog",
+    "netlinking-opportunites-backlinks-sans-spam",
+    "regression-seo-apres-mise-en-production",
+}
 
 
 def test_english_guides_load() -> None:
     cl.reload()
     assert cl.LOAD_ERRORS == []
-    assert len(TRANSLATED) == len(cl.blog_pages())
-    assert all(page["path"] == f"/en/ressources-seo/{page['slug']}" for page in TRANSLATED)
+    translated = cl.translated_pages("blog", "en")
+    slugs = {page["slug"] for page in translated}
+    assert PUBLISHED_TRANSLATIONS <= slugs
+    assert slugs <= {page["slug"] for page in cl.blog_pages()}
+    assert all(page["path"] == f"/en/ressources-seo/{page['slug']}" for page in translated)
+
+
+def test_new_french_only_guide_keeps_real_translation_links(tmp_path, monkeypatch) -> None:
+    directory = tmp_path / "blog"
+    shutil.copytree(cl.BLOG_DIR, directory)
+    slug = "guide-francais-de-recette"
+    template = next(directory.glob("*.md")).read_text(encoding="utf-8")
+    # Reuse valid metadata while giving this fixture its own canonical slug.
+    template = re.sub(r"(?m)^slug:.*$", "slug: " + slug, template)
+    (directory / (slug + ".md")).write_text(template, encoding="utf-8")
+    try:
+        with monkeypatch.context() as patch:
+            patch.setattr(cl, "BLOG_DIR", directory)
+            patch.setitem(cl.TRANSLATION_DIRS, "blog", {"en": directory / "en"})
+            test_english_guides_load()
+            assert cl.get_article(slug, "en") is None
+            assert len(cl.translated_pages("blog", "en")) + 1 <= len(cl.blog_pages())
+            french_url = "/ressources-seo/" + slug
+            english_url = "/en" + french_url
+            redirect = TestClient(app_module.app).get(english_url, follow_redirects=False)
+            assert (redirect.status_code, redirect.headers["location"]) == (302, french_url)
+            french = TestClient(app_module.app).get(french_url)
+            assert french.status_code == 200 and '<html lang="fr">' in french.text
+            assert 'hreflang="en"' not in french.text.split("</head>", 1)[0]
+            index = TestClient(app_module.app).get("/en/ressources-seo").text
+            assert f'href="{french_url}"' in index and f'href="{english_url}"' not in index
+            sitemap = TestClient(app_module.app).get("/sitemap.xml").text
+            assert f"<loc>http://testserver{french_url}</loc>" in sitemap
+            assert f"<loc>http://testserver{english_url}</loc>" not in sitemap
+    finally:
+        cl.reload()
 
 
 @pytest.mark.parametrize("page", TRANSLATED, ids=lambda p: p["slug"])

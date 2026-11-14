@@ -1,6 +1,7 @@
 {% extends "public_layout.html" %}
 
-{% block title %}{{ page.meta_title }} - {{ app_name }}{% endblock %}
+{# Keep the reviewed heading intact; the browser title has its own length budget. #}
+{% block title %}{% set short_title = page.meta_title|truncate(70, false, '…', 0) %}{{ short_title }}{% if short_title|length + app_name|length + 3 <= 70 %} - {{ app_name }}{% endif %}{% endblock %}
 
 {% block head_extra %}
 {% if help_project %}<link rel="stylesheet" href="/static/help-project-context.css?v=1" />{% endif %}
