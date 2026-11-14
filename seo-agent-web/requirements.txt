@@ -13,6 +13,10 @@ requests==2.34.2
 idna==3.19
 urllib3==2.8.0
 beautifulsoup4==4.14.3
+# beautifulsoup4's CSS selector engine (soupsieve>=1.6.1, unpinned until now). Below 4.0 it carries
+# CVE-2026-126190/126191/126192/126193 (denial of service on nested HTML or selectors); 4.1 fixes
+# all four. Pinned so the Docker layer that installs this file cannot keep an older copy.
+soupsieve==4.1
 reportlab==4.5.1
 pillow==13.0.0
 sqlalchemy==2.0.50
