@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block title %}{{ copy.title }} - {{ app_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/own_social.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/settings/system">{{ copy.system }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
+{% block content %}
+<div class="social-studio">
+<header class="page-header"><p class="social-eyebrow">Instagram · TikTok</p><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
+<nav class="social-actions" aria-label="{{ copy.title }}"><a class="btn" href="/settings/system">{{ copy.system }}</a><a class="btn" href="/settings/system/own-seo">{{ copy.seo }}</a><a class="btn" href="{{ '/en' if current_lang() == 'en' else '' }}/ressources-seo">{{ copy.blog }}</a></nav>
+{% if unavailable %}<p class="alert error" role="alert">{{ copy.unavailable }}</p>{% else %}
+{% if changed %}<p class="alert warning" role="alert">{{ copy.changed }} <a href="{{ state.back }}">{{ copy.back }}</a></p>{% endif %}
+{% if selected %}<details class="card"><summary>{{ copy.change_intention }} · {{ 'Instagram' if state.network == 'instagram' else 'TikTok' }} · {{ copy.goals[state.goal] }} · {{ copy.audiences[state.audience] }}</summary>{% else %}<section class="card"><h2>{{ copy.choose }}</h2>{% endif %}
+<form method="get" action="{{ base }}" class="social-filters"><input type="hidden" name="lang" value="{{ state.lang }}" />
+<label for="social-network">{{ copy.network }}<select id="social-network" name="network">{% for value in ['instagram','tiktok'] %}<option value="{{ value }}" {{ 'selected' if state.network == value else '' }}>{{ 'Instagram' if value == 'instagram' else 'TikTok' }}</option>{% endfor %}</select></label>
+<label for="social-goal">{{ copy.goal }}<select id="social-goal" name="goal">{% for value,label in copy.goals.items() %}<option value="{{ value }}" {{ 'selected' if state.goal == value else '' }}>{{ label }}</option>{% endfor %}</select></label>
+<label for="social-audience">{{ copy.audience }}<select id="social-audience" name="audience">{% for value,label in copy.audiences.items() %}<option value="{{ value }}" {{ 'selected' if state.audience == value else '' }}>{{ label }}</option>{% endfor %}</select></label>
+<button class="btn primary" type="submit">{{ copy.show }}</button></form>
+<p class="muted">{{ copy.basis }}</p>{% if selected %}</details>{% else %}</section>{% endif %}
+{% if selected %}
+<section class="card social-pack" id="production-pack" aria-labelledby="pack-heading"><p class="social-eyebrow">{{ copy.dossier }} · {{ selected.format }}</p><h2 id="pack-heading">{{ selected.title }}</h2>
+{% if not selected.ready %}<p class="alert warning" role="status">{{ copy.product_changed if selected.missing == 'product' else copy.guidance_changed if selected.missing == 'guidance' else copy.missing }}</p><div class="social-actions"><a class="btn" href="{{ state.back }}">{{ copy.back }}</a>{% if selected.missing != 'product' %}<a class="btn" href="/settings/system/seo-knowledge">{{ copy.watch }}</a>{% endif %}</div>
+{% else %}<div class="social-actions"><a class="btn primary" href="{{ selected.download }}">{{ copy.download }}</a><a class="btn" href="{{ state.back }}">{{ copy.back }}</a></div>
+<h3>{{ copy.hook }}</h3><blockquote>{{ selected.hook }}</blockquote>
+<h3>{{ copy.sequence }}</h3><ol class="social-sequence">{% for part in selected.sequence %}<li><h4>{{ part[0] }}</h4>{% for text in part[1:] %}<p>{{ text }}</p>{% endfor %}</li>{% endfor %}</ol>
+<h3>{{ copy.caption }}</h3><p>{{ selected.caption }}</p><h3>{{ copy.cta }}</h3><p>{{ selected.cta }}</p>
+<details><summary>{{ copy.make }}</summary>{% for text in selected.production %}<p>{{ text }}</p>{% endfor %}</details>
+<details><summary>{{ copy.proof }}</summary>{% for ref in selected.sources %}<p><a href="{{ ref.url }}" target="_blank" rel="noopener noreferrer">{{ ref.title }}</a><br />{{ copy.source_product if ref.kind == 'product' else copy.source_official }}{% if ref.checked_at %} · {{ copy.checked }} {{ ref.checked_at[:10] }}{% endif %}</p>{% endfor %}</details>
+{% if selected.blog %}<details><summary>{{ copy.blog_optional }}</summary><p>{{ copy.blog_info }}</p><a href="{{ selected.blog.url }}" target="_blank" rel="noopener noreferrer">{{ selected.blog.title }}</a></details>{% endif %}
+<details><summary>{{ copy.measure }}</summary><p>{{ selected.measure }}</p><p class="muted">{{ copy.measure_info }}</p></details>
+<p class="social-note">{{ copy.footer }}</p>{% endif %}</section>
+{% endif %}
+{% if selected %}<details class="card" id="social-ideas"><summary>{{ copy.change_idea }}</summary>{% else %}<section id="social-ideas" aria-labelledby="ideas-heading"><h2 id="ideas-heading">{{ copy.ideas }}</h2>{% endif %}<div class="social-grid">
+{% for idea in state.ideas %}<article class="card social-idea"><p class="social-eyebrow">{{ idea.format }}</p><h3>{{ idea.title }}</h3><p>{{ idea.hook }}</p><details><summary>{{ copy.why }}</summary><p>{{ idea.why }}</p><p>{{ idea.audience_reason }}</p></details><p class="social-note">{{ copy.native }}</p><a class="btn {{ 'primary' if loop.first else '' }}" href="{{ idea.href }}"{% if selected and selected.key == idea.key %} aria-current="true"{% endif %}>{{ copy.choose_idea }}</a></article>{% else %}<p>{{ copy.empty }}</p>{% endfor %}
+</div>{% if selected %}</details>{% else %}</section>{% endif %}
+<details class="card"><summary>{{ copy.deferred }}</summary>{% for idea in state.deferred %}<h3>{{ idea.title }}</h3><p>{{ copy.product_changed if idea.missing == 'product' else copy.guidance_changed if idea.missing == 'guidance' else copy.missing }}</p>{% endfor %}{% if state.deferred | selectattr('missing','equalto','official') | list %}<a class="btn" href="/settings/system/seo-knowledge">{{ copy.watch }}</a>{% endif %}{% for title,reason in copy.skips %}<h3>{{ title }}</h3><p>{{ reason }}</p>{% endfor %}</details>
+<p class="muted">{{ copy.scope }}</p>
+{% endif %}</div>{% endblock %}
