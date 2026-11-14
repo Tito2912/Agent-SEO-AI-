@@ -25,7 +25,7 @@
         }
         return;
       }
-    } catch (_) { /* A later read may recover; no write or automatic login. */ }
+    } catch (_) { return; } // Stop after network failure or an authentication redirect.
     schedule();
   };
   const schedule = () => {
