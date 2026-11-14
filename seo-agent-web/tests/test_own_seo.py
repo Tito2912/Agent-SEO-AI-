@@ -178,11 +178,13 @@ def test_native_form_review_export_and_context_preserving_content_link(own,lang,
     csrf=browser.cookies.get(m._CSRF_COOKIE_NAME)
     response=browser.post(PATH+'/prepare',data={'token':token,'candidate_key':item['key'],'_csrf':csrf},headers={'Accept-Language':lang},follow_redirects=False)
     assert response.status_code==303
-    bid=response.headers['location'].split('#brief-')[1]
+    assert response.headers['location'].startswith(PATH+'/writing?brief=')
+    bid=response.headers['location'].split('brief=')[1]
     response=browser.post(PATH+'/briefs/'+bid+'/review',data={'token':token,'confirm':'true','_csrf':csrf},headers={'Accept-Language':lang},follow_redirects=False)
     assert response.status_code==303
     page=browser.get(PATH,headers={'Accept-Language':lang})
-    assert '/content?sujet=' in page.text
+    assert PATH+'/writing?brief='+bid in page.text
+    assert '/content?sujet=' not in page.text
     exported=browser.get(PATH+'/briefs/'+bid+'/download')
     assert exported.status_code==200 and 'attachment;' in exported.headers['content-disposition']
     assert ('not a publishable article' if lang=='en' else 'pas un article publiable') in exported.text

@@ -8,13 +8,13 @@ from sqlalchemy.exc import SQLAlchemyError
 try:
     from . import own_writing as w,i18n,own_seo_routes
     from .own_writing_copy import strings
-    from .models import OwnSeoDraft
+    from .models import OwnSeoDraft, OwnBlogPublication
 except ImportError:
     import own_writing as w
     import i18n
     import own_seo_routes
     from own_writing_copy import strings
-    from models import OwnSeoDraft
+    from models import OwnSeoDraft, OwnBlogPublication
 
 router=APIRouter()
 
@@ -30,24 +30,29 @@ def page(request:Request,brief:str='',err:str=''):
     try:
         with m.DB.session() as db:
             state=w.seo.view(db,user.id,lang=i18n.current_lang())
-            eligible=[i['row'] for i in w.seo.history(db,user.id,state) if i['current'] and i['row'].status=='reviewed' and i['row'].kind in {'research','guide'}]
+            eligible=[i['row'] for i in w.seo.history(db,user.id,state) if i['current'] and i['row'].status in {'prepared','reviewed'} and i['row'].kind in {'research','guide'}]
             if brief:
                 try:_,_,selected=w.seo.brief_for(db,user.id,brief)
                 except ValueError:raise HTTPException(404,'brief_not_found')
-                try:dossier,fingerprint=w.bundle(db,user.id,brief)
+                try:dossier,fingerprint=w.bundle(db,user.id,brief,allow_prepared=True)
                 except ValueError as exc:problem=str(exc)
             used=w.reserved(db,user.id)
             if state.get('project'):
                 query=select(OwnSeoDraft).where(OwnSeoDraft.owner_id==user.id,OwnSeoDraft.workspace_token==state['workspace'].token)
                 if brief:query=query.where(OwnSeoDraft.brief_id==brief)
                 for row in db.scalars(query.order_by(OwnSeoDraft.created_at.desc()).limit(20)):
-                    items.append({'row':row,'current':w.current(db,row),'sources':{s['id']:{**s,'number':i+1} for i,s in enumerate(row.bundle['sources'])}})
+                    publication=db.scalar(select(OwnBlogPublication).where(OwnBlogPublication.owner_id==user.id,OwnBlogPublication.fr_id==row.id).order_by(OwnBlogPublication.created_at.desc()).limit(1))
+                    items.append({'row':row,'publication':publication,'current':w.current(db,row),'sources':{s['id']:{**s,'number':i+1} for i,s in enumerate(row.bundle['sources'])}})
     except SQLAlchemyError:unavailable=True
     existing=next((i['row'] for i in items if i['row'].brief_id==brief and i['row'].input_hash==fingerprint
         and i['row'].status in {'queued','running','draft','reviewed','uncertain'}),None)
+    active_publication=next((i['publication'] for i in items if existing and i['row'].id==existing.id),None)
     return m.templates.TemplateResponse('settings_own_writing.html',{'request':request,'project':None,'copy':copy,'state':state,
         'selected':selected,'dossier':dossier,'input_hash':fingerprint,'key':uuid.uuid4().hex,'items':items,'eligible':eligible,
         'used':used,'existing':existing,'base':w.PATH,'unavailable':unavailable,'problem':copy['errors'].get(problem,''),
+        'active_publication':active_publication,
+        'journey_version':w.seo.digest([selected.status if selected else '',[(i['row'].id,i['row'].status,i['publication'].state if i['publication'] else '') for i in items]]),
+        'watch':bool(selected and not existing) or any(i['row'].status in {'queued','running'} or (i['publication'] and i['publication'].state in {'checking','queued_prepare','preparing','reviewing','queued_publish','publishing','observing'}) for i in items),
         'err':copy['errors'].get(err,copy['errors']['unavailable']) if err else ''},status_code=503 if unavailable else 200,
         headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
 
@@ -55,7 +60,7 @@ def page(request:Request,brief:str='',err:str=''):
 @router.post('/settings/system/own-seo/writing/authorize')
 def authorize(request:Request,background:BackgroundTasks,brief:str=Form(''),input_hash:str=Form(''),key:str=Form(''),confirm:bool=Form(False)):
     user=w.module()._require_system_owner(request);own_seo_routes.throttle(request)
-    try:draft_id=w.authorize(user.id,brief,input_hash,key,confirm)
+    try:draft_id=w.authorize(user.id,brief,input_hash,key,confirm,article_journey=True)
     except ValueError as exc:return redirect(brief,str(exc))
     except SQLAlchemyError:return redirect(brief,'unavailable')
     background.add_task(w.run,draft_id)

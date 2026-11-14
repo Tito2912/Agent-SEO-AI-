@@ -1,0 +1,299 @@
+{
+  "scope": "Local fictional accounts; real routes and Chromium; no production session or external requests",
+  "observations": [
+    {
+      "lang": "fr",
+      "scene": "topic",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "topic",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "topic",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "topic",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "draft",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "draft",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "draft",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "draft",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "checks",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "checks",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "checks",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "checks",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "published",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "published",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "published",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "published",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "error",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "error",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "error",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "scene": "error",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "flow": "read-only-auto-refresh",
+      "published": true
+    },
+    {
+      "lang": "en",
+      "scene": "topic",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "topic",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "topic",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "topic",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "draft",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "draft",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "draft",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "draft",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "checks",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "checks",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "checks",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "checks",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "published",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "published",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "published",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "published",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "error",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "error",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "error",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "scene": "error",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "flow": "read-only-auto-refresh",
+      "published": true
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "simulated_ai_calls": 1,
+  "simulated_github_writes": 0
+}

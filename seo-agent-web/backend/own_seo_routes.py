@@ -76,6 +76,10 @@ def prepare(request:Request,token:str=Form(''),candidate_key:str=Form('')):
     try:brief=service.prepare(user.id,token,candidate_key,i18n.current_lang())
     except ValueError as exc:return redirect(error=str(exc))
     except SQLAlchemyError:return redirect(error='unavailable')
+    with service.module().DB.session() as db:
+        _,_,row=service.brief_for(db,user.id,brief)
+        if row.kind in {'research','guide'}:
+            return RedirectResponse(PATH+'/writing?'+urlencode({'brief':brief}),status_code=303,headers={'Cache-Control':'no-store'})
     return redirect(msg='prepared',brief=brief)
 
 

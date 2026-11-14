@@ -10,6 +10,7 @@ try:
         OwnSeoDraft,
         SeoKnowledgeSource,
         SeoKnowledgeRevision,
+        TelegramApprovalRequest,
     )
 except ImportError:
     import own_seo as s
@@ -21,6 +22,7 @@ except ImportError:
         OwnSeoDraft,
         SeoKnowledgeSource,
         SeoKnowledgeRevision,
+        TelegramApprovalRequest,
     )
 
 
@@ -155,7 +157,18 @@ def inspect(db, owner, kind, target, lang):
                 sections=display.brief_sections(row, en),
                 en=en,
             )
-        value, fingerprint = w.bundle(db, owner, target)
+        value, fingerprint = w.bundle(db, owner, target, allow_prepared=True)
+        legacy_decision=db.scalar(select(TelegramApprovalRequest.id).where(
+            TelegramApprovalRequest.owner_id==owner,
+            TelegramApprovalRequest.kind=='writing',
+            TelegramApprovalRequest.target_id==target,
+            TelegramApprovalRequest.version==fingerprint,
+            TelegramApprovalRequest.state.in_({'approved','rejected','expired'}),
+        ).limit(1))
+        if legacy_decision:
+            # A presentation upgrade must not revive refused/expired work or
+            # widen a durably accepted legacy writing request.
+            raise ValueError('changed')
         previous = db.scalar(
             select(OwnSeoDraft.id)
             .where(
@@ -174,10 +187,15 @@ def inspect(db, owner, kind, target, lang):
             "Authorize one paid AI text request, valid for 24 hours, within the existing two requests / rolling 24h cap. "
             "Only the dossier below is sent to the configured provider. Private draft, no publication."
             if en
-            else "Autoriser un appel IA texte payant, valable 24 h, dans la limite existante de deux appels / 24 h glissantes. "
+            else "Décision 1/2 : valider ce sujet et autoriser un appel IA texte payant, valable 24 h, dans la limite existante de deux appels / 24 h glissantes. "
             "Seul le dossier ci-dessous est transmis au fournisseur configuré. Brouillon privé, aucune publication."
         )
-        return document(
+        effect += (
+            '\nApprove the brief and writing together. The publication proposal is prepared read-only; you will review the article in decision 2/2 before any GitHub write or publication.'
+            if en else
+            '\nLe sujet et la rédaction sont validés ensemble. La proposition de publication se prépare en lecture seule ; tu reliras l’article lors de la décision 2/2 avant toute écriture GitHub ou publication.'
+        )
+        doc = document(
             kind,
             target,
             fingerprint,
@@ -185,9 +203,14 @@ def inspect(db, owner, kind, target, lang):
             "",
             effect,
             w.PATH + "?brief=" + target,
-            sections=display.writing_sections(value, en),
+            sections=display.brief_sections(row, en) + display.writing_sections(value, en),
             en=en,
         )
+        # Separate version from legacy writing cards: an old decision keeps its
+        # original scope, even though the content fingerprint stays compatible.
+        doc['version'] = s.digest(['article-writing-v2', fingerprint, row.title, row.evidence])
+        doc['stage'] = 1
+        return doc
     if kind == "draft":
         row = w.row_for(db, owner, target)
         if (
@@ -243,14 +266,12 @@ def candidates(db, owner, lang):
         .order_by(OwnSeoBrief.created_at.desc())
         .limit(40)
     ):
-        yield ("brief" if row.status == "prepared" else "writing"), row.id
-    for ident in db.scalars(
-        select(OwnSeoDraft.id)
-        .where(OwnSeoDraft.owner_id == owner, OwnSeoDraft.status == "draft")
-        .order_by(OwnSeoDraft.created_at.desc())
-        .limit(40)
-    ):
-        yield "draft", ident
+        if row.kind in {'research','guide'}:
+            yield 'writing', row.id
+        elif row.status == 'prepared':
+            yield 'brief', row.id
+    # Draft review is part of the final article decision. Do not emit another
+    # card simply to mark the same text reviewed.
 
 
 def apply(db, owner, kind, target, approve, key, version):
@@ -298,7 +319,12 @@ def apply(db, owner, kind, target, approve, key, version):
         )
     elif kind == "writing":
         if approve:
-            return w.authorize_in_session(db, owner, target, version, key, True)
+            doc=inspect(db, owner, kind, target, 'fr')
+            if doc['version'] != version:raise ValueError('changed')
+            fingerprint=w.bundle(db, owner, target, allow_prepared=True)[1]
+            return w.authorize_in_session(db, owner, target, fingerprint, key, True, article_journey=True)
+        workspace, _, _ = s.brief_for(db, owner, target)
+        s.review_in_session(db, owner, target, workspace.token, confirm=True, status='discarded')
     elif kind == "draft":
         row = w.row_for(db, owner, target)
         if approve:

@@ -95,11 +95,12 @@ def scope(db, owner, ident, *, fresh=True):
         or row.project_id != project.id
     ):
         raise Stop("paused")
-    drafts = c.drafts(db, owner, row.fr_id, row.en_id, current=fresh)
+    unreviewed = row.proposal.get('flow') == 'two_decisions' and not row.receipt.get('article_consent')
+    drafts = c.drafts(db, owner, row.fr_id, row.en_id, current=fresh, allow_unreviewed=unreviewed)
     if row.proposal["drafts"] != [[d.id, d.input_hash, d.content_hash] for d in drafts]:
         raise Stop("draft_required")
     if fresh:
-        slug, files = c.files(db, owner, row.fr_id, row.en_id, row.proposal["date"])
+        slug, files = c.files(db, owner, row.fr_id, row.en_id, row.proposal["date"], allow_unreviewed=unreviewed)
         if slug != row.slug or files != row.proposal["files"]:
             raise Stop("draft_required")
     for file in row.proposal["files"]:
@@ -136,7 +137,11 @@ def version(row, kind):
     )
 
 
-def prepare(owner, fr_id, en_id, key, confirm):
+def article_mandate(row):
+    return s.digest([row.id, row.generation, row.proposal])
+
+
+def prepare(owner, fr_id, en_id, key, confirm, *, article_journey=False):
     if not confirm:
         raise Stop("confirm_required")
     if not re.fullmatch("[a-f0-9]{32}", key):
@@ -147,8 +152,8 @@ def prepare(owner, fr_id, en_id, key, confirm):
         workspace, project = s.scope(db, owner)
         if not workspace or not project or workspace.paused:
             raise Stop("paused")
-        rows = c.drafts(db, owner, fr_id, en_id)
-        slug, files = c.files(db, owner, fr_id, en_id, now().date().isoformat())
+        rows = c.drafts(db, owner, fr_id, en_id, allow_unreviewed=article_journey)
+        slug, files = c.files(db, owner, fr_id, en_id, now().date().isoformat(), allow_unreviewed=article_journey)
         existing = db.scalar(
             select(Publication)
             .where(
@@ -184,6 +189,7 @@ def prepare(owner, fr_id, en_id, key, confirm):
                 "files": files,
                 "base": None,
                 "date": now().date().isoformat(),
+                **({'flow':'two_decisions'} if article_journey else {}),
             },
             receipt={},
             intents={},
@@ -241,6 +247,10 @@ class Worker:
                     return copy.deepcopy(known)
                 # Every *new* effect needs current sources, draft, binding and mandate.
                 self.scoped(db, write=True)
+                if row.proposal.get('flow') == 'two_decisions':
+                    if row.receipt.get('article_consent') != article_mandate(row):
+                        raise Stop('authorization_required')
+                    c.drafts(db, self.owner, row.fr_id, row.en_id)
                 if row.state == "uncertain":
                     if any(not v.get("done") for v in row.intents.values()):
                         raise Stop("github_uncertain")
@@ -310,7 +320,7 @@ class Worker:
             db.commit()
 
 
-def claim(owner, ident, *, refresh=False):
+def claim(owner, ident, *, refresh=False, renew=False):
     with s.module().DB.session() as db:
         s.locked(db)
         row, _ = scope(db, owner, ident, fresh=False)
@@ -327,13 +337,13 @@ def claim(owner, ident, *, refresh=False):
                 raise Stop("changed")
         elif row.state not in RUNNABLE:
             raise Stop("changed")
-        if refresh and w.utc(row.expires_at) <= now():
+        if refresh and renew and w.utc(row.expires_at) <= now():
             row.expires_at = now() + timedelta(hours=24)
         elif w.utc(row.expires_at) <= now():
             raise Stop("expired")
         row.lease_token = uuid.uuid4().hex
         row.lease_until = now() + timedelta(minutes=4)
-        row.next_check_at = now() + timedelta(minutes=10)
+        row.next_check_at = now() + timedelta(seconds=60 if row.proposal.get('flow')=='two_decisions' else 600)
         if row.state == "queued_prepare":
             row.state = "preparing"
         if row.state == "queued_publish":
@@ -401,10 +411,16 @@ def release(worker, error=None):
         db.commit()
 
 
-def refresh(owner, ident):
+def refresh(owner, ident, *, automatic=False):
     try:
-        worker = claim(owner, ident, refresh=True)
-    except ValueError:
+        worker = claim(owner, ident, refresh=True, renew=not automatic)
+    except ValueError as exc:
+        if automatic and str(exc)=='expired':
+            with s.module().DB.session() as db:
+                s.locked(db)
+                row=db.get(Publication,ident)
+                if row and row.owner_id==owner and row.state=='checking':
+                    row.state='needs_review';row.error_code='expired';db.commit()
         return
     error = None
     try:
@@ -433,6 +449,8 @@ def refresh(owner, ident):
                     raise Stop("budget")
                 live.generation += 1
             live.proposal = proposal
+            if proposal.get('flow') == 'two_decisions':
+                live.receipt = {**live.receipt, 'article_consent': None}
             live.state = "proposal"
             live.error_code = None
             audit(db, live, "refresh")
@@ -456,6 +474,10 @@ def decision_in_session(db, owner, ident, kind, approve, fingerprint):
         raise Stop("expired")
     if row.lease_until and w.utc(row.lease_until) > now():
         raise Stop("busy")
+    if row.proposal.get('flow') == 'two_decisions' and kind == 'blog_pr' and approve:
+        for draft in c.drafts(db, owner, row.fr_id, row.en_id, allow_unreviewed=True):
+            w.review_in_session(db, owner, draft.id, draft.content_hash, True)
+        row.receipt = {**row.receipt, 'article_consent': article_mandate(row)}
     row.state = (
         ("queued_prepare" if kind == "blog_pr" else "queued_publish")
         if approve
@@ -495,6 +517,13 @@ def approval_document(db, owner, ident, kind, lang):
             else "Rendre cette PR prête puis fusionner sa tête exacte. Le déploiement automatique pourra publier ces articles. Aucun nouvel appel IA."
         )
     )
+    combined = row.proposal.get('flow') == 'two_decisions'
+    if combined:
+        effect = (
+            'Decision 2/2: I reviewed this exact article and its sources. Create the draft PR, run the checks, then merge and publish automatically only if they pass on this unchanged base. No new AI request. Reject stops this publication.'
+            if en else
+            'Décision 2/2 : j’ai relu cet article exact et ses sources. Créer la PR en brouillon, attendre les contrôles puis fusionner et publier automatiquement uniquement s’ils réussissent sur cette base inchangée. Aucun nouvel appel IA. Refuser arrête cette publication.'
+        )
     lines = [
         c.REPO + " · main",
         "Base: " + row.proposal["base"],
@@ -515,16 +544,22 @@ def approval_document(db, owner, ident, kind, lang):
         ("📦 GitHub destination" if en else "📦 Destination GitHub", "\n".join(lines)),
     ]
     for file in row.proposal["files"]:
-        sections.append(("📄 " + file["path"], file["url"] + "\n\n" + file["text"]))
+        if combined:
+            draft = w.row_for(db, owner, row.en_id if file['lang']=='en' else row.fr_id)
+            sections += display.draft_sections(draft, en)
+            sections.append(('📍 URL · '+file['lang'].upper(),file['url']+'\nSHA-256: '+file['sha256']))
+        else:
+            sections.append(("📄 " + file["path"], file["url"] + "\n\n" + file["text"]))
     doc = dict(
         kind=kind,
         target=ident,
         version=version(row, kind),
-        title=row.slug,
+        title=w.row_for(db, owner, row.fr_id).content['title'] if combined else row.slug,
         effect=effect,
-        path=PATH + "?publication=" + ident,
+        path=PATH + "?publication=" + ident + '#publication-' + ident,
         ready=True,
         expires_at=row.expires_at,
+        stage=2 if combined else None,
     )
     summary = row.slug + "\n" + c.REPO + " · main"
     if kind == "blog_publish":
@@ -625,7 +660,12 @@ def inspect_pr(worker, *, merge=False):
     api.diff(row.proposal["base"], row.receipt["head"], row.proposal["files"])
     checks = api.checks(row.receipt["number"], row.receipt["head"])
     if not merge:
-        worker.save(state="review_ready", receipt={"checks": checks})
+        if row.proposal.get('flow') == 'two_decisions':
+            if row.receipt.get('article_consent') != article_mandate(row):
+                raise Stop('authorization_required')
+            worker.save(state='queued_publish', receipt={'checks': checks,'phase':'publish'})
+        else:
+            worker.save(state="review_ready", receipt={"checks": checks})
         return
     if checks != row.receipt.get("checks"):
         raise Stop("checks_incomplete")
@@ -763,7 +803,7 @@ def tick():
         ident = db.scalar(
             select(Publication.id)
             .where(
-                Publication.state.in_(RUNNABLE),
+                Publication.state.in_(RUNNABLE | {'checking'}),
                 or_(
                     Publication.next_check_at.is_(None),
                     Publication.next_check_at <= now(),
@@ -776,7 +816,11 @@ def tick():
             .limit(1)
         )
     if ident:
-        run(ident)
+        with s.module().DB.session() as db:
+            row=db.get(Publication,ident)
+            owner,initial=row.owner_id,row.state=='checking'
+        if initial:refresh(owner,ident,automatic=True)
+        else:run(ident)
     return int(bool(ident))
 
 

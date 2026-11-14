@@ -77,6 +77,16 @@ def row(x, ident):
         return db.get(a.Approval, ident)
 
 
+def legacy_card(x, kind, target):
+    """Persist a pre-existing card; the new sweep no longer emits these steps."""
+    with x['db'].session() as db:
+        channel=a.active(db)
+        doc=a.adapters.inspect(db,x['owner'].id,kind,target,'fr')
+        result=a.register(db,channel,doc)
+        db.commit()
+        return result
+
+
 def query(row, verb, nonce=None):
     return {
         "id": uuid.uuid4().hex,
@@ -413,8 +423,7 @@ def test_brief_review_and_discard_call_existing_rules(bot, writing):
     with x["db"].session() as db:
         db.get(OwnSeoBrief, x["brief"]).status = "prepared"
         db.commit()
-    a.sync()
-    r = next(r for r in rows(x) if r.kind == "brief")
+    r = legacy_card(x,'brief',x['brief'])
     a.deliver_one()
     decision(x, r.id)
     with x["db"].session() as db:
@@ -442,7 +451,8 @@ def test_writing_authorization_is_atomic_one_call_and_draft_review_never_publish
     with x["db"].session() as db:
         assert db.get(OwnSeoDraft, draft_id).status == "draft"
     a.sync()
-    draft = next(r for r in rows(x) if r.kind == "draft")
+    assert not any(r.kind=='draft' for r in rows(x))
+    draft = legacy_card(x,'draft',draft_id)
     a.deliver_one()
     decision(x, draft.id)
     with x["db"].session() as db:
@@ -457,8 +467,7 @@ def test_changed_draft_or_evidence_never_approves(bot, writing, change):
     activate(bot)
     ident = authorize_draft(x)
     w.run(ident)
-    a.sync()
-    r = next(r for r in rows(x) if r.kind == "draft")
+    r = legacy_card(x,'draft',ident)
     a.deliver_one()
     for p in range(len(r.pages)):
         click(x, r.id, "p" + str(p))
@@ -509,8 +518,7 @@ def test_failed_business_action_rolls_back_both_decision_and_object(
     with x["db"].session() as db:
         db.get(OwnSeoBrief, x["brief"]).status = "prepared"
         db.commit()
-    a.sync()
-    r = next(r for r in rows(x) if r.kind == "brief")
+    r = legacy_card(x,'brief',x['brief'])
     a.deliver_one()
     for page in range(len(r.pages)):
         click(x, r.id, "p" + str(page))

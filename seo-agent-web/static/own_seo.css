@@ -20,5 +20,9 @@
 .own-seo pre {overflow:auto;max-height:32rem;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;border:1px solid var(--border);border-radius:10px;}
 .own-seo summary {min-height:44px;cursor:pointer;padding-block:12px;}
 .own-seo .own-discard {margin-top:16px;}
+.own-seo [id^="draft-"],.own-seo [id^="publication-"],.own-seo [id^="brief-"] {scroll-margin-top:100px;}
+.own-seo .own-steps {margin-block:20px;}
+.own-seo .own-steps [aria-current="step"] {border-color:var(--accent,#7fba98);background:rgba(127,186,152,.12);font-weight:700;}
+.own-seo .own-update:not([hidden]) {padding:16px;border:1px solid var(--accent,#7fba98);border-radius:12px;}
 .own-seo :focus-visible {outline:3px solid var(--accent,#7fba98);outline-offset:4px;}
 @media(max-width:540px){.own-seo .own-actions>* {width:100%;}.own-seo form>button {width:100%;}.own-seo .btn {display:inline-flex;justify-content:center;}}

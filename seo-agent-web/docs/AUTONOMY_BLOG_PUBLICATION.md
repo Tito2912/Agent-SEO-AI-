@@ -1,6 +1,35 @@
 # Publication du blog propre à Noyaru
 
-## Bilan avant ce lot
+## Parcours courant depuis le 14 novembre 2026
+
+Les nouvelles propositions utilisent **deux décisions Telegram au total** :
+
+1. Valider le sujet et autoriser une rédaction IA bornée avec son coût habituel.
+   Le brief est relu dans cette même transaction. Le texte reste privé ; une
+   proposition de publication se prépare ensuite en lecture seule.
+2. Relire l’article et ses sources, puis autoriser sa préparation GitHub et sa
+   publication exacte après réussite des contrôles. Cette décision inclut la
+   relecture enregistrée, la création de PR en brouillon, la CI, la fusion et
+   l’observation du déploiement. Aucun nouvel appel IA.
+
+Un changement de base, de contenu, de sources ou d’accès arrête la progression.
+Une nouvelle décision est nécessaire après actualisation de la proposition. Les
+refus et expirations restent effectifs ; un résultat incertain est réconcilié sans
+répéter une écriture. Les limites de lecture/écriture et la protection de branche
+restent applicables. Le suivi des nouvelles opérations est relevé environ chaque
+minute ; consulter une page ne déclenche ni appel IA ni écriture GitHub.
+
+**Compatibilité :** les opérations antérieures sans `proposal.flow=two_decisions`
+conservent leurs accords distincts de préparation et de publication. Aucun mandat
+ancien n’est élargi. Les anciennes cartes de rédaction en attente dont la version
+ne correspond plus deviennent caduques ; les opérations déjà autorisées restent
+bornées à leur effet d’origine. Aucune migration de base ni action en production
+n’est nécessaire pour activer ce comportement sur les prochaines propositions.
+
+Le bilan écran par écran et les preuves locales sont dans
+[ux-own-blog-journey](ux-own-blog-journey/README.md).
+
+## Historique : bilan avant le lot initial
 
 | Écran / étape | Existant examiné dans le code | Conséquence | Évolution (P1) |
 | --- | --- | --- | --- |
@@ -12,7 +41,7 @@
 Ce bilan provient du code, pas d'une nouvelle recette en production. Les écrans système
 exigent le compte propriétaire. Aucun article réel n'est créé par les tests de ce lot.
 
-## Parcours cible et règles
+## Historique : parcours initial et règles
 
 1. Relire les affirmations et les sources du brouillon privé.
 2. Choisir le français et, facultativement, une version anglaise relue du même sujet.
