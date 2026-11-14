@@ -19,6 +19,7 @@ import os
 import re
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
 
 WEB_ROOT = Path(__file__).resolve().parents[1]
@@ -90,11 +91,22 @@ def test_une_valeur_INCONNUE_n_est_pas_inventee_et_bloque_la_publication(monkeyp
 
 
 def test_le_capital_social_est_publie_dans_les_deux_langues() -> None:
-    assert "<dt>Capital social</dt><dd>10\u00a0000\u00a0€</dd>" in _page()
-    assert "<dt>Share Capital</dt><dd>€10,000</dd>" in _page("/en/mentions-legales")
-    assert "au capital de 10\u00a0000\u00a0€" in _page("/terms")
-    assert "with a share capital of €10,000" in _page("/en/terms")
+    """Celui des statuts : 1 €. Le site a publié 10 000 € du 21/10 au 14/11/2026 : la correction,
+    confirmée par le propriétaire le 24/10 (PR #58), n'avait jamais été fusionnée."""
+    assert "<dt>Capital social</dt><dd>1\u00a0€</dd>" in _page()
+    assert "<dt>Share Capital</dt><dd>€1</dd>" in _page("/en/mentions-legales")
+    assert "au capital de 1\u00a0€." in _page("/terms")
+    assert "with a share capital of €1." in _page("/en/terms")
+    for chemin in ("/mentions-legales", "/en/mentions-legales", "/terms", "/en/terms"):
+        page = _page(chemin)
+        assert "10\u00a0000\u00a0€" not in page and "€10,000" not in page, chemin
     assert "share_capital" not in m.legal.missing()
+
+
+def test_les_pages_qui_portent_le_capital_sont_datees_de_sa_CORRECTION() -> None:
+    """Une page dont le texte change porte la date de sa nouvelle version (backend/legal.py)."""
+    assert m.legal.UPDATED["legal_notice"] >= date(2026, 11, 14)
+    assert m.legal.UPDATED["terms"] >= date(2026, 11, 14)
 
 
 def test_l_hebergeur_est_celui_que_Render_declare() -> None:

@@ -46,8 +46,8 @@ revanche le cookie de langue `noyaru_lang`, qui n'était pas mentionné.
 
 ## Mentions légales (`/mentions-legales`, `/en/mentions-legales`)
 
-- Une ligne par mention : dénomination sociale, forme juridique, capital social (10 000 €, donné
-  par le propriétaire le 21/10/2026), siège social, immatriculation, TVA intracommunautaire, téléphone, e-mail, directeur de la
+- Une ligne par mention : dénomination sociale, forme juridique, capital social (1 €, celui des
+  statuts ; le 10 000 € publié du 21/10 au 14/11/2026 était faux, voir plus bas), siège social, immatriculation, TVA intracommunautaire, téléphone, e-mail, directeur de la
   publication, hébergeur. Valeurs reprises de la version en ligne du 20/10/2026. (3.1, 3.2)
 - Traduction anglaise avec la terminologie de l'audit (Website Publisher, Registered Office,
   Company Registration Number, EU VAT Identification Number, Publication Director, Hosting
@@ -172,6 +172,15 @@ les illustrations, et remplit les garanties de transfert à partir du registre D
   - annexe IV : Sentry peut traiter les données hors de l'Union (article 6.1 de son contrat) ;
     l'API PageSpeed de Google sort du tableau des sous-traitants ultérieurs, ses conditions la plaçant
     entre responsables du traitement.
+
+## Capital social (14 novembre 2026)
+
+- **Mentions légales et CGU (article 1), en français et en anglais** : le capital social est de **1 €**,
+  celui des statuts du 30/10/2024, confirmé par le propriétaire le 24/10/2026. Les pages affichaient
+  10 000 € depuis le 21/10/2026 : la correction préparée le 24/10 (PR #58) n'avait jamais été
+  fusionnée. Date des deux pages : 14 novembre 2026.
+- Le pied de page des factures Stripe est un réglage du compte Stripe, hors du code : il est à
+  corriger dans Stripe par le propriétaire.
 
 ## Points en attente
 

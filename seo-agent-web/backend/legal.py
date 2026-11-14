@@ -18,9 +18,10 @@ from typing import Any
 PUBLISHER: dict[str, str | int | None] = {
     "name": "E-Com Shop",
     "form": "SASU",
-    # En euros, donné par le propriétaire le 21/10/2026. Écrit dans la langue de la page par
-    # share_capital().
-    "share_capital": 10_000,
+    # En euros : celui des statuts du 30/10/2024, confirmé par le propriétaire le 24/10/2026. Le
+    # 10 000 € publié du 21/10 au 14/11/2026 était faux (sa correction, la PR #58, n'avait jamais
+    # été fusionnée). Écrit dans la langue de la page par share_capital().
+    "share_capital": 1,
     "address": "60 rue François 1er, 75008 Paris, France",
     "registration": "934 934 308 R.C.S. Paris",
     "vat_number": "FR18934934308",
@@ -51,7 +52,8 @@ UPDATED: dict[str, date] = {
     # confié, enregistrement après validation) : ils décomptaient déjà depuis le 02/11.
     # 04/11/2026 : Wix puis Webflow connectés (correction décomptée, accès confié : clé API, jeton
     # de site, enregistrement après validation) ; la confidentialité les nomme parmi les prestataires.
-    "terms": date(2026, 11, 4),
+    # 14/11/2026 : article 1, capital social de 1 € (celui des statuts) au lieu de 10 000 €.
+    "terms": date(2026, 11, 14),
     # 02/11/2026 : Telegram (notifications du proprietaire) et Google Analytics (mesure d'audience
     # du site public, apres consentement), chacun nomme quand il est configure.
     # 05/11/2026 : Cloudflare Turnstile (captcha du formulaire d'inscription), nomme quand l'une de
@@ -61,7 +63,8 @@ UPDATED: dict[str, date] = {
     # description) ; il n'etait presente que comme le secours d'Anthropic. Le meme jour, Sentry :
     # stocke en Allemagne, traitement possible aux Etats-Unis (article 6.1 de son contrat).
     "privacy": date(2026, 11, 12),
-    "legal_notice": date(2026, 10, 21),
+    # 14/11/2026 : capital social de 1 € (celui des statuts) au lieu de 10 000 €.
+    "legal_notice": date(2026, 11, 14),
 }
 
 # Version de l'avertissement montré avant d'activer une fusion ou une publication automatique
@@ -93,7 +96,7 @@ def identity() -> str:
 
 
 def share_capital(lang: str) -> str | None:
-    """Le capital social, écrit dans la langue de la page : « 10 000 € », "€10,000"."""
+    """Le capital social, écrit dans la langue de la page : « 1 € », "€1" ; « 10 000 € », "€10,000"."""
     amount = PUBLISHER["share_capital"]
     if not amount:
         return None
