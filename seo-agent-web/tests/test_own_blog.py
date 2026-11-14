@@ -594,6 +594,37 @@ def test_content_is_valid_catalog_markdown_with_literal_prose_and_fixed_sources(
     assert c.prose("Noyaru *texte* <x>") == "{{app_name}} \\*texte\\* &lt;x&gt;"
 
 
+@pytest.mark.parametrize('lang,text', [
+    ('fr', 'L\'audit compare "avant" et "après" : clics & citations, avec *prudence* et des limites explicites.'),
+    ('en', 'An audit doesn\'t prove "ranking gains": clicks & citations require *careful* interpretation over time.'),
+], ids=['fr-quotes', 'en-quotes'])
+def test_public_article_keeps_literal_quotes_and_markup_inert(blog, tmp_path, lang, text):
+    x=blog
+    with x['db'].session() as db:
+        draft=db.get(OwnSeoDraft,x['draft'])
+        sources=copy.deepcopy(draft.bundle['sources'])
+        if lang=='en':
+            for source in sources:
+                if source['kind']=='product':
+                    source['url']=source['url'].replace('/docs/','/en/docs/')
+        draft.bundle={**draft.bundle,'brief':{**draft.bundle['brief'],'lang':lang},'sources':sources}
+        content=copy.deepcopy(draft.content);content['intro']['text']=text
+        draft.content=content
+        before=copy.deepcopy(draft.content)
+        file=c.article(draft,content['slug'],NOW.date().isoformat())
+        assert draft.content==before
+    assert ('L\'audit' if lang=='fr' else 'doesn\'t') in file['text']
+    assert ('"avant"' if lang=='fr' else '"ranking gains"') in file['text']
+    path=tmp_path/'article.md';path.write_text(file['text'],encoding='utf-8')
+    page=m.content_library._load_page(path,collection='blog')
+    parsed=BeautifulSoup(page['body_html'],'html.parser')
+    assert parsed.select_one('p').get_text().startswith(text+' ')
+    assert '&#x27;' not in parsed.get_text() and '&quot;' not in parsed.get_text()
+    assert not parsed.select('em,strong,script')
+    assert all(a['href'].startswith(('#reference-','https://developers.google.com/','https://blogs.bing.com/','https://noyaru.com/'))
+        for a in parsed.select('a[href]'))
+
+
 def test_owner_only_page_and_csrf(blog):
     x = blog
     assert client(user(x["db"])).get(b.PATH).status_code == 403

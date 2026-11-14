@@ -251,6 +251,28 @@ def test_reviewer_confirms_exact_current_version_and_export_keeps_evidence(writi
     assert client(x['owner']).get(w.PATH+'/'+draft+'/download').status_code==200
 
 
+@pytest.mark.parametrize('lang,text', [
+    ('fr', 'L\'audit compare "avant" et "après" : clics & citations, avec *prudence* et des limites explicites.'),
+    ('en', 'An audit doesn\'t prove "ranking gains": clicks & citations require *careful* interpretation over time.'),
+], ids=['fr-quotes', 'en-quotes'])
+def test_export_keeps_readable_literal_quotes_after_markdown_rendering(lang, text):
+    content=output();content['intro']['text']=text
+    source_ids=['product_lire-le-rapport','product_verifier-une-correction','google_essentials']
+    sources=[{'id':key,'title':'L\'audit "SEO" & ses limites','url':'https://noyaru.com/docs/lire-le-rapport',
+        'checked_at':'2026-11-14','fingerprint':'f'*64} for key in source_ids]
+    draft=SimpleNamespace(bundle={'brief':{'lang':lang},'sources':sources},content=content,
+        created_at=NOW,status='reviewed')
+    before=json.dumps(content,ensure_ascii=False,sort_keys=True)
+    exported=w.export(draft)
+    assert 'L\'audit "SEO"' in exported
+    rendered=BeautifulSoup(m.content_library._markdown_instance().convert(exported),'html.parser')
+    assert text in rendered.get_text(' ',strip=True)
+    assert 'L\'audit "SEO" & ses limites' in rendered.get_text(' ',strip=True)
+    assert '&#x27;' not in rendered.get_text() and '&quot;' not in rendered.get_text()
+    assert not rendered.select('em,strong,script')
+    assert json.dumps(content,ensure_ascii=False,sort_keys=True)==before
+
+
 @pytest.mark.parametrize('lang',['fr','en'])
 def test_native_forms_role_csrf_review_and_download(writing,lang):
     x=writing;browser=client(x['owner']);url=w.PATH+'?brief='+x['brief']

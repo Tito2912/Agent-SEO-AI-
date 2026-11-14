@@ -1,0 +1,102 @@
+[
+  {
+    "lang": "fr",
+    "width": 1440,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  },
+  {
+    "lang": "fr",
+    "width": 1024,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  },
+  {
+    "lang": "fr",
+    "width": 768,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  },
+  {
+    "lang": "fr",
+    "width": 390,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  },
+  {
+    "lang": "fr",
+    "width": 360,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  },
+  {
+    "lang": "en",
+    "width": 1024,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  },
+  {
+    "lang": "en",
+    "width": 768,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  },
+  {
+    "lang": "en",
+    "width": 390,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  },
+  {
+    "lang": "en",
+    "width": 360,
+    "literal_quotes": true,
+    "rendered_text_exact": true,
+    "markup_inert": true,
+    "overflow": false,
+    "page_errors": 0,
+    "network": "blocked"
+  }
+]

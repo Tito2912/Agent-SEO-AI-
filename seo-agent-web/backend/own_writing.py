@@ -260,7 +260,7 @@ def cancel(owner_id,draft_id):
 def export(row):
     en=row.bundle['brief']['lang']=='en';c=row.content
     def esc(text):
-        text=html.escape(text)
+        text=html.escape(text,quote=False)
         return re.sub(r'([\\`*_[\]#])',r'\\\1',text)
     sources={s['id']:s for s in row.bundle['sources']}
     def paragraph(p):return esc(p['text'])+' '+''.join('['+str(list(sources).index(k)+1)+']' for k in p['sources'])
