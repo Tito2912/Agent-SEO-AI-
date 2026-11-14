@@ -62,7 +62,9 @@ UPDATED: dict[str, date] = {
     # 12/11/2026 : OpenAI dessine aussi les illustrations d'articles (il n'en recoit que la
     # description) ; il n'etait presente que comme le secours d'Anthropic. Le meme jour, Sentry :
     # stocke en Allemagne, traitement possible aux Etats-Unis (article 6.1 de son contrat).
-    "privacy": date(2026, 11, 12),
+    # 14/11/2026 : declaration « Limited Use » des donnees Google (Gmail du SAV), exigee par Google
+    # pour valider l'acces Gmail, avec sa phrase anglaise mot pour mot sur les deux pages.
+    "privacy": date(2026, 11, 14),
     # 14/11/2026 : capital social de 1 € (celui des statuts) au lieu de 10 000 €.
     "legal_notice": date(2026, 11, 14),
 }

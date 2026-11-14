@@ -182,6 +182,18 @@ les illustrations, et remplit les garanties de transfert à partir du registre D
 - Le pied de page des factures Stripe est un réglage du compte Stripe, hors du code : il est à
   corriger dans Stripe par le propriétaire.
 
+## Usage limité des données Google (14 novembre 2026)
+
+- **Politique de confidentialité, section 6, en français et en anglais**, texte validé par le
+  propriétaire : un paragraphe « Usage limité des données Google » suit celui du SAV. Il déclare
+  l'adhésion à la politique de Google sur les données des utilisateurs (Google API Services User
+  Data Policy), y compris ses exigences d'usage limité, comme Google l'exige pour valider l'accès
+  Gmail du SAV. La phrase anglaise demandée par Google figure mot pour mot sur les deux pages.
+- Engagements écrits, conformes au fonctionnement actuel : données Gmail utilisées seulement pour
+  le SAV ; ni vente, ni publicité, ni création, entraînement ou amélioration de modèles d'IA ;
+  transmission aux seuls prestataires nommés qui en ont besoin pour le SAV, l'hébergement ou les
+  sauvegardes. Date de la page : 14 novembre 2026.
+
 ## Points en attente
 
 Voir `LEGAL-VALIDATION-REQUIRED.md`. Les messages de l'application qui citaient encore « Comptes
