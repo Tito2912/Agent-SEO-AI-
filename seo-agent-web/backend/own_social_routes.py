@@ -32,7 +32,7 @@ def state_for(request, network, goal, audience):
         return s.plan(db, network=network, goal=goal, audience=audience, lang=i18n.current_lang())
 
 
-@router.get(s.PATH)
+@router.get('/settings/system/social')
 def page(request: Request, network: str = Query('instagram', max_length=20), goal: str = Query('discovery', max_length=20),
          audience: str = Query('freelance', max_length=20), topic: str = Query('', max_length=32)):
     m = s.own_seo.module()
@@ -49,7 +49,7 @@ def page(request: Request, network: str = Query('instagram', max_length=20), goa
     return render(request, state, selected, unavailable=unavailable)
 
 
-@router.get(s.PATH + '/{topic}/download')
+@router.get('/settings/system/social/{topic}/download')
 def download(request: Request, topic: str, network: str = Query('instagram', max_length=20),
              goal: str = Query('discovery', max_length=20), audience: str = Query('freelance', max_length=20),
              version: str = Query('', max_length=64)):
