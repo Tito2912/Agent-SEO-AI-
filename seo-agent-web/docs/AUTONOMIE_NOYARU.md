@@ -429,6 +429,18 @@ performances sociales n’est activé. Prochaines étapes : production/validatio
 médias, comptes et connecteurs, décisions Telegram puis observation des résultats.
 Détails, audit et validations : [SOCIAL_EDITORIAL_NOYARU.md](SOCIAL_EDITORIAL_NOYARU.md).
 
+Premier lot vidéo, même date : le sujet TikTok « comprendre le score » propose
+un storyboard puis un MP4 privé, composé de captures réelles de données fictives
+et d'une voix synthétique. Deux décisions Telegram : autoriser un appel vocal
+payant, puis relire le fichier exact. Aucun envoi sur un réseau social. Au plus
+deux tentatives vocales par 24 h glissantes, 2 048 jetons de sortie par appel ;
+ce n'est pas un plafond en euros et aucun quota SEO client n'est utilisé.
+Une voix sauvée permet la reprise du montage ; résultat fournisseur inconnu
+arrêté, sans nouvel appel automatique. Les autres pistes restent textuelles.
+Le lecteur est privé dans Noyaru, pas envoyé dans Telegram. La qualité vocale
+réelle reste à écouter lors du premier essai autorisé. Détails, limites et recette :
+[ux-social-media/README.md](ux-social-media/README.md).
+
 Les comptes n’existent pas encore selon Tony. Les connexions sont à choisir avec
 lui. Capacités officielles relues le 14 novembre 2026 :
 

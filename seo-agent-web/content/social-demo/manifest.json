@@ -1,0 +1,19 @@
+{
+  "captured": "2026-11-14",
+  "base": "4caec100",
+  "scope": "Real local Noyaru routes, fictional atelier.example project, no external requests",
+  "files": {
+    "en-explanation.png": "dd85dcadbfe3a60b10e78f46f5cbbcb3a46d51a5069b405634c656e59fdfbef8",
+    "en-issues.png": "61f5de74c09c661616d1ecd2bd17bd6805c64d277a94c8ec5ac10fa4a57704c2",
+    "en-score.png": "183407b8c199c6d6b673e2f3450b561c547c57b17de53b465a3d28be51d4e453",
+    "fr-explanation.png": "78188067e811fdd9df184ab1d74fc849a925448786835168bf8c8f2470ae4b63",
+    "fr-issues.png": "c8ac5ce757b36f0d730c762974580672a3fd334fb80921c552bc5ea0a8135c24",
+    "fr-score.png": "494d283308f5e062610e7e188626053a1b6aac1e22423d9ec579fb2aee38f75d"
+  },
+  "sources": {
+    "templates/project_overview.html": "fd62a3eccc7d6c45bb30bbaad904f2140fbd4fbaa28fec04575705425edab87b",
+    "templates/layout.html": "23a47bade16652db5bc57fd80ecfe373d776809f8f23a2758e43304163fe538d",
+    "static/project_overview.css": "d79217fd5530727f1c586d769b1e0dca3e6b2bdebaeae374e021257e404e6ad5",
+    "static/styles.css": "0b858eac30e0c25ca47b996b1b026948e43079fdf13b5af2a8edbc7c97454bb8"
+  }
+}

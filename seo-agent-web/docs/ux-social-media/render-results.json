@@ -1,0 +1,32 @@
+[
+  {
+    "sha256": "e56ab588a743970c2e81f24cc29ae4b17ce679cd6ad8bdaa990352088f14a517",
+    "bytes": 450165,
+    "duration": 30.0,
+    "width": 720,
+    "height": 1280,
+    "captions": [
+      "Le score de santé de Noyaru est un indicateur technique. Même un score élevé ne prouve pas une première place sur Google.",
+      "Ouvrez À propos du score. Cette explication précise ce qui est compté, les pages concernées et les limites du bilan.",
+      "Regardez ensuite Vos prochaines actions. Choisissez un problème et la page concernée. Après la modification, faites vérifier le résultat sur le site publié."
+    ],
+    "lang": "fr",
+    "full_decode": true,
+    "audio": "synthetic silence, no speech quality claim"
+  },
+  {
+    "sha256": "2a615b1c35535f8ffa51626b22f550177f6f8333b55c02f1c3b2acb365db438b",
+    "bytes": 408335,
+    "duration": 30.0,
+    "width": 720,
+    "height": 1280,
+    "captions": [
+      "The Noyaru health score is a technical indicator. Even a high score does not prove a first position on Google.",
+      "Open About the score. This explanation tells you what is counted, which pages are covered and the limits of the report.",
+      "Then look at Your next actions. Choose an issue and the affected page. After editing, verify the result on the published website."
+    ],
+    "lang": "en",
+    "full_decode": true,
+    "audio": "synthetic silence, no speech quality claim"
+  }
+]

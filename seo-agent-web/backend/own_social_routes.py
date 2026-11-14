@@ -12,6 +12,11 @@ except ImportError:
     from own_social_copy import strings
 
 router = APIRouter()
+try:
+    from .own_social_media_routes import router as media_router
+except ImportError:
+    from own_social_media_routes import router as media_router
+router.include_router(media_router)
 HEADERS = {'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff'}
 
 

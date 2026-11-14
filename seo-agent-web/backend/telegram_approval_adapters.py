@@ -62,6 +62,12 @@ def document(
 
 def inspect(db, owner, kind, target, lang):
     s.actor(db, owner)
+    if kind in {'social_render', 'social_review'}:
+        try:
+            from . import own_social_media
+        except ImportError:
+            import own_social_media
+        return own_social_media.approval_document(db, owner, target, kind, lang)
     if kind in {'support_write','support_send','support_review'}:
         try:
             from . import own_support
@@ -239,6 +245,11 @@ def inspect(db, owner, kind, target, lang):
 def candidates(db, owner, lang):
     # Limits bound a sweep, not authority. Older rows are still checked on every click.
     try:
+        from . import own_social_media
+    except ImportError:
+        import own_social_media
+    yield from own_social_media.candidates(db, owner)
+    try:
         from .models import OwnBlogPublication
     except ImportError:
         from models import OwnBlogPublication
@@ -276,6 +287,12 @@ def candidates(db, owner, lang):
 
 def apply(db, owner, kind, target, approve, key, version):
     actor = s.actor(db, owner)
+    if kind in {'social_render', 'social_review'}:
+        try:
+            from . import own_social_media
+        except ImportError:
+            import own_social_media
+        return own_social_media.decide(db, owner, target, kind, approve, version)
     if kind in {'support_write','support_send','support_review'}:
         try:
             from . import own_support

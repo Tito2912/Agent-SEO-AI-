@@ -1,0 +1,579 @@
+{
+  "scope": "Local fictional data, simulated Telegram, real MP4 with synthetic silence; no paid voice or production access",
+  "observations": [
+    {
+      "lang": "fr",
+      "state": "storyboard",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "storyboard",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "storyboard",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "storyboard",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "proposal",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "proposal",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "proposal",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "proposal",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "queued",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "queued",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "queued",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "queued",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "running",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "running",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "running",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "running",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "review",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "review",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "review",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "review",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "approved",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "approved",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "approved",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "approved",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "stopped",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "stopped",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "stopped",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "stopped",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "uncertain",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "uncertain",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "uncertain",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "uncertain",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "cancelled",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "cancelled",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "cancelled",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "cancelled",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "expired",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "expired",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "expired",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "expired",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "fr",
+      "state": "no-javascript",
+      "width": 360,
+      "native_controls": true
+    },
+    {
+      "lang": "en",
+      "state": "storyboard",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "storyboard",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "storyboard",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "storyboard",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "proposal",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "proposal",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "proposal",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "proposal",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "queued",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "queued",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "queued",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "queued",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "running",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "running",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "running",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "running",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "review",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "review",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "review",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "review",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "approved",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "approved",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "approved",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "approved",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "stopped",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "stopped",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "stopped",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "stopped",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "uncertain",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "uncertain",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "uncertain",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "uncertain",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "cancelled",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "cancelled",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "cancelled",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "cancelled",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "expired",
+      "width": 1440,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "expired",
+      "width": 768,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "expired",
+      "width": 390,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "expired",
+      "width": 360,
+      "status": 200,
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "state": "no-javascript",
+      "width": 360,
+      "native_controls": true
+    }
+  ],
+  "javascript_errors": [],
+  "external_requests": []
+}

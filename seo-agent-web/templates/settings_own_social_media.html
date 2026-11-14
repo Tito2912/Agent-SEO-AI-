@@ -1,0 +1,23 @@
+{% extends 'layout.html' %}
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
+{% block title %}{{ copy.title }} - {{ app_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/own_social.css?v=2" /><script src="/static/own_social_media.js?v=1" defer></script>{% endblock %}
+{% block crumbs %}<a href="/settings/system/social?lang={{ lang }}">{{ copy.studio }}</a><span class="crumb-sep">/</span><span>{{ copy.title }}</span>{% endblock %}
+{% block content %}<div class="social-studio">
+<header class="page-header"><p class="social-eyebrow">TikTok · 9:16</p><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
+<nav class="social-actions"><a class="btn" href="/settings/system/social?network=tiktok&amp;topic=score&amp;lang={{ lang }}&amp;goal={{ packet.goal if packet else 'discovery' }}&amp;audience={{ packet.audience if packet else 'freelance' }}">{{ copy.studio }}</a><a class="btn" href="/settings/system/telegram/approvals">{{ copy.bot }}</a><a class="btn" href="{{ base }}{% if item %}?media={{ item.id }}&amp;lang={{ lang }}{% else %}?lang={{ lang }}&amp;goal={{ packet.goal if packet else 'discovery' }}&amp;audience={{ packet.audience if packet else 'freelance' }}{% endif %}">{{ copy.reload }}</a></nav>
+{% if unavailable %}<p class="alert error" role="alert">{{ copy.unavailable }}</p>{% else %}
+{% if error %}<p class="alert warning" role="alert">{{ error }}</p>{% endif %}
+{% if item %}<section class="card" {% if item.state in ['proposal','queued','running','review'] %}data-media-watch="{{ base }}/{{ item.id }}/status" data-state="{{ item.state }}" data-error="{{ item.error_code or '' }}"{% endif %}>
+<p class="social-eyebrow">{{ copy.pipeline }}</p><h2>{{ item.packet.title }}</h2><p role="status">{{ copy.states.get(item.state, item.state) }}</p>
+{% if item.error_code %}<p class="alert warning">{{ copy.errors.get(item.error_code, copy.errors.changed) }}</p>{% endif %}
+{% if item.result.video %}<video class="social-video" controls preload="metadata" playsinline aria-label="{{ item.packet.title }}" src="{{ base }}/{{ item.id }}/video"></video><p>{{ copy.ai }}</p><p>{{ copy.review }}</p><div class="social-actions"><a class="btn" href="{{ base }}/{{ item.id }}/video" download="noyaru-demo.mp4">{{ copy.download }}</a>{% if item.state == 'review' and not blocked %}<a class="btn primary" href="/settings/system/telegram/approvals">{{ copy.bot }}</a>{% endif %}</div><h3>{{ copy.caption }}</h3><p>{{ item.packet.caption }}</p><p>{{ item.packet.cta }}</p>
+{% elif item.state in ['proposal','queued','running'] %}<p>{{ copy.waiting }}</p><a class="btn primary" href="/settings/system/telegram/approvals">{{ copy.bot }}</a>{% endif %}
+{% if item.state in ['cancelled','stopped','uncertain'] or blocked %}<a class="btn" href="{{ base }}?lang={{ lang }}&amp;goal={{ item.packet.goal }}&amp;audience={{ item.packet.audience }}">{{ copy.fresh }}</a>{% endif %}
+{% if item.state != 'cancelled' %}<details><summary>{{ copy.cancel }}</summary><p>{{ copy.cancel_info }}</p><form method="post" action="{{ base }}/{{ item.id }}/cancel">{{ csrf() }}<button class="btn" type="submit">{{ copy.cancel }}</button></form></details>{% endif %}</section>
+{% elif packet %}<section class="card"><h2>{{ copy.preview }}</h2><p>{{ copy.scope }}</p>
+<div class="social-frames">{% for scene in packet.scenes %}<figure><img src="{{ base }}/frame/{{ loop.index0 }}?lang={{ lang }}&amp;goal={{ packet.goal }}&amp;audience={{ packet.audience }}" alt="{{ scene.heading }}" width="720" height="1280" /><figcaption>{{ loop.index }} · {{ scene.heading }}</figcaption></figure>{% endfor %}</div>
+<details><summary>{{ copy.voice }}</summary>{% for scene in packet.scenes %}<p>{{ scene.text }}</p>{% endfor %}</details><p>{{ copy.limit }}</p>
+{% if not blocked %}<form method="post" action="{{ base }}/prepare?lang={{ lang }}">{{ csrf() }}<input type="hidden" name="key" value="{{ key }}" /><input type="hidden" name="goal" value="{{ packet.goal }}" /><input type="hidden" name="audience" value="{{ packet.audience }}" /><label><input type="checkbox" name="confirm" value="true" required /> {{ copy.consent }}</label><button class="btn primary" type="submit">{{ copy.request }}</button></form>{% endif %}</section>{% endif %}
+<section class="card"><h2>{{ copy.recent }}</h2>{% for row in recent %}<p><a href="{{ base }}?media={{ row.id }}&amp;lang={{ lang }}">{{ copy.open }} · {{ copy.states.get(row.state, row.state) }}</a></p>{% else %}<p>{{ copy.empty }}</p>{% endfor %}</section>
+{% endif %}</div>{% endblock %}
