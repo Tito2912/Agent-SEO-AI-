@@ -1,26 +1,32 @@
 {% extends "layout.html" %}
 {% block title %}{{ copy.title }} - {{ app_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/own_seo.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/own_seo.css?v=3" /><script src="/static/own_blog_journey.js?v=1" defer></script>{% endblock %}
 {% block crumbs %}<a href="/settings/system/own-seo">{{ copy.back }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ copy.title }}</span>{% endblock %}
 {% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
 {% macro paragraph(p,item) %}<p>{{ p.text }} {% for ref in p.sources %}<a href="#source-{{ item.row.id }}-{{ ref }}" title="{{ item.sources[ref].title }}">[{{ item.sources[ref].number }}]</a>{% endfor %}</p>{% endmacro %}
-{% block content %}<div class="own-seo">
+{% block content %}<div class="own-seo" data-journey-version="{{ journey_version }}" data-journey-watch="{{ 'yes' if watch else 'no' }}">
 <header class="page-header"><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
-<nav class="own-actions"><a class="btn" href="/settings/system/own-seo/publication">{{ copy.publication }}</a><a class="btn" href="/settings/system/own-seo">{{ copy.back }}</a><a class="btn" href="{{ base }}{% if selected %}?brief={{ selected.id }}{% endif %}">{{ copy.reload }}</a></nav>
+<nav class="own-actions own-steps" aria-label="{{ copy.title }}"><a class="btn" href="/settings/system/own-seo{% if selected %}#brief-{{ selected.id }}{% endif %}">{{ copy.journey_topic }}</a><span class="btn" aria-current="step">{{ copy.journey_article }}</span><a class="btn" href="/settings/system/own-seo/publication{% if active_publication %}?publication={{ active_publication.id }}#publication-{{ active_publication.id }}{% elif existing %}?draft={{ existing.id }}{% endif %}">{{ copy.journey_publish }}</a></nav>
+<p class="own-update" hidden><a class="btn" href="{{ base }}{% if selected %}?brief={{ selected.id }}{% endif %}">{{ copy.updates }}</a></p>
+{% if active_publication %}<p><a class="btn primary" href="/settings/system/own-seo/publication?publication={{ active_publication.id }}#publication-{{ active_publication.id }}">{{ copy.track_publication }}</a></p>{% endif %}
+<nav class="own-actions"><a class="btn" href="{{ base }}{% if selected %}?brief={{ selected.id }}{% endif %}">{{ copy.reload }}</a></nav>
 {% if unavailable %}<p class="alert error" role="alert">{{ copy.errors.unavailable }}</p>{% else %}
-<section class="card"><p>{{ copy.scope }}</p><p>{{ copy.limits }}</p><p>{{ copy.used }} : {{ used }}/2</p></section>
+<section class="card"><p>{{ copy.flow }}</p><details><summary>{{ copy.cost }}</summary><p>{{ copy.scope }}</p><p>{{ copy.limits }}</p><p>{{ copy.used }} : {{ used }}/2</p></details></section>
 {% if err %}<p class="alert error" role="alert">{{ err }}</p>{% endif %}
-<section class="card"><h2>{{ copy.choose }}</h2>{% for row in eligible %}<p><a href="{{ base }}?brief={{ row.id }}">{{ row.title }} · {{ row.lang|upper }}</a></p>{% else %}<p>{{ copy.none }}</p>{% endfor %}</section>
+<details class="card" {{ 'open' if not selected else '' }}><summary>{{ copy.choose }}</summary>{% for row in eligible %}<p><a href="{{ base }}?brief={{ row.id }}">{{ row.title }} · {{ row.lang|upper }}</a></p>{% else %}<p>{{ copy.none }}</p>{% endfor %}</details>
 {% if selected %}<section class="card"><h2>{{ selected.title }}</h2><p>{{ copy.language }} : {{ selected.lang|upper }}</p>
 {% if problem %}<p role="status">{{ problem }}</p>{% endif %}
-{% if dossier %}<h3>{{ copy.dossier }}</h3><p>{{ copy.source_info }}</p>
+{% if dossier %}<details {{ 'open' if not existing else '' }}><summary>{{ copy.dossier }}</summary><p>{{ copy.source_info }}</p>
 {% for source in dossier.sources %}<details><summary>{{ source.title }}</summary><p>{{ source.text }}</p><p><a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.url }}</a> · {{ source.checked_at }}</p></details>{% endfor %}
 <details><summary>{{ copy.catalog }}</summary>{% for slug,title in dossier.catalog %}<p>{{ title }}</p>{% endfor %}{% if dossier.catalog_truncated %}<p>{{ copy.catalog_limit }}</p>{% endif %}</details>
-{% if existing %}<p>{{ copy.existing }}</p><a class="btn primary" href="#draft-{{ existing.id }}">{{ copy.find }}</a>{% elif used < 2 %}<form method="post" action="{{ base }}/authorize">{{ csrf() }}<input type="hidden" name="brief" value="{{ selected.id }}" /><input type="hidden" name="input_hash" value="{{ input_hash }}" /><input type="hidden" name="key" value="{{ key }}" />
-<label class="own-check"><input type="checkbox" name="confirm" value="true" required /><span>{{ copy.consent }}</span></label><button class="btn primary" type="submit">{{ copy.authorize }}</button></form>{% endif %}
+</details>{% if existing %}<p>{{ copy.existing }}</p><a class="btn primary" href="#draft-{{ existing.id }}">{{ copy.find }}</a>{% elif used < 2 %}<p role="status">{{ copy.waiting }}</p><p><a class="btn primary" href="/settings/system/telegram/approvals">{{ copy.telegram }}</a></p><details><summary>{{ copy.authorize }}</summary><form method="post" action="{{ base }}/authorize">{{ csrf() }}<input type="hidden" name="brief" value="{{ selected.id }}" /><input type="hidden" name="input_hash" value="{{ input_hash }}" /><input type="hidden" name="key" value="{{ key }}" />
+<label class="own-check"><input type="checkbox" name="confirm" value="true" required /><span>{{ copy.consent }}</span></label><button class="btn primary" type="submit">{{ copy.authorize }}</button></form></details>{% endif %}
 {% endif %}</section>{% endif %}
 {% if items %}<h2>{{ copy.history }}</h2>{% endif %}
-{% for item in items %}{% set row=item.row %}<article class="card" id="draft-{{ row.id }}" data-writing="{{ row.status }}"><p>{{ copy.statuses[row.status] }} · {{ row.bundle.brief.lang|upper }}</p><h2>{{ row.bundle.brief.title }}</h2><p>{{ copy.prepared }} : {{ row.created_at }}</p>
+{% for item in items %}{% set row=item.row %}<article class="card" id="draft-{{ row.id }}" data-writing="{{ row.status }}"><p role="status">{{ copy.statuses[row.status] }} · {{ row.bundle.brief.lang|upper }}</p><h2>{{ row.bundle.brief.title }}</h2><p>{{ copy.prepared }} : {{ row.created_at }}</p>
+{% if item.publication %}<div class="own-actions"><a class="btn primary" href="/settings/system/own-seo/publication?publication={{ item.publication.id }}#publication-{{ item.publication.id }}">{{ copy.track_publication }}</a></div>
+{% elif row.status in ['draft','reviewed'] and item.current and row.bundle.brief.lang=='fr' %}<a class="btn primary" href="/settings/system/own-seo/publication?draft={{ row.id }}">{{ copy.next_publication }}</a>{% endif %}
+
 {% if not item.current %}<p class="alert warning" role="status">{{ copy.stale }}</p>{% endif %}
 {% if row.error_code %}<p role="status">{{ copy.errors.get(row.error_code,copy.errors.unavailable) }}</p>{% endif %}
 {% if row.status in ['queued','running'] %}<p role="status">{{ copy.pending }}</p><p>{{ copy.stop_info }}</p><form method="post" action="{{ base }}/{{ row.id }}/resume">{{ csrf() }}<button class="btn" type="submit">{{ copy.resume }}</button></form>{% endif %}
@@ -28,7 +34,6 @@
 {{ paragraph(row.content.intro,item) }}{% for section in row.content.sections %}<h3>{{ section.heading }}</h3>{% for p in section.paragraphs %}{{ paragraph(p,item) }}{% endfor %}{% endfor %}
 <h3>{{ copy.sources }}</h3>{% for ref in item.sources.values() %}<div id="source-{{ row.id }}-{{ ref.id }}"><p>[{{ ref.number }}] <a href="{{ ref.url }}" target="_blank" rel="noopener noreferrer">{{ ref.title }}</a> · {{ ref.checked_at }}</p><details><summary>{{ ref.title }}</summary><p>{{ ref.text }}</p></details></div>{% endfor %}
 <a class="btn" href="{{ base }}/{{ row.id }}/download">{{ copy.download }}</a>
-{% if row.status=='draft' and item.current %}<form method="post" action="{{ base }}/{{ row.id }}/review">{{ csrf() }}<input type="hidden" name="content_hash" value="{{ row.content_hash }}" /><label class="own-check"><input type="checkbox" name="confirm" value="true" required /><span>{{ copy.review_consent }}</span></label><button class="btn primary" type="submit">{{ copy.review }}</button></form>{% endif %}
 {% if row.status=='reviewed' %}<p role="status">{{ copy.reviewed }}</p>{% endif %}
 {% else %}{% if row.status not in ['queued','running'] %}<p>{{ copy.no_article }}</p>{% endif %}{% endif %}
 {% if row.status!='cancelled' %}<form class="own-discard" method="post" action="{{ base }}/{{ row.id }}/cancel">{{ csrf() }}<button class="btn" type="submit">{{ copy.cancel }}</button></form>{% endif %}

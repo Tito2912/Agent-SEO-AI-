@@ -33,10 +33,10 @@ def audit(db,row,action):
         meta={'brief_id':row.brief_id,'input_hash':row.input_hash,'status':row.status,'provider_calls':row.provider_calls}))
 
 
-def bundle(db,owner_id,brief_id):
+def bundle(db,owner_id,brief_id,*,allow_prepared=False):
     workspace,project,brief=seo.brief_for(db,owner_id,brief_id)
     if workspace.paused:raise ValueError('paused')
-    if brief.status!='reviewed' or brief.kind not in {'research','guide'}:raise ValueError('brief_required')
+    if brief.status not in ({'prepared','reviewed'} if allow_prepared else {'reviewed'}) or brief.kind not in {'research','guide'}:raise ValueError('brief_required')
     state=seo.view(db,owner_id,lang=brief.lang)
     if brief.candidate_key not in {c['key'] for c in state['candidates']}:raise ValueError('evidence_changed')
     sources=[]
@@ -84,10 +84,10 @@ def reserved(db,owner_id):
         and_(OwnSeoDraft.status.in_(ACTIVE),OwnSeoDraft.provider_started_at.is_(None),OwnSeoDraft.authorized_until>now())))) or 0
 
 
-def authorize_in_session(db,owner_id,brief_id,input_hash,key,confirm):
+def authorize_in_session(db,owner_id,brief_id,input_hash,key,confirm,*,article_journey=False):
     if not confirm:raise ValueError('confirm_required')
     if not re.fullmatch('[a-f0-9]{32}',key):raise ValueError('changed')
-    value,fingerprint=bundle(db,owner_id,brief_id)
+    value,fingerprint=bundle(db,owner_id,brief_id,allow_prepared=article_journey)
     if fingerprint!=input_hash:raise ValueError('evidence_changed')
     existing=db.scalar(select(OwnSeoDraft).where(OwnSeoDraft.owner_id==owner_id,OwnSeoDraft.authorization_key==key))
     if existing:
@@ -99,15 +99,18 @@ def authorize_in_session(db,owner_id,brief_id,input_hash,key,confirm):
     if reserved(db,owner_id)>=DAILY_CALLS:raise ValueError('budget')
     if not module()._ai_configured():raise ValueError('provider_missing')
     workspace,project,_=seo.brief_for(db,owner_id,brief_id)
+    if article_journey:
+        seo.review_in_session(db,owner_id,brief_id,workspace.token,confirm=True,status='reviewed')
+        value={**value,'article_journey':'two_decisions'}
     row=OwnSeoDraft(owner_id=owner_id,project_id=project.id,brief_id=brief_id,workspace_token=workspace.token,
         authorization_key=key,input_hash=input_hash,bundle=value,content={},status='queued',provider_calls=0,
         authorized_until=now()+timedelta(hours=24),created_at=now())
     db.add(row);db.flush();audit(db,row,'authorize');return row.id
 
 
-def authorize(owner_id,brief_id,input_hash,key,confirm):
+def authorize(owner_id,brief_id,input_hash,key,confirm,*,article_journey=False):
     with module().DB.session() as db:
-        seo.locked(db);result=authorize_in_session(db,owner_id,brief_id,input_hash,key,confirm)
+        seo.locked(db);result=authorize_in_session(db,owner_id,brief_id,input_hash,key,confirm,article_journey=article_journey)
         db.commit();return result
 
 
@@ -220,6 +223,31 @@ def run(draft_id):
         row.status=status;row.error_code=reason;row.content=content
         row.content_hash=seo.digest(content) if content else None;row.lease_token=None;row.lease_until=None
         audit(db,row,'completed');db.commit()
+    if status=='draft' and value.get('article_journey')=='two_decisions':
+        prepare_article(draft_id)
+
+
+def prepare_article(draft_id):
+    """Read-only proposal after writing. No GitHub write before final approval."""
+    try:
+        from . import own_blog
+    except ImportError:
+        import own_blog
+    try:
+        with module().DB.session() as db:
+            row=db.get(OwnSeoDraft,draft_id)
+            if (not row or row.status not in {'draft','reviewed'} or
+                    row.bundle.get('article_journey')!='two_decisions' or
+                    row.bundle['brief']['lang']!='fr'):
+                return
+            owner=row.owner_id
+        ident=own_blog.prepare(owner,draft_id,None,seo.digest(['article-proposal',draft_id])[:32],True,article_journey=True)
+        with module().DB.session() as db:
+            initial=db.get(own_blog.Publication,ident).state=='checking'
+        if initial:own_blog.refresh(owner,ident,automatic=True)
+    except Exception as exc:
+        # The draft is durable and can be resumed from the owner UI. Never retry AI.
+        module().logger.info('[own-writing] article proposal needs attention: %s',type(exc).__name__)
 
 
 def tick():

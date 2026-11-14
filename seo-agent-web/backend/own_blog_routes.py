@@ -34,28 +34,35 @@ def copy(lang):
 
     return dict(
         title=t("Publication du blog de Noyaru", "Noyaru blog publication"),
+        details=t("Détails de la publication", "Publication details"),
+        legacy=t("Cette ancienne opération conserve ses deux accords : créer la PR, puis publier.", "This existing operation keeps two approvals: create the PR, then publish."),
+        topic=t("1. Sujet", "1. Topic"), article=t("2. Article", "2. Article"), publication_step=t("3. Publication", "3. Publication"),
+        final_decision=t("Décision 2/2 : relire et publier", "Decision 2/2: review and publish"),
+        automatic=t("Le suivi continue automatiquement. Vous pouvez quitter cet écran.", "Tracking continues automatically. You can leave this page."),
+        source_draft=t("Relire l’article et ses sources", "Read the article and its sources"),
+        updates=t("Un nouvel état est disponible. Afficher la mise à jour", "A new status is available. Show update"),
         intro=t(
-            "Du brouillon relu à l’article publié, avec deux accords distincts dans Telegram.",
-            "From reviewed draft to published article, with two separate Telegram approvals.",
+            "Après le sujet et la rédaction, une dernière décision permet de relire et publier cet article.",
+            "After topic and writing approval, one final decision lets you review and publish this article.",
         ),
         scope=t(
             "Seuls de nouveaux articles du blog de Noyaru peuvent être ajoutés. Aucun site client ni nouvel appel IA.",
             "Only new Noyaru blog articles can be added. No client site or new AI request.",
         ),
         choose=t("Préparer une proposition", "Prepare a proposal"),
-        fr=t("Brouillon français relu", "Reviewed French draft"),
+        fr=t("Article français à publier", "French article to publish"),
         en=t(
-            "Version anglaise relue du même sujet (facultatif)",
-            "Reviewed English version of the same topic (optional)",
+            "Version anglaise du même sujet (facultatif)",
+            "English version of the same topic (optional)",
         ),
         none=t("Aucune version anglaise", "No English version"),
         empty=t(
-            "Aucun brouillon français relu et à jour. Commencez par la rédaction sourcée.",
-            "No current reviewed French draft. Start with sourced writing.",
+            "Aucun article français actuel à préparer. Retrouvez votre sujet dans Rédaction sourcée.",
+            "No current French article to prepare. Continue with your topic in Sourced writing.",
         ),
         consent=t(
-            "Préparer les fichiers exacts et vérifier GitHub en lecture seule. Si je choisis une version anglaise, j’ai vérifié sa correspondance avec le français.",
-            "Prepare the exact files and check GitHub read-only. If I select an English version, I have checked that it corresponds to the French version.",
+            "Préparer la proposition et vérifier GitHub en lecture seule. La décision Telegram permettra ensuite de relire l’article et d’autoriser sa publication. Si je choisis une version anglaise, elle couvre le même sujet.",
+            "Prepare the proposal and check GitHub read-only. The Telegram decision will then let me review the article and authorize publication. Any selected English version covers the same topic.",
         ),
         prepare=t("Examiner la proposition", "Review the proposal"),
         history=t("Suivi des publications", "Publication history"),
@@ -70,8 +77,8 @@ def copy(lang):
             "The next decision is sent to the enabled bot. Read every page and confirm your choice. You can reject; any existing PR is kept.",
         ),
         limits=t(
-            "La première validation autorise une PR en brouillon. La seconde autorise sa fusion et donc sa publication par le déploiement automatique. Chaque demande expire ; un changement du contenu ou des accès bloque l’exécution.",
-            "The first approval allows a draft PR. The second allows merging it and therefore publishing through automatic deployment. Each request expires; content or access changes block execution.",
+            "Nouvelles propositions : la décision finale couvre la relecture, la création de PR, les contrôles et la publication du contenu exact. Les anciennes opérations gardent leurs deux accords distincts. Un changement de base, de contenu ou d’accès exige une nouvelle décision.",
+            "New proposals: the final decision covers review, PR creation, checks and publication of the exact content. Existing operations keep their two separate approvals. A base, content or access change requires a fresh decision.",
         ),
         proof=t(
             "Publication technique observée. Cela ne prouve ni indexation, ni progression du référencement, ni visibilité dans les réponses IA.",
@@ -145,8 +152,8 @@ def copy(lang):
                 ),
                 (
                     "draft_required",
-                    "Le brouillon doit être relu, inchangé et fondé sur des sources toujours valides.",
-                    "The draft must be reviewed, unchanged and based on sources that remain valid.",
+                    "Le brouillon doit être inchangé et fondé sur des sources toujours valides ; la publication attend sa relecture.",
+                    "The draft must be unchanged and based on valid sources; publication requires review.",
                 ),
                 (
                     "translation_required",
@@ -224,25 +231,27 @@ def copy(lang):
 
 
 @router.get("/settings/system/own-seo/publication")
-def page(request: Request, publication: str = "", err: str = ""):
+def page(request: Request, publication: str = "", err: str = "", draft: str = ""):
     m = b.s.module()
     user = m._require_system_owner(request)
     strings = copy(i18n.current_lang())
     items = []
     eligible = []
+    briefs = {}
+    titles = {}
     unavailable = False
     try:
         with m.DB.session() as db:
-            for draft in db.scalars(
+            for candidate in db.scalars(
                 select(OwnSeoDraft)
                 .where(
-                    OwnSeoDraft.owner_id == user.id, OwnSeoDraft.status == "reviewed"
+                    OwnSeoDraft.owner_id == user.id, OwnSeoDraft.status.in_({'draft','reviewed'})
                 )
                 .order_by(OwnSeoDraft.created_at.desc())
                 .limit(40)
             ):
-                if b.w.current(db, draft):
-                    eligible.append(draft)
+                if b.w.current(db, candidate):
+                    eligible.append(candidate)
             for row in db.scalars(
                 select(b.Publication)
                 .where(b.Publication.owner_id == user.id)
@@ -250,6 +259,16 @@ def page(request: Request, publication: str = "", err: str = ""):
                 .limit(20)
             ):
                 items.append(row)
+            if publication and not any(r.id==publication for r in items):
+                selected_row=db.get(b.Publication,publication)
+                if not selected_row or selected_row.owner_id!=user.id:
+                    raise HTTPException(404,'publication_missing')
+                items.insert(0,selected_row)
+            for row in items:
+                source=db.get(OwnSeoDraft,row.fr_id)
+                if source and source.owner_id==user.id:
+                    briefs[row.id]=source.brief_id
+                    titles[row.id]=source.content.get('title',row.slug)
     except SQLAlchemyError:
         unavailable = True
     return m.templates.TemplateResponse(
@@ -263,6 +282,10 @@ def page(request: Request, publication: str = "", err: str = ""):
             unavailable=unavailable,
             base=b.PATH,
             selected=publication,
+            briefs=briefs, titles=titles,
+            selected_draft=draft,
+            journey_version=b.s.digest([(r.id,r.state,r.error_code,r.generation) for r in items]),
+            watch=any(r.state in b.RUNNABLE|{'checking'} for r in items),
             key=uuid.uuid4().hex,
             error=strings["errors"].get(err, strings["errors"]["changed"])
             if err
@@ -285,7 +308,7 @@ def prepare(
     user = b.s.module()._require_system_owner(request)
     own_seo_routes.throttle(request)
     try:
-        ident = b.prepare(user.id, fr, en or None, key, confirm)
+        ident = b.prepare(user.id, fr, en or None, key, confirm, article_journey=True)
     except ValueError as exc:
         return redirect(error=str(exc))
     except SQLAlchemyError:

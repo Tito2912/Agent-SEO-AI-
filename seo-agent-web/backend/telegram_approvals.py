@@ -434,16 +434,19 @@ def card(channel, row, page=0, doc=None, confirm=False):
         "support_send": "📨",
         "support_review": "🧑‍💼",
     }
+    label = kind_label(channel, row.kind)
+    if doc and doc.get('stage') == 2:
+        label = tr(channel,'Relire et publier l’article','Review and publish the article')
     heading = (
         "<b>"
         + icons[row.kind]
         + " Noyaru · "
-        + display.escaped(kind_label(channel, row.kind))
+        + display.escaped(label)
         + "</b>"
     )
     path = doc.get("path", PATH) if doc else PATH
     if not re.fullmatch(
-        r"/settings/system/[a-zA-Z0-9/_-]+(?:\?[a-zA-Z0-9=_&%.-]+)?", path
+        r"/settings/system/[a-zA-Z0-9/_-]+(?:\?[a-zA-Z0-9=_&%.-]+)?(?:#[a-zA-Z0-9_-]+)?", path
     ):
         path = PATH
     open_button = [
@@ -556,10 +559,10 @@ def card(channel, row, page=0, doc=None, confirm=False):
                 {
                     "text": tr(
                         channel,
-                        "✅ Confirmer l’accord"
+                        ("🚀 Confirmer la publication" if doc and doc.get('stage')==2 else "✅ Confirmer l’accord")
                         if row.choice == "yes"
                         else "✋ Confirmer le refus",
-                        "✅ Confirm approval"
+                        ("🚀 Confirm publication" if doc and doc.get('stage')==2 else "✅ Confirm approval")
                         if row.choice == "yes"
                         else "✋ Confirm rejection",
                     ),
@@ -593,6 +596,12 @@ def card(channel, row, page=0, doc=None, confirm=False):
                 "Step 2/2 · Authorize publication",
             ),
         }.get(row.kind)
+        if doc and doc.get('stage') in {1,2}:
+            stage = (
+                ('Décision 1/2 · Sujet et rédaction','Decision 1/2 · Topic and writing')
+                if doc['stage']==1 else
+                ('Décision 2/2 · Relire et publier','Decision 2/2 · Review and publish')
+            )
         text = heading
         if stage:
             text += "\n<i>" + tr(channel, *stage) + "</i>"
@@ -646,7 +655,7 @@ def card(channel, row, page=0, doc=None, confirm=False):
         if all_shown and (doc is None or doc["ready"]):
             choices.append(
                 {
-                    "text": tr(channel, "✅ Approuver", "✅ Approve"),
+                    "text": tr(channel, "🚀 Valider et publier" if doc and doc.get('stage')==2 else "✅ Approuver", "🚀 Approve and publish" if doc and doc.get('stage')==2 else "✅ Approve"),
                     "callback_data": callback_data(row, "y"),
                 }
             )
@@ -1042,6 +1051,24 @@ def resume_writing():
         ).start()
 
 
+def resume_article_proposal():
+    """Recover the read-only handoff if writing finished just before restart."""
+    try:
+        from .models import OwnBlogPublication
+    except ImportError:
+        from models import OwnBlogPublication
+    with s.module().DB.session() as db:
+        channel=active(db)
+        ident=db.scalar(select(OwnSeoDraft.id).where(
+            OwnSeoDraft.owner_id==channel.owner_id,
+            OwnSeoDraft.status=='draft',
+            OwnSeoDraft.bundle['article_journey'].as_string()=='two_decisions',
+            OwnSeoDraft.bundle['brief']['lang'].as_string()=='fr',
+            ~OwnSeoDraft.id.in_(select(OwnBlogPublication.fr_id)),
+        ).order_by(OwnSeoDraft.created_at).limit(1))
+    if ident:w.prepare_article(ident)
+
+
 def cycle():
     token = claim()
     if token is None:
@@ -1051,6 +1078,7 @@ def cycle():
         # At most one notification per poll avoids message bursts and provider throttling.
         deliver_one()
         resume_writing()
+        resume_article_proposal()
         with s.module().DB.session() as db:
             s.locked(db)
             channel = active(db)

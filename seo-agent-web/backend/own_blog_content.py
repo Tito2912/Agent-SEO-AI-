@@ -175,14 +175,14 @@ def public_matches(file, document):
     )
 
 
-def drafts(db, owner, fr_id, en_id=None, *, current=True):
+def drafts(db, owner, fr_id, en_id=None, *, current=True, allow_unreviewed=False):
     rows = [w.row_for(db, owner, fr_id)]
     if en_id:
         rows.append(w.row_for(db, owner, en_id))
     for row, lang in zip(rows, ("fr", "en")):
         if (
-            row.status != "reviewed"
-            or not row.reviewed_at
+            row.status not in ({"draft", "reviewed"} if allow_unreviewed else {"reviewed"})
+            or (row.status == "reviewed" and not row.reviewed_at)
             or row.bundle["brief"]["lang"] != lang
             or row.content_hash != s.digest(row.content)
             or (current and not w.current(db, row))
@@ -207,7 +207,7 @@ def drafts(db, owner, fr_id, en_id=None, *, current=True):
     return rows
 
 
-def files(db, owner, fr_id, en_id, date):
-    rows = drafts(db, owner, fr_id, en_id)
+def files(db, owner, fr_id, en_id, date, *, allow_unreviewed=False):
+    rows = drafts(db, owner, fr_id, en_id, allow_unreviewed=allow_unreviewed)
     slug = rows[0].content["slug"]
     return slug, [article(row, slug, date) for row in rows]
