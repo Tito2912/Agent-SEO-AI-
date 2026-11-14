@@ -456,6 +456,18 @@ def run(ident):
             scope(db, row.owner_id, ident)
             if s.seo_watch.utc(row.expires_at) <= s.clock():
                 raise ValueError("expired")
+            busy = db.scalar(
+                select(Media.id)
+                .where(
+                    Media.owner_id == row.owner_id,
+                    Media.id != row.id,
+                    Media.state == "running",
+                    Media.lease_until > s.clock(),
+                )
+                .limit(1)
+            )
+            if busy:
+                return  # Leave authorized work queued; one montage at a time on the web service.
             mandate = db.scalar(
                 select(TelegramApprovalRequest)
                 .where(

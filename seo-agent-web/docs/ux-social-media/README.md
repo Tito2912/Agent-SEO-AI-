@@ -45,6 +45,8 @@ son texte d'accompagnement. Aucun visage, imitation d'une personne ou musique.
 - Un appel dont le résultat est inconnu n'est jamais relancé automatiquement.
   Une voix sauvée permet de reprendre le montage sans nouvelle facturation IA.
   Deux essais locaux de montage au plus, bail de travail pour les doublons.
+  Une fabrication active au plus par propriétaire ; la suivante reste en file
+  pour préserver les ressources du service web.
   Un arrêt définitif retire aussi la voix intermédiaire.
 - Dix demandes préparées par 24 h et dix rendus conservés avant nouvelle
   fabrication. Le contrôle du stockage est revérifié avant l'appel vocal.
@@ -72,8 +74,8 @@ L'ancien endpoint TTS n'a pas été retenu pour ce nouveau flux.
 
 ## Vérifications
 
-- 131 cas ciblés uniques couverts par les passages finaux (130 groupés puis
-  26 cas média après les derniers ajustements, dont un nouveau) : décisions et refus, accès, CSRF,
+- 132 cas ciblés uniques couverts par les passages finaux (130 groupés puis
+  27 cas média après les derniers ajustements, dont deux nouveaux) : décisions et refus, accès, CSRF,
   rejeu, expiration, changements d'accès/captures/texte, concurrence, reprise,
   résultat incertain, plafonds ; anciennes cartes Telegram/studio et inventaire UX.
 - Migration additive 0031 depuis 0030 : upgrade répété, base créée par migrations

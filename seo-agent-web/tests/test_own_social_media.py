@@ -531,3 +531,35 @@ def test_running_paid_job_reserves_an_output_slot(media):
         row.state = "cancelled"
         db.flush()
         assert m.occupied(db, x["owner"].id) == 0
+
+
+def test_distinct_productions_wait_for_the_active_montage(media, monkeypatch):
+    x = media
+    first = prepare(x)
+    second = m.prepare(
+        x["owner"].id, "en", "discovery", "freelance", uuid.uuid4().hex, True
+    )
+    approve(x, first)
+    approve(x, second)
+    entered, release = threading.Event(), threading.Event()
+
+    def voice(*args):
+        x["voice_calls"].append("one")
+        entered.set()
+        assert release.wait(10)
+        return audio()
+
+    monkeypatch.setattr(m, "narration", voice)
+    thread = threading.Thread(target=m.run, args=(first,))
+    thread.start()
+    try:
+        assert entered.wait(10)
+        m.run(second)
+        assert read(x, second).state == "queued" and read(x, second).provider_calls == 0
+        assert len(x["voice_calls"]) == 1
+    finally:
+        release.set()
+        thread.join(timeout=15)
+    assert read(x, first).state == "review"
+    m.run(second)
+    assert read(x, second).state == "review" and len(x["voice_calls"]) == 2
