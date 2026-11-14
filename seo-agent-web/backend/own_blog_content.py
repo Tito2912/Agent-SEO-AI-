@@ -37,7 +37,7 @@ def tokenized(text):
 
 
 def prose(text):
-    text = re.sub(r"([\\`*_[\]#!|~])", r"\\\1", html.escape(text))
+    text = re.sub(r"([\\`*_[\]#!|~])", r"\\\1", html.escape(text, quote=False))
     return tokenized(text)
 
 
