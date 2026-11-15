@@ -68,13 +68,30 @@ def strings(lang):
             "Demander la fabrication dans Telegram", "Request production in Telegram"
         ),
         limit=t(
-            "Pilote : plafond vocal choisi ci-dessus, 2 048 jetons de sortie au plus par appel. Ce n’est pas un plafond en euros. Aucun crédit SEO client. Modèle gpt-audio-1.5, voix coral ; seul le texte affiché est transmis.",
-            "Pilot: audio call limit selected above, at most 2048 output tokens per call. This is not a euro cap. No customer SEO credit. Model gpt-audio-1.5, coral voice; only the displayed script is sent.",
+            "Pilote : plafond vocal choisi ci-dessus, 4 096 jetons de sortie au plus par appel. Ce n’est pas un plafond en euros. Aucun crédit SEO client. Modèle gpt-audio-1.5, voix coral ; seul le texte affiché est transmis.",
+            "Pilot: audio call limit selected above, at most 4096 output tokens per call. This is not a euro cap. No customer SEO credit. Model gpt-audio-1.5, coral voice; only the displayed script is sent.",
         ),
         pipeline=t("2. Fabrication et relecture", "2. Production and review"),
         review=t(
             "Regardez la vidéo entière : voix, texte, lisibilité et exactitude. La seconde décision Telegram marque ce fichier prêt à diffuser ; elle ne le publie pas.",
             "Watch the entire video: voice, wording, legibility and accuracy. The second Telegram decision marks this file ready for distribution; it does not publish it.",
+        ),
+        comparison_accepted=t(
+            "Vous avez relu et accepté cette version. L’écart reste visible pour garder la trace de votre décision.",
+            "You reviewed and accepted this version. The difference remains visible as a record of your decision.",
+        ),
+        comparison=t("Écart de narration à relire", "Narration difference to review"),
+        comparison_done=t("Écart de narration accepté", "Narration difference accepted"),
+        compare_help=t(
+            "La transcription reçue diffère du script. Écoutez la vidéo entière, puis vérifiez les deux textes. La transcription du fournisseur aide cette relecture ; elle ne prouve pas les mots réellement prononcés. Rien n’est marqué prêt sans votre décision explicite dans Telegram.",
+            "The received transcript differs from the script. Listen to the entire video, then check both texts. The provider transcript helps this review; it does not prove what was actually spoken. Nothing is marked ready without your explicit Telegram decision.",
+        ),
+        expected=t("Script approuvé", "Approved script"),
+        received=t("Transcription reçue", "Received transcript"),
+        differences=t("Différences dans le texte", "Text differences"),
+        diff_key=t(
+            "Texte barré : retiré du script. Texte souligné : ajouté dans la transcription reçue.",
+            "Struck-through text: removed from the script. Underlined text: added in the received transcript.",
         ),
         download=t("Télécharger la vidéo", "Download video"),
         waiting=t(
@@ -223,8 +240,23 @@ def strings(lang):
                 ),
                 (
                     "narration_changed",
-                    "La transcription fournie ne correspond pas au texte approuvé. Le rendu est arrêté.",
-                    "The supplied transcript does not match the approved script. Production stopped.",
+                    "Le contrôle de narration a arrêté cet essai. L’ancien diagnostic peut désigner une transcription différente ou une réponse coupée ; le fichier n’a pas été conservé.",
+                    "The narration check stopped this attempt. The older diagnostic can mean a different transcript or a cut-off response; the file was not retained.",
+                ),
+                (
+                    "narration_review",
+                    "La narration diffère : regardez la vidéo et comparez les textes avant de l’accepter ou de la refuser dans Telegram.",
+                    "The narration differs: watch the video and compare both texts before accepting or rejecting it in Telegram.",
+                ),
+                (
+                    "narration_truncated",
+                    "La génération vocale a atteint sa limite de sortie. Réponse coupée, aucun nouvel appel automatique.",
+                    "Audio generation reached its output limit. Response cut off; no automatic retry.",
+                ),
+                (
+                    "narration_incomplete",
+                    "La génération vocale ne s’est pas terminée normalement. Aucun nouvel appel automatique.",
+                    "Audio generation did not finish normally. No automatic retry.",
                 ),
                 (
                     "audio_invalid",

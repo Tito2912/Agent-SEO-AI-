@@ -2,6 +2,7 @@
 
 import base64
 import binascii
+import difflib
 from datetime import timedelta
 import json
 import os
@@ -35,11 +36,12 @@ s = social.own_seo
 PATH = "/settings/system/social/media"
 MODEL = "gpt-audio-1.5"
 VOICE = "coral"
-MAX_TOKENS = 2048
+MAX_TOKENS = 4096
+MAX_TRANSCRIPT = 4000
 DEFAULT_DAILY_CALLS = 10
 MAX_DAILY_CALLS = 100
 LEGACY_DAILY_CALLS = 2
-PROFILE = "noyaru-commented-captures-v1"
+PROFILE = "noyaru-commented-captures-v2"
 SCENES = {
     "fr": [
         (
@@ -161,17 +163,18 @@ def scope(db, owner, ident, *, current=True):
 
 
 def version(row, kind):
-    return s.digest(
-        [
-            PROFILE,
-            row.id,
-            row.input_hash,
-            row.connection_hash,
-            row.binding,
-            kind,
-            row.result.get("sha256") if kind == "social_review" else None,
-        ]
-    )
+    fields = [
+        PROFILE,
+        row.id,
+        row.input_hash,
+        row.connection_hash,
+        row.binding,
+        kind,
+        row.result.get("sha256") if kind == "social_review" else None,
+    ]
+    if kind == "social_review" and row.result.get("narration_check") is not None:
+        fields.append(row.result["narration_check"])
+    return s.digest(fields)
 
 
 def occupied(db, owner, ignore=""):
@@ -350,7 +353,64 @@ def prepare(owner, lang, goal, audience, key, confirm):
         return row.id
 
 
+def script(packet):
+    return " ".join(scene["text"] for scene in packet["scenes"])
+
+
+def valid_transcript(value):
+    return (
+        isinstance(value, str)
+        and 1 <= len(value) <= MAX_TRANSCRIPT
+        and any(char.isalnum() for char in value)
+        and not any(
+            unicodedata.category(char).startswith("C") and char not in "\n\t\r"
+            for char in value
+        )
+    )
+
+
+class NarrationReview(ValueError):
+    """A complete, valid WAV differs from the script; never an automatic acceptance."""
+
+    def __init__(self, audio, transcript):
+        super().__init__("narration_changed")
+        self.audio = audio
+        self.transcript = transcript
+
+
+def narration_check(row):
+    saved = row.result.get("narration_check")
+    if saved is None:
+        return None
+    expected = script(row.packet)
+    if (
+        not isinstance(saved, dict)
+        or not valid_transcript(saved.get("transcript"))
+        or saved.get("sha256") != s.digest([expected, saved["transcript"]])
+        or normalize(saved["transcript"]) == normalize(expected)
+    ):
+        raise ValueError("changed")
+    received = saved["transcript"]
+    before = re.findall(r"\w+|\s+|[^\w\s]", expected)
+    after = re.findall(r"\w+|\s+|[^\w\s]", received)
+    parts = []
+    for kind, a, b, c, d in difflib.SequenceMatcher(
+        None, before, after, autojunk=False
+    ).get_opcodes():
+        if kind in {"equal", "delete", "replace"}:
+            parts.append(
+                {
+                    "kind": "same" if kind == "equal" else "removed",
+                    "text": "".join(before[a:b]),
+                }
+            )
+        if kind in {"insert", "replace"}:
+            parts.append({"kind": "added", "text": "".join(after[c:d])})
+    return {"expected": expected, "received": received, "parts": parts}
+
+
 def video(row):
+    narration_check(row)
     try:
         data = base64.b64decode(row.result["video"], validate=True)
         if (
@@ -373,16 +433,17 @@ def approval_document(db, owner, ident, kind, lang):
     if s.seo_watch.utc(row.expires_at) <= s.clock():
         raise ValueError("expired")
     en = lang == "en"
+    check = None
     if kind == "social_render":
         render.executable()
         limit = request_limit(row)
         effect = (
             "Decision 1/2: authorize one paid OpenAI audio request and a private local montage. "
-            f"Only the exact public narration below is sent. Maximum {limit} requests per rolling 24h, 2048 output tokens per request. "
+            f"Only the exact public narration below is sent. Maximum {limit} requests per rolling 24h, {MAX_TOKENS} output tokens per request. "
             "This is a request/token cap, not a euro cap. No customer SEO credit or social publication."
             if en
             else "Décision 1/2 : autoriser un appel vocal OpenAI payant et le montage local privé. "
-            f"Seule la narration publique exacte ci-dessous est transmise. {limit} appels au plus par 24 h glissantes, 2 048 jetons de sortie par appel. "
+            f"Seule la narration publique exacte ci-dessous est transmise. {limit} appels au plus par 24 h glissantes, {MAX_TOKENS} jetons de sortie par appel. "
             "Ce plafond porte sur les appels/jetons, pas sur les euros. Aucun crédit SEO client ni publication sociale."
         )
         sections = [
@@ -406,6 +467,7 @@ def approval_document(db, owner, ident, kind, lang):
         ]
     else:
         video(row)
+        check = narration_check(row)
         effect = (
             "Decision 2/2: watch the exact private video, check narration, captions, legibility and claims, then approve or reject it. "
             "Approval marks it ready for distribution only. No account connection, upload or publication."
@@ -431,6 +493,30 @@ def approval_document(db, owner, ident, kind, lang):
                 row.packet["caption"] + "\n\n" + row.packet["cta"],
             ),
         ]
+    if check:
+        effect = (
+            "Decision 2/2: the received transcript differs from the approved script. Listen to the entire video and compare both texts below. "
+            "Approve only if you explicitly accept this received narration and its claims; otherwise reject it. Marks this exact file ready only; no publication or paid call."
+            if en
+            else "Décision 2/2 : la transcription reçue diffère du script approuvé. Écoutez toute la vidéo et comparez les deux textes ci-dessous. "
+            "Approuvez uniquement si vous acceptez explicitement cette narration reçue et ses affirmations ; sinon refusez. Ce fichier exact sera marqué prêt uniquement ; aucune publication ni appel payant."
+        )
+        sections = [
+            (
+                "⚠️ " + ("Difference to review" if en else "Écart à relire"),
+                "The provider transcript is a reading aid, not independent proof of what was spoken."
+                if en
+                else "La transcription du fournisseur aide la relecture ; elle ne prouve pas indépendamment les mots prononcés.",
+            ),
+            (
+                "📋 " + ("Approved script" if en else "Script approuvé"),
+                check["expected"],
+            ),
+            (
+                "🎧 " + ("Received transcript" if en else "Transcription reçue"),
+                check["received"],
+            ),
+        ] + sections
     return approvals().adapters.document(
         kind,
         ident,
@@ -440,6 +526,16 @@ def approval_document(db, owner, ident, kind, lang):
         effect,
         PATH + "?media=" + row.id,
         sections=sections,
+        summary=(
+            (
+                "Accept the received narration difference: "
+                if en
+                else "Accepter l’écart de narration reçu : "
+            )
+            + row.packet["title"]
+        )
+        if check
+        else "",
         en=en,
     )
 
@@ -484,6 +580,7 @@ def decide(db, owner, ident, kind, approve, expected):
         row.state = "queued"
     else:
         row.state = "approved"
+        row.error_code = None
         row.reviewed_at = s.clock()
     audit(db, row, "approved" if approve else "rejected")
     return row.id if approve and kind == "social_render" else None
@@ -496,7 +593,7 @@ def normalize(text):
 
 
 def narration(packet, key):
-    text = " ".join(scene["text"] for scene in packet["scenes"])
+    text = script(packet)
     body = {
         "model": MODEL,
         "modalities": ["text", "audio"],
@@ -535,18 +632,23 @@ def narration(packet, key):
     try:
         result = json.loads(b"".join(chunks))
         choice = result["choices"][0]
+        if choice["finish_reason"] == "length":
+            raise ValueError("narration_truncated")
+        if choice["finish_reason"] != "stop":
+            raise ValueError("narration_incomplete")
         audio = choice["message"].get("audio")
         if not isinstance(audio, dict):
             raise ValueError("audio_missing")
-        if choice["finish_reason"] != "stop" or normalize(
-            audio["transcript"]
-        ) != normalize(text):
-            raise ValueError("narration_changed")
+        if not valid_transcript(audio.get("transcript")):
+            raise ValueError("audio_invalid")
         try:
             data = base64.b64decode(audio["data"], validate=True)
         except (binascii.Error, ValueError, TypeError):
             raise ValueError("audio_encoding") from None
-        return render.read_audio(data)[0]
+        data = render.read_audio(data)[0]
+        if normalize(audio["transcript"]) != normalize(text):
+            raise NarrationReview(data, audio["transcript"])
+        return data
     except (KeyError, TypeError, IndexError, json.JSONDecodeError):
         raise ValueError("audio_invalid") from None
 
@@ -619,7 +721,17 @@ def run(ident):
             audit(db, row, "started")
             db.commit()
         if audio is None:
-            audio = narration(value, key)
+            check = None
+            try:
+                audio = narration(value, key)
+            except NarrationReview as received:
+                audio = render.read_audio(received.audio)[0]
+                if not valid_transcript(received.transcript):
+                    raise ValueError("audio_invalid") from None
+                check = {
+                    "transcript": received.transcript,
+                    "sha256": s.digest([script(value), received.transcript]),
+                }
             with s.module().DB.session() as db:
                 s.locked(db)
                 row = db.get(Media, ident)
@@ -627,6 +739,8 @@ def run(ident):
                     return
                 scope(db, row.owner_id, ident)
                 row.result = {"audio": base64.b64encode(audio).decode("ascii")}
+                if check:
+                    row.result = {**row.result, "narration_check": check}
                 db.commit()
         with s.module().DB.session() as db:
             s.locked(db)
@@ -637,8 +751,12 @@ def run(ident):
             if row.render_attempts >= 2:
                 raise ValueError("render_failed")
             row.render_attempts += 1
+            narration_check(row)
+            check = row.result.get("narration_check")
             db.commit()
         result = render.render(value, audio)
+        if check:
+            result["narration_check"] = check
         with s.module().DB.session() as db:
             s.locked(db)
             row = db.get(Media, ident)
@@ -647,6 +765,7 @@ def run(ident):
             scope(db, row.owner_id, ident)
             row.result = result
             row.state = "review"
+            row.error_code = "narration_review" if check else None
             row.expires_at = s.clock() + timedelta(hours=24)
             row.lease_token = None
             row.lease_until = None
@@ -671,6 +790,8 @@ def run(ident):
             "not_configured",
             "voice_refused",
             "narration_changed",
+            "narration_truncated",
+            "narration_incomplete",
             "audio_invalid",
             "audio_missing",
             "audio_encoding",

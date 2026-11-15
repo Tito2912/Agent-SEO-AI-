@@ -55,7 +55,7 @@ def page(
     m = media
     user = m.s.module()._require_system_owner(request)
     row, packet, recent, issue, unavailable = None, None, [], "", False
-    budget, policy = None, None
+    budget, policy, comparison = None, None, None
     try:
         with m.s.module().DB.session() as db:
             recent = list(
@@ -71,6 +71,7 @@ def page(
             if media_id:
                 row = m.scope(db, user.id, media_id, current=False)
                 packet = row.packet
+                comparison = m.narration_check(row)
                 if row.state not in {"cancelled", "stopped", "uncertain"}:
                     try:
                         m.scope(db, user.id, row.id)
@@ -117,6 +118,7 @@ def page(
             unavailable=unavailable,
             blocked=bool(issue) or bool(not row and budget and not budget["remaining"]),
             budget=budget,
+            comparison=comparison,
             policy=policy,
             saved=msg == "limit_saved",
             base=m.PATH,

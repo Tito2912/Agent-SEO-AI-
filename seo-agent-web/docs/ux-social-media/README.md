@@ -37,7 +37,7 @@ son texte d'accompagnement. Aucun visage, imitation d'une personne ou musique.
 - Fournisseur fixe : OpenAI `gpt-audio-1.5`, voix `coral`, WAV, un appel par
   fabrication. Plafond propriétaire réglable de 1 à 100 tentatives par 24 heures
   glissantes (10 par défaut depuis le 15/11 ; les anciens mandats gardent 2) et
-  2 048 jetons de sortie par appel ; ce n'est pas un plafond en euros. Aucun
+  4 096 jetons de sortie par nouvel appel (profil v2, voir le correctif ci-dessous) ; ce n'est pas un plafond en euros. Aucun
   quota SEO client. Aucune tentative fournisseur réelle pendant cette recette.
 - La clé OpenAI et le bot privé doivent être déjà configurés. Le mandat lie le
   propriétaire actuel, les accès, le texte, les sources et les captures exacts.
@@ -223,3 +223,71 @@ Bandit medium/high réussis. Preuves temporaires `/tmp/noyaru-limit-browser-proo
 
 Un enregistrement explicite de la valeur par défaut crée aussi le réglage durable :
 un futur changement de défaut applicatif ne remplace pas le choix enregistré.
+
+## Écarts de transcription et réponse coupée — 15 novembre 2026
+
+Base : `213d5d73` après #88. Constat opérateur : « La transcription fournie ne
+correspond pas au texte approuvé ». Le code utilisait ce diagnostic lorsque
+`finish_reason` n'était pas `stop` **ou** que le texte normalisé différait. Le
+fichier et la transcription étaient alors jetés. La cause de l'ancien essai
+reste indéterminée ; ses données ne sont pas récupérables par ce correctif.
+
+| Écran / contrôle | Défaut vérifié dans le code | Conséquence | Correction | Priorité |
+| --- | --- | --- | --- | --- |
+| Fabrication arrêtée | Troncature et différence partagent la même erreur | Relance payante sans savoir ce qui s'est passé | Diagnostics distincts pour limite de sortie, fin anormale et écart | P1 |
+| Préécoute | Un WAV complet et valide est perdu dès qu'un mot diffère | Le propriétaire ne peut pas écouter ou refuser la voix reçue | Montage privé conservé avec les deux textes et leurs différences | P1 |
+| Relecture Telegram 2/2 | La carte ne prévoit que la narration attendue | Risque d'accepter une version différente sans le comprendre | Avertissement, script initial, transcription reçue, résumé explicite de l'écart, empreinte du fichier | P1 |
+
+La comparaison reste stricte après normalisation de casse, ponctuation et
+espaces : aucun seuil de similarité ni jugement IA n'accepte une reformulation.
+Une réponse terminée par `stop`, un WAV valide de 8–60 secondes et une
+transcription textuelle bornée sont requis pour conserver l'aperçu. Le rendu
+passe en **relecture**, jamais directement en prêt. La page affiche les retraits
+barrés et les ajouts soulignés, avec une légende textuelle, les deux versions
+complètes et le lecteur natif. Le texte du fournisseur est échappé par Jinja.
+
+Le propriétaire doit écouter l'ensemble, vérifier les affirmations, les textes
+incrustés et leur synchronisation, puis accepter explicitement cette version
+dans la décision Telegram 2/2 existante, ou la refuser. Aucun troisième accord
+ni nouvel appel IA n'est ajouté pour cette comparaison. La transcription vient
+du fournisseur ; elle n'est pas une reconnaissance vocale indépendante et ne
+prouve pas à elle seule les mots prononcés. Le découpage des scènes demeure
+fondé sur le script initial : une différence peut aussi rendre le montage
+inadapté et justifier son refus.
+
+La décision lie également la transcription reçue, en plus du MP4 exact. Tout
+changement invalide une carte antérieure. Le refus ou l'arrêt retire le rendu ;
+l'acceptation garde les différences comme trace de la relecture et marque ce
+fichier prêt uniquement, sans publication sociale. Une panne locale de montage
+garde le WAV et la comparaison pour la reprise autorisée sans nouvel appel vocal.
+Une sortie coupée (`length`) ou une autre fin anormale reste arrêtée, sans
+rappel automatique. Historique, plafonds, droits et confirmations sont conservés.
+
+Les **nouvelles** demandes utilisent le profil v2, plafonné à 4 096 jetons de
+sortie au lieu de 2 048. Le texte de la page et la carte de fabrication indiquent
+ce plafond ; ce n'est pas un budget en euros ni une garantie de résultat. Le
+changement de profil invalide les anciens mandats avant tout appel, sans les
+élargir, relancer ou remettre leurs compteurs à zéro. Les anciens fichiers
+déjà conservés restent consultables historiquement par leur propriétaire, avec
+l'avertissement de contexte habituel ; une nouvelle action exige le contexte
+actuel. Aucun changement de modèle, migration ou dépendance dans ce lot.
+
+Documentation officielle OpenAI relue le 15/11 :
+[audio Chat Completions](https://developers.openai.com/api/docs/guides/audio-chat-completions)
+pour les champs audio/transcription ;
+[référence Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)
+pour la fin de génération ;
+[dépréciations](https://developers.openai.com/api/docs/deprecations)
+pour le maintien de `gpt-audio-1.5` dans ce lot. La documentation ne garantit pas
+une lecture verbatim de toute sortie audio. Aucun essai payant n'a été lancé
+pour attribuer la cause de l'ancienne réponse ou mesurer la voix réelle.
+
+Vérification locale : tests de réponses HTTP simulées, mots modifiant une
+affirmation, refus/acceptation explicite, carte périmée, comparaison altérée,
+WAV invalide, texte non exploitable, reprise locale et ancien mandat v1. Les
+comptes, clés et messages sont fictifs. La recette navigateur et la CI sont
+consignées dans la PR de livraison ; elles ne valent pas écoute du fournisseur.
+Reproduction : `python -m pytest -q tests/test_own_social_narration.py
+tests/test_own_social_media.py tests/test_own_social_audio.py
+tests/test_own_social_media_policy.py tests/test_telegram_approvals.py
+tests/test_current_ux_inventory.py` depuis `seo-agent-web/`.

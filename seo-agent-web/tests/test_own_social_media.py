@@ -548,7 +548,7 @@ def test_provider_request_is_fixed_bounded_and_checks_exact_transcript(
     assert body["allow_redirects"] is False and body["json"]["store"] is False
     assert (
         body["json"]["model"] == m.MODEL
-        and body["json"]["max_completion_tokens"] == 2048
+        and body["json"]["max_completion_tokens"] == 4096
     )
     assert body["json"]["messages"][1]["content"] == script
     script += " Changed."
@@ -605,7 +605,7 @@ def test_audio_failure_is_specific_terminal_and_keeps_the_paid_attempt(
         ("duration", "audio_duration"),
         ("json", "audio_invalid"),
         ("text", "narration_changed"),
-        ("limit", "narration_changed"),
+        ("limit", "narration_truncated"),
     ],
     ids=[
         "missing",
