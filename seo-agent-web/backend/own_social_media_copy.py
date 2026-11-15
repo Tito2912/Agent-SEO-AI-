@@ -195,8 +195,8 @@ def strings(lang):
                 ),
                 (
                     "connection_changed",
-                    "L’accès fournisseur a changé. Un nouveau mandat est nécessaire.",
-                    "Provider access changed. A new mandate is required.",
+                    "Les accès ou les paramètres vocaux ont changé. Préparez une nouvelle demande à valider dans Telegram.",
+                    "Access or audio settings changed. Prepare a fresh request for Telegram approval.",
                 ),
                 (
                     "binding_changed",
