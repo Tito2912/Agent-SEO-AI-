@@ -137,3 +137,41 @@ de la voix fournisseur. Preuves temporaires : `/tmp/noyaru-audio-wav-proof/`
 et `/tmp/noyaru-audio-browser-proof/`. CI complète à référencer dans la PR.
 Tests reproductibles : `python -m pytest -q tests/test_own_social_audio.py
 tests/test_own_social_media.py` depuis `seo-agent-web/`.
+
+## Disponibilité avant Telegram — 15 novembre 2026
+
+Constat opérateur : une nouvelle carte était approuvée alors que les deux appels
+du pilote avaient déjà commencé. Le worker refusait correctement le troisième
+appel, mais le parcours demandait une décision inutile et proposait de recommencer
+sans indiquer quand ce serait possible.
+
+La page montre désormais les appels disponibles et, au plafond, la première
+heure de réouverture. L’heure est rendue en UTC sans JavaScript, puis dans le
+fuseau du navigateur avec son nom de zone. Le contrôle vient de la base à chaque
+affichage : la date ne réserve aucun appel. Le lien de disponibilité conduit à
+une nouvelle lecture, sans création ni relance. Le formulaire et l’invitation à
+préparer un nouvel essai restent masqués au plafond ; le POST direct est aussi
+refusé avant toute création de demande/carte Telegram.
+Une proposition déjà préparée mais pas encore notifiée attend aussi une place
+avant la création d’une nouvelle carte de fabrication ; les cartes de relecture
+restent disponibles.
+
+La fenêtre de 24 h exclut les appels ayant exactement 24 h ou plus. Les appels
+commencés restent comptés quels que soient le résultat ou le retrait du rendu ;
+une préparation refusée sans appel ne repousse pas l’échéance. Si l’historique
+contient plus de deux appels, la disponibilité attend l’expiration d’un nombre
+suffisant. Le contrôle transactionnel final avant appel reste obligatoire :
+une disponibilité affichée auparavant ne l’autorise pas. Le montage d’une voix
+sauvée et la relecture du fichier exact restent possibles sans nouvel appel.
+
+Aucune augmentation, remise à zéro, suppression d’historique ou reprise des
+anciens essais. Aucune nouvelle requête fournisseur/Telegram réelle ou session
+de production utilisée. Les garde-fous et mandats des lots précédents demeurent.
+Tests locaux : 80 cas média/audio réussis, dont huit nouveaux cas de limite,
+date/frontière, isolation propriétaire, absence de carte à la préparation refusée,
+idempotence et reprise locale. Compilation, Ruff et Bandit medium/high verts.
+26 observations Chromium locales du compteur, du refus et de la réouverture en
+FR/EN, quatre largeurs et repli sans JavaScript. Heure locale Paris vérifiée en
+FR 24 h et EN AM/PM ; repli UTC explicite. Aucune erreur JavaScript, requête
+externe ou débordement global ; captures relues. Preuves temporaires sous
+`/tmp/noyaru-quota-browser-proof/` ; référence de CI dans la PR.

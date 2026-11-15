@@ -14,6 +14,22 @@ def strings(lang):
         studio=t("Studio réseaux sociaux", "Social content studio"),
         bot=t("Valider dans Telegram", "Decide in Telegram"),
         reload=t("Actualiser", "Reload"),
+        availability=t(
+            "Disponibilité du prochain essai", "Availability for the next attempt"
+        ),
+        remaining=t(
+            "Appels vocaux disponibles sur 24 h glissantes",
+            "Audio calls available per rolling 24h",
+        ),
+        budget_info=t(
+            "Les appels déjà commencés restent comptés, même si aucune vidéo exploitable n’a pu être produite. Cette disponibilité ne réserve pas d’appel.",
+            "Started calls remain counted, even if no usable video was produced. This availability does not reserve a call.",
+        ),
+        retry_at=t(
+            "Une nouvelle demande sera possible à partir du",
+            "A new request can be made from",
+        ),
+        retry_check=t("Vérifier la disponibilité", "Check availability"),
         preview=t("1. Découvrir le storyboard", "1. Preview the storyboard"),
         scope=t(
             "Première démonstration : comprendre le score de santé. Captures de l’application sur un projet fictif, sans visage. Les autres sujets restent disponibles dans le studio éditorial.",

@@ -87,6 +87,27 @@ def approve(x, ident, kind="social_render", yes=True):
     return card.id
 
 
+def spent(x, at, *, state="stopped", owner=None):
+    """Historical attempt metadata only; no request or authority is fabricated."""
+    with x["db"].session() as db:
+        row = m.Media(
+            owner_id=owner or x["owner"].id,
+            authorization_key=uuid.uuid4().hex,
+            binding="fixture-history",
+            connection_hash="fixture-history",
+            input_hash="fixture-history",
+            packet={},
+            result={},
+            state=state,
+            provider_calls=1,
+            provider_started_at=at,
+            expires_at=at + timedelta(hours=24),
+        )
+        db.add(row)
+        db.commit()
+        return row.id
+
+
 def test_private_page_frames_status_and_video_are_owner_only(media):
     x = media
     ident = prepare(x)
@@ -298,19 +319,141 @@ def test_concurrent_worker_does_not_duplicate_the_paid_call(media, monkeypatch):
 
 def test_daily_cap_counts_uncertain_and_cancelled_provider_attempts(media):
     x = media
-    for i in range(2):
-        ident = prepare(x)
-        approve(x, ident)
-        with x["db"].session() as db:
-            row = db.get(m.Media, ident)
-            row.state = "cancelled"
-            row.provider_calls = 1
-            row.provider_started_at = m.s.clock()
-            db.commit()
+    # Even a request approved before other attempts must pass the final gate.
     ident = prepare(x)
     approve(x, ident)
+    for state in ("uncertain", "cancelled"):
+        spent(x, m.s.clock(), state=state)
+    with pytest.raises(ValueError, match="^budget$"):
+        prepare(x, goal="product")  # A new pack, not the already authorized duplicate.
     m.run(ident)
     assert read(x, ident).error_code == "budget" and not x["voice_calls"]
+    assert read(x, ident).provider_started_at is None
+
+
+def test_budget_returns_exact_reopening_and_excludes_other_owners(media, monkeypatch):
+    x = media
+    now = m.s.clock().replace(microsecond=0)
+    monkeypatch.setattr(m.s, "clock", lambda: now)
+    spent(x, now - timedelta(hours=20), state="cancelled")
+    spent(x, now - timedelta(hours=2), state="uncertain")
+    other = user(x["db"])
+    spent(x, now, owner=other.id)
+    with x["db"].session() as db:
+        budget = m.audio_budget(db, x["owner"].id)
+    assert budget == {"limit": 2, "remaining": 0, "retry_at": now + timedelta(hours=4)}
+
+
+def test_budget_reopens_at_24_hours_without_changing_history(media, monkeypatch):
+    x = media
+    now = m.s.clock().replace(microsecond=0)
+    monkeypatch.setattr(m.s, "clock", lambda: now)
+    first = spent(x, now - timedelta(hours=24))
+    second = spent(x, now - timedelta(hours=23))
+    with x["db"].session() as db:
+        assert m.audio_budget(db, x["owner"].id) == {
+            "limit": 2,
+            "remaining": 1,
+            "retry_at": None,
+        }
+    monkeypatch.setattr(m.s, "clock", lambda: now + timedelta(hours=1))
+    with x["db"].session() as db:
+        assert m.audio_budget(db, x["owner"].id)["remaining"] == 2
+    assert read(x, first).provider_calls == read(x, second).provider_calls == 1
+    assert read(x, first).state == read(x, second).state == "stopped"
+    assert prepare(x)
+    assert not x["voice_calls"]
+
+
+def test_excess_history_waits_until_enough_attempts_have_expired(media, monkeypatch):
+    x = media
+    now = m.s.clock().replace(microsecond=0)
+    monkeypatch.setattr(m.s, "clock", lambda: now)
+    for hours in (22, 20, 2):
+        spent(x, now - timedelta(hours=hours))
+    with x["db"].session() as db:
+        assert m.audio_budget(db, x["owner"].id)["retry_at"] == now + timedelta(hours=4)
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"], ids=["fr", "en"])
+def test_full_budget_is_visible_and_post_creates_no_row_or_telegram_card(media, lang):
+    x = media
+    for hours in (20, 2):
+        spent(x, m.s.clock() - timedelta(hours=hours))
+    c = client(x["owner"])
+    count, calls = len(rows(x)), len(x["calls"])
+    page = c.get(m.PATH + "?lang=" + lang)
+    assert page.status_code == 200 and "data-media-local-time" in page.text
+    assert "0 / 2" in page.text and "UTC" in page.text
+    assert 'action="' + m.PATH + "/prepare" not in page.text
+    response = c.post(
+        m.PATH + "/prepare?lang=" + lang,
+        data={
+            "_csrf": c.cookies.get(app._CSRF_COOKIE_NAME),
+            "key": uuid.uuid4().hex,
+            "confirm": "true",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303 and "err=budget" in response.headers["location"]
+    assert len(rows(x)) == count and len(x["calls"]) == calls and not x["voice_calls"]
+    with x["db"].session() as db:
+        assert db.scalar(select(func.count()).select_from(m.Media)) == 2
+
+
+def test_blocked_old_attempt_does_not_offer_a_new_fabrication_until_slot_reopens(
+    media, monkeypatch
+):
+    x = media
+    now = m.s.clock()
+    ident = prepare(x)
+    with x["db"].session() as db:
+        row = db.get(m.Media, ident)
+        row.state, row.error_code = "stopped", "budget"
+        db.commit()
+    for hours in (20, 2):
+        spent(x, now - timedelta(hours=hours))
+    page = client(x["owner"]).get(m.PATH + "?media=" + ident)
+    assert (
+        "Vérifier la disponibilité" in page.text
+        and "Préparer une nouvelle fabrication" not in page.text
+    )
+    monkeypatch.setattr(m.s, "clock", lambda: now + timedelta(hours=4, seconds=1))
+    page = client(x["owner"]).get(m.PATH + "?media=" + ident)
+    assert "Préparer une nouvelle fabrication" in page.text
+    assert read(x, ident).provider_started_at is None
+
+
+def test_saved_audio_montage_and_exact_review_remain_available_with_no_new_slot(media):
+    x = media
+    ident = prepare(x)
+    approve(x, ident)
+    with x["db"].session() as db:
+        row = db.get(m.Media, ident)
+        row.provider_calls, row.provider_started_at = 1, m.s.clock()
+        row.result = {"audio": base64.b64encode(audio()).decode()}
+        db.commit()
+    spent(x, m.s.clock())
+    m.run(ident)
+    assert read(x, ident).state == "review" and not x["voice_calls"]
+    page = client(x["owner"]).get(m.PATH + "?media=" + ident)
+    assert "0 / 2" in page.text and "<video " in page.text
+    approve(x, ident, "social_review")
+    assert read(x, ident).state == "approved"
+
+
+def test_duplicate_submission_returns_existing_request_without_new_authority_at_cap(
+    media,
+):
+    x = media
+    key = uuid.uuid4().hex
+    ident = prepare(x, key)
+    for _ in range(2):
+        spent(x, m.s.clock())
+    assert prepare(x, key) == ident
+    assert read(x, ident).state == "proposal" and not x["voice_calls"]
+    m.approvals().sync()
+    assert not rows(x)  # Even delayed first delivery waits while the voice cap is full.
 
 
 def test_tampered_video_cannot_be_approved_or_downloaded(media):

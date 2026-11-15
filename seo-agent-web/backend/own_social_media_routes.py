@@ -54,6 +54,7 @@ def page(
     m = media
     user = m.s.module()._require_system_owner(request)
     row, packet, recent, issue, unavailable = None, None, [], "", False
+    budget = None
     try:
         with m.s.module().DB.session() as db:
             recent = list(
@@ -79,6 +80,7 @@ def page(
                         issue = str(exc)
             else:
                 packet = m.packet(db, i18n.current_lang(), goal, audience)
+            budget = m.audio_budget(db, user.id)
             if not row:
                 try:
                     channel = m.approvals().active(db)
@@ -111,7 +113,8 @@ def page(
             recent=recent,
             error=error,
             unavailable=unavailable,
-            blocked=bool(issue),
+            blocked=bool(issue) or bool(not row and budget and not budget["remaining"]),
+            budget=budget,
             base=m.PATH,
             key=uuid.uuid4().hex,
             lang=i18n.current_lang(),
