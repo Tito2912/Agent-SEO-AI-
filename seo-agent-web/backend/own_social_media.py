@@ -221,9 +221,9 @@ def set_policy(owner, value, expected):
         prior = policy(db, owner)
         if prior["token"] != expected:
             raise ValueError("limit_changed")
-        if prior["limit"] == limit:
-            return
         row = db.get(OwnSocialMediaPolicy, owner)
+        if row and prior["limit"] == limit:
+            return
         if not row:
             row = OwnSocialMediaPolicy(owner_id=owner)
             db.add(row)

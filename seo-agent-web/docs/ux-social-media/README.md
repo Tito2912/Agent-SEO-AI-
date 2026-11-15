@@ -212,7 +212,7 @@ Recette de ce lot : comptes fictifs, bot et voix simulés ; aucun appel vocal
 payant, donnée SAV, site client ou accès privé de production. Vérifications et
 PR consignées au journal partagé lors de la livraison.
 
-Validation locale finale : 153 cas ciblés uniques (média, politique, audio,
+Validation locale finale : 154 cas ciblés uniques (média, politique, audio,
 préservation des migrations, décisions Telegram et inventaire) ; 26 observations
 Chromium FR/EN à 1 440/768/390/360 px, dont les deux enregistrements du plafond
 sans JavaScript. Hausse réelle du formulaire 2 → 10 : deux tentatives conservées,
@@ -220,3 +220,6 @@ sans JavaScript. Hausse réelle du formulaire 2 → 10 : deux tentatives conserv
 Telegram réel, appel vocal, débordement global ou erreur JavaScript ; captures
 relues, champ de 48 px et libellé associé. Contrôles compilation, Ruff F/E9 et
 Bandit medium/high réussis. Preuves temporaires `/tmp/noyaru-limit-browser-proof`.
+
+Un enregistrement explicite de la valeur par défaut crée aussi le réglage durable :
+un futur changement de défaut applicatif ne remplace pas le choix enregistré.

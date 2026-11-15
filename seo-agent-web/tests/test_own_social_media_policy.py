@@ -279,3 +279,24 @@ def test_capped_old_proposals_cannot_hide_new_notification(media):
         assert list(m.candidates(db, x["owner"].id)) == [("social_render", fresh)]
     approve(x, fresh)
     assert read(x, fresh).state == "queued" and not x["voice_calls"]
+
+
+def test_saving_the_default_is_a_durable_explicit_choice(bot, monkeypatch):
+    x = bot
+    m.set_policy(x["owner"].id, "10", "")
+    with x["db"].session() as db:
+        token = m.policy(db, x["owner"].id)["token"]
+        assert token and db.get(OwnSocialMediaPolicy, x["owner"].id).daily_calls == 10
+    monkeypatch.setattr(m, "DEFAULT_DAILY_CALLS", 5)
+    m.set_policy(x["owner"].id, "10", token)
+    with x["db"].session() as db:
+        assert m.policy(db, x["owner"].id)["limit"] == 10
+        assert m.policy(db, x["owner"].id)["token"] == token
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AuditLog)
+                .where(AuditLog.action == "own_social_media.limit_changed")
+            )
+            == 1
+        )
