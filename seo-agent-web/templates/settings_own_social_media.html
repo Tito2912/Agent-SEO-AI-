@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 {% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
 {% block title %}{{ copy.title }} - {{ app_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/own_social.css?v=3" /><script src="/static/own_social_media.js?v=2" defer></script>{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/own_social.css?v=4" /><script src="/static/own_social_media.js?v=2" defer></script>{% endblock %}
 {% block crumbs %}<a href="/settings/system/social?lang={{ lang }}">{{ copy.studio }}</a><span class="crumb-sep">/</span><span>{{ copy.title }}</span>{% endblock %}
 {% block content %}<div class="social-studio">
 <header class="page-header"><p class="social-eyebrow">TikTok · 9:16</p><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
@@ -18,6 +18,7 @@
 {% if item %}<section class="card" {% if item.state in ['proposal','queued','running','review'] %}data-media-watch="{{ base }}/{{ item.id }}/status" data-state="{{ item.state }}" data-error="{{ item.error_code or '' }}"{% endif %}>
 <p class="social-eyebrow">{{ copy.pipeline }}</p><h2>{{ item.packet.title }}</h2><p role="status">{{ copy.states.get(item.state, item.state) }}</p>
 {% if item.error_code %}<p class="alert warning">{{ copy.errors.get(item.error_code, copy.errors.changed) }}</p>{% endif %}
+{% if comparison %}<section class="narration-comparison" aria-labelledby="narration-comparison-title"><h3 id="narration-comparison-title">{{ copy.comparison_done if item.state == "approved" else copy.comparison }}</h3><p>{{ copy.comparison_accepted if item.state == "approved" else copy.compare_help }}</p><details open><summary>{{ copy.differences }}</summary><p>{{ copy.diff_key }}</p><p class="narration-diff">{% for part in comparison.parts %}{% if part.kind == 'removed' %}<del>{{ part.text }}</del>{% elif part.kind == 'added' %}<ins>{{ part.text }}</ins>{% else %}{{ part.text }}{% endif %}{% endfor %}</p></details><details><summary>{{ copy.expected }}</summary><p>{{ comparison.expected }}</p></details><details><summary>{{ copy.received }}</summary><p>{{ comparison.received }}</p></details></section>{% endif %}
 {% if item.result.video %}<video class="social-video" controls preload="metadata" playsinline aria-label="{{ item.packet.title }}" src="{{ base }}/{{ item.id }}/video"></video><p>{{ copy.ai }}</p><p>{{ copy.review }}</p><div class="social-actions"><a class="btn" href="{{ base }}/{{ item.id }}/video" download="noyaru-demo.mp4">{{ copy.download }}</a>{% if item.state == 'review' and not blocked %}<a class="btn primary" href="/settings/system/telegram/approvals">{{ copy.bot }}</a>{% endif %}</div><h3>{{ copy.caption }}</h3><p>{{ item.packet.caption }}</p><p>{{ item.packet.cta }}</p>
 {% elif item.state in ['proposal','queued','running'] %}<p>{{ copy.waiting }}</p><a class="btn primary" href="/settings/system/telegram/approvals">{{ copy.bot }}</a>{% endif %}
 {% if (item.state in ['cancelled','stopped','uncertain'] or blocked) and budget and budget.remaining %}<a class="btn" href="{{ base }}?lang={{ lang }}&amp;goal={{ item.packet.goal }}&amp;audience={{ item.packet.audience }}">{{ copy.fresh }}</a>{% endif %}

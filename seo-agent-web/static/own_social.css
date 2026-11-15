@@ -38,3 +38,8 @@
 .social-studio #media-daily-calls {display:block;width:100%;max-width:220px;box-sizing:border-box;min-height:48px;margin-top:8px;padding:12px;font:inherit;color:var(--text,#ededed);background:var(--surface,#181b18);border:1px solid var(--border,#465048);border-radius:8px;}
 
 .social-studio #media-limits summary span {white-space:nowrap;}
+
+.social-studio .narration-comparison {border:1px solid var(--border);padding:16px;border-radius:12px;margin-block:16px;}
+.social-studio .narration-diff {white-space:pre-wrap;overflow-wrap:anywhere;}
+.social-studio .narration-diff del {color:#ffd3d3;background:#4a2228;text-decoration:line-through;}
+.social-studio .narration-diff ins {color:#dbffe5;background:#1e4230;text-decoration:underline;}
