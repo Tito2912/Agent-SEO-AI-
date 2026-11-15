@@ -1,5 +1,16 @@
 (() => {
   'use strict';
+  // UTC remains the usable fallback without JavaScript or Intl support.
+  document.querySelectorAll('[data-media-local-time]').forEach(time => {
+    try {
+      const date = new Date(time.dateTime);
+      if (!Number.isFinite(date.getTime())) return;
+      time.textContent = new Intl.DateTimeFormat(document.documentElement.lang || 'fr', {
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit',
+        timeZoneName: 'short'
+      }).format(date);
+    } catch (_) { /* Keep the explicit server-rendered UTC date. */ }
+  });
   const item = document.querySelector('[data-media-watch]');
   if (!item) return;
   const url = new URL(item.dataset.mediaWatch, window.location.origin);

@@ -184,6 +184,29 @@ def occupied(db, owner, ignore=""):
     )
 
 
+def audio_budget(db, owner):
+    """Read-only rolling availability; a slot is not a reservation or a mandate."""
+    starts = list(
+        db.scalars(
+            select(Media.provider_started_at)
+            .where(
+                Media.owner_id == owner,
+                Media.provider_started_at > s.clock() - timedelta(hours=24),
+            )
+            .order_by(Media.provider_started_at.desc())
+            .limit(DAILY_CALLS)
+        )
+    )
+    return {
+        "limit": DAILY_CALLS,
+        "remaining": DAILY_CALLS - len(starts),
+        # With excess historical rows, wait for the second newest to expire.
+        "retry_at": s.seo_watch.utc(starts[-1]) + timedelta(hours=24)
+        if len(starts) >= DAILY_CALLS
+        else None,
+    }
+
+
 def prepare(owner, lang, goal, audience, key, confirm):
     if not confirm or not re.fullmatch("[a-f0-9]{32}", key):
         raise ValueError("confirm_required")
@@ -225,6 +248,8 @@ def prepare(owner, lang, goal, audience, key, confirm):
         )
         if prior:
             return prior.id
+        if not audio_budget(db, owner)["remaining"]:
+            raise ValueError("budget")
         if occupied(db, owner) >= 10:
             raise ValueError("storage_limit")
         if (
@@ -498,19 +523,7 @@ def run(ident):
             if audio is None:
                 if occupied(db, row.owner_id, row.id) >= 10:
                     raise ValueError("storage_limit")
-                count = (
-                    db.scalar(
-                        select(func.count())
-                        .select_from(Media)
-                        .where(
-                            Media.owner_id == row.owner_id,
-                            Media.provider_started_at
-                            >= s.clock() - timedelta(hours=24),
-                        )
-                    )
-                    or 0
-                )
-                if count >= DAILY_CALLS:
+                if not audio_budget(db, row.owner_id)["remaining"]:
                     raise ValueError("budget")
                 row.provider_calls = 1
                 row.provider_started_at = s.clock()
