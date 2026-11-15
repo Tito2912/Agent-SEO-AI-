@@ -4,6 +4,7 @@ import base64
 from datetime import timedelta
 import io
 import json
+import struct
 import threading
 import uuid
 import wave
@@ -344,8 +345,9 @@ def test_cancel_during_provider_request_discards_late_result(media, monkeypatch)
     assert read(x, ident).state == "cancelled" and not read(x, ident).result
 
 
+@pytest.mark.parametrize("pending", [False, True], ids=["finite-wav", "streaming-wav"])
 def test_provider_request_is_fixed_bounded_and_checks_exact_transcript(
-    media, monkeypatch
+    media, monkeypatch, pending
 ):
     # Exercise the actual HTTP adapter, not a network service.
     narration = REAL_NARRATION
@@ -353,6 +355,10 @@ def test_provider_request_is_fixed_bounded_and_checks_exact_transcript(
         packet = m.packet(db, "fr", "discovery", "freelance")
     script = " ".join(s["text"] for s in packet["scenes"])
     seen = []
+    received = bytearray(audio())
+    if pending:
+        struct.pack_into("<I", received, 4, 0xFFFFFFFF)
+        struct.pack_into("<I", received, 40, 0xFFFFFFFF)
 
     class Response:
         status_code = 200
@@ -372,7 +378,7 @@ def test_provider_request_is_fixed_bounded_and_checks_exact_transcript(
                             "message": {
                                 "audio": {
                                     "transcript": script,
-                                    "data": base64.b64encode(audio()).decode(),
+                                    "data": base64.b64encode(received).decode(),
                                 }
                             },
                         }
@@ -404,6 +410,132 @@ def test_provider_request_is_fixed_bounded_and_checks_exact_transcript(
     script += " Changed."
     with pytest.raises(ValueError, match="narration_changed"):
         narration(packet, "fixture-key")
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "audio_missing",
+        "audio_encoding",
+        "audio_format",
+        "audio_incomplete",
+        "audio_duration",
+    ],
+    ids=["missing", "encoding", "format", "incomplete", "duration"],
+)
+def test_audio_failure_is_specific_terminal_and_keeps_the_paid_attempt(
+    media, monkeypatch, code
+):
+    x = media
+    ident = prepare(x)
+    approve(x, ident)
+
+    def rejected_audio(*args):
+        x["voice_calls"].append("attempt")
+        raise ValueError(code)
+
+    monkeypatch.setattr(m, "narration", rejected_audio)
+    m.run(ident)
+    m.run(ident)
+    row = read(x, ident)
+    assert row.state == "stopped" and row.error_code == code
+    assert row.provider_calls == 1 and row.provider_started_at and row.result == {}
+    assert x["voice_calls"] == ["attempt"]
+    for lang in ("fr", "en"):
+        response = client(x["owner"]).get(m.PATH + "?media=" + ident + "&lang=" + lang)
+        assert response.status_code == 200
+        assert (
+            "automatic retry" in response.text
+            if lang == "en"
+            else "appel automatique" in response.text
+        )
+
+
+@pytest.mark.parametrize(
+    "fault,expected",
+    [
+        ("missing", "audio_missing"),
+        ("encoding", "audio_encoding"),
+        ("format", "audio_format"),
+        ("incomplete", "audio_incomplete"),
+        ("duration", "audio_duration"),
+        ("json", "audio_invalid"),
+        ("text", "narration_changed"),
+        ("limit", "narration_changed"),
+    ],
+    ids=[
+        "missing",
+        "encoding",
+        "format",
+        "incomplete",
+        "duration",
+        "json",
+        "text",
+        "limit",
+    ],
+)
+def test_real_http_adapter_rejects_bad_audio_once_with_no_external_detail(
+    media, monkeypatch, fault, expected
+):
+    with media["db"].session() as db:
+        packet = m.packet(db, "fr", "discovery", "freelance")
+    script = " ".join(s["text"] for s in packet["scenes"])
+    received = bytearray(audio())
+    if fault == "format":
+        received[:4] = b"nope"
+    if fault == "incomplete":
+        received = received[:-100]
+    if fault == "duration":
+        received = received[: 44 + 24000 * 2 * 3]
+        struct.pack_into("<I", received, 4, len(received) - 8)
+        struct.pack_into("<I", received, 40, len(received) - 44)
+    payload = {
+        "choices": [
+            {
+                "finish_reason": "length" if fault == "limit" else "stop",
+                "message": {
+                    "audio": None
+                    if fault == "missing"
+                    else {
+                        "transcript": "different words" if fault == "text" else script,
+                        "data": "invalid!"
+                        if fault == "encoding"
+                        else base64.b64encode(received).decode(),
+                    }
+                },
+            }
+        ]
+    }
+    body = b"invalid-json" if fault == "json" else json.dumps(payload).encode()
+    calls = []
+
+    class Response:
+        status_code = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def iter_content(self, size):
+            yield body
+
+    class Session:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def post(self, *args, **kwargs):
+            calls.append("one request")
+            return Response()
+
+    monkeypatch.setattr(m.requests, "Session", Session)
+    with pytest.raises(ValueError, match="^" + expected + "$"):
+        REAL_NARRATION(packet, "fixture-key")
+    assert calls == ["one request"]
 
 
 def test_missing_capture_reports_a_controlled_error(media, monkeypatch, tmp_path):

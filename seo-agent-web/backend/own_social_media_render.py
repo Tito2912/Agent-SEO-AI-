@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 import tempfile
 import wave
@@ -112,24 +113,78 @@ def frame(packet, index):
     return result.getvalue()
 
 
-def audio_duration(value):
+def read_audio(value):
+    """Validate actual PCM frames and finalize bounded streaming WAV sizes.
+
+    A streaming writer can leave RIFF/data sizes at 0xffffffff or 0x7fffffff.
+    Those are not durations. Repair only these explicit sentinels; a finite
+    declaration beyond the received bytes remains a truncated, rejected file.
+    """
+    if not isinstance(value, bytes) or not 44 <= len(value) <= 9_000_000:
+        raise ValueError("audio_invalid")
+    if value[:4] != b"RIFF" or value[8:12] != b"WAVE":
+        raise ValueError("audio_format")
+    pending = {0xFFFFFFFF, 0x7FFFFFFF}
+    declared = struct.unpack_from("<I", value, 4)[0]
+    if declared not in pending and declared != len(value) - 8:
+        raise ValueError("audio_incomplete")
+    fixed = bytearray(value)
+    struct.pack_into("<I", fixed, 4, len(value) - 8)
+    offset, data_size, formats = 12, None, 0
+    while offset < len(value):
+        if offset + 8 > len(value):
+            raise ValueError("audio_incomplete")
+        tag, size = struct.unpack_from("<4sI", value, offset)
+        start = offset + 8
+        if tag == b"data" and size in pending:
+            size = len(value) - start
+            struct.pack_into("<I", fixed, offset + 4, size)
+        if start + size + (size % 2) > len(value):
+            raise ValueError("audio_incomplete")
+        if tag == b"fmt ":
+            formats += 1
+        if tag == b"data":
+            if data_size is not None or formats != 1:
+                raise ValueError("audio_format")
+            data_size = size
+        offset = start + size + (size % 2)
+    if data_size is None or formats != 1:
+        raise ValueError("audio_format")
     try:
-        with wave.open(io.BytesIO(value), "rb") as audio:
-            duration = audio.getnframes() / audio.getframerate()
+        with wave.open(io.BytesIO(fixed), "rb") as audio:
+            channels, width, rate, frames, compression, _ = audio.getparams()
             if (
-                audio.getnchannels() not in {1, 2}
-                or audio.getsampwidth() != 2
-                or not 8 <= duration <= 60
+                channels not in {1, 2}
+                or width != 2
+                or not 8000 <= rate <= 96000
+                or compression != "NONE"
+                or data_size % (channels * width)
+                or frames * channels * width != data_size
             ):
-                raise ValueError("audio_invalid")
-            return duration
-    except (wave.Error, EOFError, ZeroDivisionError):
-        raise ValueError("audio_invalid") from None
+                raise ValueError("audio_format")
+            duration = frames / rate
+            if not 8 <= duration <= 60:
+                raise ValueError("audio_duration")
+            pcm = audio.readframes(frames)
+            if len(pcm) != data_size:
+                raise ValueError("audio_incomplete")
+        # Canonical header for FFmpeg and saved local retries; samples unchanged.
+        output = io.BytesIO()
+        with wave.open(output, "wb") as audio:
+            audio.setparams((channels, width, rate, 0, "NONE", "not compressed"))
+            audio.writeframes(pcm)
+        return output.getvalue(), duration
+    except (wave.Error, EOFError, ZeroDivisionError, struct.error):
+        raise ValueError("audio_format") from None
+
+
+def audio_duration(value):
+    return read_audio(value)[1]
 
 
 def render(packet, audio):
     captures()
-    duration = audio_duration(audio)
+    audio, duration = read_audio(audio)
     with tempfile.TemporaryDirectory(prefix="noyaru-render-") as directory:
         root = Path(directory)
         (root / "voice.wav").write_bytes(audio)
