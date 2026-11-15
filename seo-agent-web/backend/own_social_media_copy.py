@@ -178,6 +178,31 @@ def strings(lang):
                     "The audio response is unusable. No automatic retry.",
                 ),
                 (
+                    "audio_missing",
+                    "Le fournisseur a répondu sans fichier vocal. Fabrication arrêtée, sans nouvel appel automatique.",
+                    "The provider replied without an audio file. Production stopped, with no automatic retry.",
+                ),
+                (
+                    "audio_encoding",
+                    "Le fichier vocal reçu est illisible. Fabrication arrêtée, sans nouvel appel automatique.",
+                    "The received audio file is unreadable. Production stopped, with no automatic retry.",
+                ),
+                (
+                    "audio_format",
+                    "Le format du son reçu n’est pas compatible avec le montage. Fabrication arrêtée, sans nouvel appel automatique.",
+                    "The received audio format is incompatible with the montage. Production stopped, with no automatic retry.",
+                ),
+                (
+                    "audio_incomplete",
+                    "Le fichier vocal reçu est incomplet. Fabrication arrêtée, sans nouvel appel automatique.",
+                    "The received audio file is incomplete. Production stopped, with no automatic retry.",
+                ),
+                (
+                    "audio_duration",
+                    "La voix reçue est trop courte ou trop longue pour cette vidéo (8 à 60 secondes). Fabrication arrêtée, sans nouvel appel automatique.",
+                    "The received voice is too short or too long for this video (8 to 60 seconds). Production stopped, with no automatic retry.",
+                ),
+                (
                     "render_failed",
                     "Le montage local a échoué. Aucun nouvel appel vocal n’est lancé.",
                     "Local montage failed. No new audio call is made.",

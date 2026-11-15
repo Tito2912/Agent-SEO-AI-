@@ -97,3 +97,43 @@ Playwright installé ; `CHROMIUM_EXECUTABLE`/`CHROMIUM_LIBRARY_PATH` facultatifs
 Exécuter dans l'ordre `capture_demo.py`, `render_smoke.py`, `browser_smoke.py`.
 Les MP4 et captures de recette navigateur restent dans `/tmp`, pas dans Git.
 Les six captures produit fictives et leur manifeste sont versionnés séparément.
+
+## Correction WAV du 15 novembre 2026
+
+Constat opérateur : fabrication arrêtée, « réponse vocale inexploitable ».
+La capture ne donne pas les octets reçus : la cause exacte de cet ancien essai
+ne peut pas être établie à partir de ce seul écran. Aucun nouvel appel payant
+ou accès privé utilisé pour le diagnostic.
+
+Défaut reproduit localement : un WAV de 30 s avec tailles RIFF/data provisoires
+`0xffffffff` est lu comme 89 478 s par le calcul précédent, qui le rejetait.
+Le lecteur finalise désormais ces tailles (ou `0x7fffffff`) avec les octets PCM
+effectivement reçus, puis conserve les mêmes échantillons dans un WAV standard.
+Une taille finie incohérente, un fichier tronqué, un format incompatible ou une
+durée réelle hors 8–60 s restent refusés. Le montage utilise le WAV normalisé.
+
+Les erreurs distinguent maintenant absence de voix, encodage, format, fichier
+incomplet et durée. La transcription exacte, les mandats Telegram, le plafond
+de deux tentatives et l’arrêt sans rappel fournisseur sont préservés. Aucun
+redémarrage des anciennes fabrications arrêtées, aucune remise à zéro de quota
+ou hypothèse de remboursement. Un prochain essai passe par un nouveau mandat
+et reste soumis à la fenêtre de 24 h. Les anciens fichiers vocaux rejetés n’ont
+pas été conservés et ne peuvent pas être récupérés par cette correction.
+
+Les fixtures PCM et réponses HTTP simulées couvrent les tailles provisoires,
+les échantillons inchangés, les fichiers réellement tronqués, les diagnostics
+et l’absence de second appel après échec. La documentation officielle OpenAI
+sur le format WAV dans Chat Completions a été relue le 15/11 ; elle ne spécifie
+pas les tailles provisoires de l’en-tête. Cette tolérance est donc testée comme
+une compatibilité de conteneur, sans affirmer qu’elle était la cause en production.
+
+Validation de ce correctif : 72 cas ciblés uniques (71 groupés puis les 31 cas
+WAV, dont un nouveau PCM extensible), compilation/Ruff/Bandit medium/high verts.
+40 observations Chromium FR/EN à 1 440/768/390/360 px sur les cinq diagnostics,
+sans débordement ni erreur JavaScript/requête externe ; captures relues.
+Deux MP4 de 30 s réellement encodés et entièrement décodés depuis les en-têtes
+provisoires (FR 450 165 octets, EN 408 335). Son synthétique, pas une écoute
+de la voix fournisseur. Preuves temporaires : `/tmp/noyaru-audio-wav-proof/`
+et `/tmp/noyaru-audio-browser-proof/`. CI complète à référencer dans la PR.
+Tests reproductibles : `python -m pytest -q tests/test_own_social_audio.py
+tests/test_own_social_media.py` depuis `seo-agent-web/`.

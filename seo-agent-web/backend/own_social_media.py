@@ -1,6 +1,7 @@
 """One bounded narration and local montage, then separate owner review. No publishing."""
 
 import base64
+import binascii
 from datetime import timedelta
 import json
 import os
@@ -427,14 +428,18 @@ def narration(packet, key):
     try:
         result = json.loads(b"".join(chunks))
         choice = result["choices"][0]
-        audio = choice["message"]["audio"]
+        audio = choice["message"].get("audio")
+        if not isinstance(audio, dict):
+            raise ValueError("audio_missing")
         if choice["finish_reason"] != "stop" or normalize(
             audio["transcript"]
         ) != normalize(text):
             raise ValueError("narration_changed")
-        data = base64.b64decode(audio["data"], validate=True)
-        render.audio_duration(data)
-        return data
+        try:
+            data = base64.b64decode(audio["data"], validate=True)
+        except (binascii.Error, ValueError, TypeError):
+            raise ValueError("audio_encoding") from None
+        return render.read_audio(data)[0]
     except (KeyError, TypeError, IndexError, json.JSONDecodeError):
         raise ValueError("audio_invalid") from None
 
@@ -569,6 +574,11 @@ def run(ident):
             "voice_refused",
             "narration_changed",
             "audio_invalid",
+            "audio_missing",
+            "audio_encoding",
+            "audio_format",
+            "audio_incomplete",
+            "audio_duration",
             "render_failed",
             "mandate_required",
         }
