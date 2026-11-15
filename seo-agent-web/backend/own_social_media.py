@@ -15,18 +15,30 @@ from sqlalchemy import select, func, or_, and_
 
 try:
     from . import own_social as social, own_social_media_render as render
-    from .models import OwnSocialMedia as Media, AuditLog, TelegramApprovalRequest
+    from .models import (
+        OwnSocialMedia as Media,
+        AuditLog,
+        TelegramApprovalRequest,
+        OwnSocialMediaPolicy,
+    )
 except ImportError:
     import own_social as social
     import own_social_media_render as render
-    from models import OwnSocialMedia as Media, AuditLog, TelegramApprovalRequest
+    from models import (
+        OwnSocialMedia as Media,
+        AuditLog,
+        TelegramApprovalRequest,
+        OwnSocialMediaPolicy,
+    )
 
 s = social.own_seo
 PATH = "/settings/system/social/media"
 MODEL = "gpt-audio-1.5"
 VOICE = "coral"
 MAX_TOKENS = 2048
-DAILY_CALLS = 2
+DEFAULT_DAILY_CALLS = 10
+MAX_DAILY_CALLS = 100
+LEGACY_DAILY_CALLS = 2
 PROFILE = "noyaru-commented-captures-v1"
 SCENES = {
     "fr": [
@@ -138,13 +150,12 @@ def scope(db, owner, ident, *, current=True):
             raise ValueError("binding_changed")
         if credentials()[1] != row.connection_hash:
             raise ValueError("connection_changed")
-        if (
-            s.digest(row.packet) != row.input_hash
-            or packet(
-                db, row.packet["lang"], row.packet["goal"], row.packet["audience"]
-            )
-            != row.packet
-        ):
+        current_packet = packet(
+            db, row.packet["lang"], row.packet["goal"], row.packet["audience"]
+        )
+        if "daily_limit" in row.packet:
+            current_packet["daily_limit"] = request_limit(row)
+        if s.digest(row.packet) != row.input_hash or current_packet != row.packet:
             raise ValueError("sources_changed")
     return row
 
@@ -184,8 +195,64 @@ def occupied(db, owner, ignore=""):
     )
 
 
-def audio_budget(db, owner):
+def policy(db, owner):
+    row = db.get(OwnSocialMediaPolicy, owner)
+    limit = row.daily_calls if row else DEFAULT_DAILY_CALLS
+    if type(limit) is not int or not 1 <= limit <= MAX_DAILY_CALLS:
+        raise ValueError("limit_invalid")
+    return {
+        "limit": limit,
+        "token": row.token if row else "",
+        "max": MAX_DAILY_CALLS,
+        "preparations": max(10, 2 * limit),
+    }
+
+
+def set_policy(owner, value, expected):
+    """Explicit owner edit, serialized with provider reservations; no work is started."""
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9]{1,3}", value):
+        raise ValueError("limit_invalid")
+    limit = int(value)
+    if not 1 <= limit <= MAX_DAILY_CALLS:
+        raise ValueError("limit_invalid")
+    with s.module().DB.session() as db:
+        s.locked(db)
+        s.actor(db, owner)
+        prior = policy(db, owner)
+        if prior["token"] != expected:
+            raise ValueError("limit_changed")
+        if prior["limit"] == limit:
+            return
+        row = db.get(OwnSocialMediaPolicy, owner)
+        if not row:
+            row = OwnSocialMediaPolicy(owner_id=owner)
+            db.add(row)
+        row.daily_calls, row.token = limit, uuid.uuid4().hex
+        db.add(
+            AuditLog(
+                actor_user_id=owner,
+                action="own_social_media.limit_changed",
+                target_type="own_social_media_policy",
+                target_id=owner,
+                meta={"before": prior["limit"], "after": limit},
+            )
+        )
+        db.commit()
+
+
+def request_limit(row):
+    # Legacy cards promised two requests. Raising today's setting never widens them.
+    value = row.packet.get("daily_limit", LEGACY_DAILY_CALLS)
+    if type(value) is not int or not 1 <= value <= MAX_DAILY_CALLS:
+        raise ValueError("limit_invalid")
+    return value
+
+
+def audio_budget(db, owner, *, mandate_limit=None):
     """Read-only rolling availability; a slot is not a reservation or a mandate."""
+    limit = policy(db, owner)["limit"]
+    if mandate_limit is not None:
+        limit = min(limit, mandate_limit)
     starts = list(
         db.scalars(
             select(Media.provider_started_at)
@@ -194,15 +261,15 @@ def audio_budget(db, owner):
                 Media.provider_started_at > s.clock() - timedelta(hours=24),
             )
             .order_by(Media.provider_started_at.desc())
-            .limit(DAILY_CALLS)
+            .limit(limit)
         )
     )
     return {
-        "limit": DAILY_CALLS,
-        "remaining": DAILY_CALLS - len(starts),
-        # With excess historical rows, wait for the second newest to expire.
+        "limit": limit,
+        "remaining": limit - len(starts),
+        # Wait until enough started calls have expired, including after a decrease.
         "retry_at": s.seo_watch.utc(starts[-1]) + timedelta(hours=24)
-        if len(starts) >= DAILY_CALLS
+        if len(starts) >= limit
         else None,
     }
 
@@ -218,6 +285,7 @@ def prepare(owner, lang, goal, audience, key, confirm):
             raise ValueError("binding_changed")
         render.executable()
         value = packet(db, lang, goal, audience)
+        value["daily_limit"] = policy(db, owner)["limit"]
         connection = credentials()[1]
         prior = db.scalar(
             select(Media)
@@ -261,9 +329,9 @@ def prepare(owner, lang, goal, audience, key, confirm):
                     Media.created_at >= s.clock() - timedelta(hours=24),
                 )
             )
-            >= 10
+            >= policy(db, owner)["preparations"]
         ):
-            raise ValueError("budget")
+            raise ValueError("preparation_limit")
         row = Media(
             owner_id=owner,
             authorization_key=key,
@@ -307,13 +375,14 @@ def approval_document(db, owner, ident, kind, lang):
     en = lang == "en"
     if kind == "social_render":
         render.executable()
+        limit = request_limit(row)
         effect = (
             "Decision 1/2: authorize one paid OpenAI audio request and a private local montage. "
-            "Only the exact public narration below is sent. Maximum two requests per rolling 24h, 2048 output tokens per request. "
+            f"Only the exact public narration below is sent. Maximum {limit} requests per rolling 24h, 2048 output tokens per request. "
             "This is a request/token cap, not a euro cap. No customer SEO credit or social publication."
             if en
             else "Décision 1/2 : autoriser un appel vocal OpenAI payant et le montage local privé. "
-            "Seule la narration publique exacte ci-dessous est transmise. Deux appels au plus par 24 h glissantes, 2 048 jetons de sortie par appel. "
+            f"Seule la narration publique exacte ci-dessous est transmise. {limit} appels au plus par 24 h glissantes, 2 048 jetons de sortie par appel. "
             "Ce plafond porte sur les appels/jetons, pas sur les euros. Aucun crédit SEO client ni publication sociale."
         )
         sections = [
@@ -376,20 +445,30 @@ def approval_document(db, owner, ident, kind, lang):
 
 
 def candidates(db, owner):
-    voice_available = bool(audio_budget(db, owner)["remaining"])
+    # At most 200 free preparations per rolling day; inspect metadata only so
+    # capped older proposals cannot hide a newer request with a higher limit.
+    delivered = 0
     for row in db.execute(
-        select(Media.id, Media.state)
+        select(Media.id, Media.state, Media.packet)
         .where(
             Media.owner_id == owner,
             Media.state.in_({"proposal", "review"}),
             Media.expires_at > s.clock(),
         )
         .order_by(Media.created_at)
-        .limit(10)
+        .limit(2 * MAX_DAILY_CALLS)
     ):
-        if row.state == "proposal" and not voice_available:
-            continue  # A delayed/idempotent preparation must not create a futile new card.
+        if (
+            row.state == "proposal"
+            and not audio_budget(db, owner, mandate_limit=request_limit(row))[
+                "remaining"
+            ]
+        ):
+            continue
         yield ("social_render" if row.state == "proposal" else "social_review"), row.id
+        delivered += 1
+        if delivered >= 10:
+            break
 
 
 def decide(db, owner, ident, kind, approve, expected):
@@ -526,7 +605,9 @@ def run(ident):
             if audio is None:
                 if occupied(db, row.owner_id, row.id) >= 10:
                     raise ValueError("storage_limit")
-                if not audio_budget(db, row.owner_id)["remaining"]:
+                if not audio_budget(db, row.owner_id, mandate_limit=request_limit(row))[
+                    "remaining"
+                ]:
                     raise ValueError("budget")
                 row.provider_calls = 1
                 row.provider_started_at = s.clock()
@@ -576,6 +657,7 @@ def run(ident):
         allowed = {
             "expired",
             "budget",
+            "limit_invalid",
             "storage_limit",
             "captures_changed",
             "sources_changed",

@@ -14,6 +14,29 @@ def strings(lang):
         studio=t("Studio réseaux sociaux", "Social content studio"),
         bot=t("Valider dans Telegram", "Decide in Telegram"),
         reload=t("Actualiser", "Reload"),
+        limits=t("Régler mon plafond vocal", "Set my audio call limit"),
+        limit_label=t(
+            "Appels vocaux au plus par 24 h glissantes",
+            "Maximum audio calls per rolling 24h",
+        ),
+        limit_help=t(
+            "Vous choisissez ce plafond Noyaru, de 1 à 100 appels. Chaque appel payant exige toujours votre accord dans Telegram. Ce réglage ne lance aucun appel et ne remet aucun compteur à zéro. Un ancien mandat garde son plafond initial ; préparez une nouvelle fabrication pour utiliser une hausse.",
+            "You choose this Noyaru limit, from 1 to 100 calls. Each paid call still requires your Telegram approval. Saving starts no call and resets no counter. An older mandate keeps its original limit; prepare a new production to use an increase.",
+        ),
+        limit_save=t("Enregistrer mon plafond", "Save my limit"),
+        limit_saved=t(
+            "Plafond enregistré. Les tentatives passées restent comptées ; aucun appel lancé.",
+            "Limit saved. Previous attempts remain counted; no call started.",
+        ),
+        other_limits=t("Autres limites du pilote", "Other pilot limits"),
+        preparation_count=t(
+            "Demandes gratuites préparées au plus par 24 h",
+            "Maximum free preparations per 24h",
+        ),
+        storage_count=t(
+            "Rendus conservés au plus : 10. Retirez un ancien rendu avant d’en fabriquer un autre si cette limite est atteinte.",
+            "Up to 10 stored outputs. Remove an older output before producing another when this limit is reached.",
+        ),
         availability=t(
             "Disponibilité du prochain essai", "Availability for the next attempt"
         ),
@@ -45,8 +68,8 @@ def strings(lang):
             "Demander la fabrication dans Telegram", "Request production in Telegram"
         ),
         limit=t(
-            "Pilote : deux appels vocaux au plus par 24 h glissantes, 2 048 jetons de sortie au plus par appel. Ce n’est pas un plafond en euros. Aucun crédit SEO client. Modèle gpt-audio-1.5, voix coral ; seul le texte affiché est transmis.",
-            "Pilot: at most two audio calls per rolling 24h, at most 2048 output tokens per call. This is not a euro cap. No customer SEO credit. Model gpt-audio-1.5, coral voice; only the displayed script is sent.",
+            "Pilote : plafond vocal choisi ci-dessus, 2 048 jetons de sortie au plus par appel. Ce n’est pas un plafond en euros. Aucun crédit SEO client. Modèle gpt-audio-1.5, voix coral ; seul le texte affiché est transmis.",
+            "Pilot: audio call limit selected above, at most 2048 output tokens per call. This is not a euro cap. No customer SEO credit. Model gpt-audio-1.5, coral voice; only the displayed script is sent.",
         ),
         pipeline=t("2. Fabrication et relecture", "2. Production and review"),
         review=t(
@@ -103,6 +126,21 @@ def strings(lang):
         errors={
             k: t(fr, en)
             for k, fr, en in [
+                (
+                    "limit_invalid",
+                    "Choisissez un nombre entier de 1 à 100 appels.",
+                    "Choose a whole number from 1 to 100 calls.",
+                ),
+                (
+                    "limit_changed",
+                    "Le plafond a été modifié dans un autre onglet. Actualisez avant de l’enregistrer.",
+                    "The limit changed in another tab. Reload before saving.",
+                ),
+                (
+                    "preparation_limit",
+                    "La limite des demandes gratuites préparées sur 24 h est atteinte. Aucun appel lancé.",
+                    "The free preparation limit per 24h has been reached. No call started.",
+                ),
                 (
                     "changed",
                     "Le dossier a changé. Revenez au studio pour préparer une nouvelle version.",

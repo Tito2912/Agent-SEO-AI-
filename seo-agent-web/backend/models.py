@@ -990,6 +990,15 @@ class OwnSupportTicket(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class OwnSocialMediaPolicy(Base):
+    """Owner-selected rolling call limit; never a provider mandate or a counter."""
+    __tablename__ = 'own_social_media_policy'
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    daily_calls: Mapped[int] = mapped_column(Integer, nullable=False)
+    token: Mapped[str] = mapped_column(String(32), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
 class OwnSocialMedia(Base):
     """Owner-only fixed demo assets. No client data or social publishing authority."""
     __tablename__ = 'own_social_media'

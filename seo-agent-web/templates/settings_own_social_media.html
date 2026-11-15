@@ -1,15 +1,20 @@
 {% extends 'layout.html' %}
 {% macro csrf() %}<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />{% endmacro %}
 {% block title %}{{ copy.title }} - {{ app_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/own_social.css?v=2" /><script src="/static/own_social_media.js?v=2" defer></script>{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/own_social.css?v=3" /><script src="/static/own_social_media.js?v=2" defer></script>{% endblock %}
 {% block crumbs %}<a href="/settings/system/social?lang={{ lang }}">{{ copy.studio }}</a><span class="crumb-sep">/</span><span>{{ copy.title }}</span>{% endblock %}
 {% block content %}<div class="social-studio">
 <header class="page-header"><p class="social-eyebrow">TikTok · 9:16</p><h1>{{ copy.title }}</h1><p>{{ copy.intro }}</p></header>
 <nav class="social-actions"><a class="btn" href="/settings/system/social?network=tiktok&amp;topic=score&amp;lang={{ lang }}&amp;goal={{ packet.goal if packet else 'discovery' }}&amp;audience={{ packet.audience if packet else 'freelance' }}">{{ copy.studio }}</a><a class="btn" href="/settings/system/telegram/approvals">{{ copy.bot }}</a><a class="btn" href="{{ base }}{% if item %}?media={{ item.id }}&amp;lang={{ lang }}{% else %}?lang={{ lang }}&amp;goal={{ packet.goal if packet else 'discovery' }}&amp;audience={{ packet.audience if packet else 'freelance' }}{% endif %}">{{ copy.reload }}</a></nav>
 {% if unavailable %}<p class="alert error" role="alert">{{ copy.unavailable }}</p>{% else %}
+{% if saved %}<p class="alert success" role="status">{{ copy.limit_saved }}</p>{% endif %}
 {% if error %}<p class="alert warning" role="alert">{{ error }}</p>{% endif %}
 {% if budget and budget.retry_at %}<section class="card" aria-labelledby="media-availability"><h2 id="media-availability">{{ copy.availability }}</h2><p>{{ copy.remaining }} : <strong>{{ budget.remaining }} / {{ budget.limit }}</strong></p>
 {% if budget.retry_at %}<p role="status">{{ copy.retry_at }} <time datetime="{{ budget.retry_at.isoformat() }}" data-media-local-time>{{ budget.retry_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</time>.</p><p>{{ copy.budget_info }}</p><a class="btn primary" href="{{ base }}?lang={{ lang }}&amp;goal={{ packet.goal if packet else 'discovery' }}&amp;audience={{ packet.audience if packet else 'freelance' }}">{{ copy.retry_check }}</a>{% endif %}</section>{% elif budget %}<p id="media-availability">{{ copy.remaining }} : <strong>{{ budget.remaining }} / {{ budget.limit }}</strong></p>{% endif %}
+{% if policy %}<details class="card" id="media-limits"><summary>{{ copy.limits }} · <span>{{ policy.limit }} / 24 h</span></summary><p id="media-limit-help">{{ copy.limit_help }}</p>
+<form method="post" action="{{ base }}/limits?lang={{ lang }}">{{ csrf() }}<input type="hidden" name="policy_token" value="{{ policy.token }}" /><input type="hidden" name="goal" value="{{ packet.goal if packet else 'discovery' }}" /><input type="hidden" name="audience" value="{{ packet.audience if packet else 'freelance' }}" />
+<label for="media-daily-calls">{{ copy.limit_label }}</label><input id="media-daily-calls" name="daily_calls" type="number" inputmode="numeric" min="1" max="{{ policy.max }}" step="1" value="{{ policy.limit }}" required aria-describedby="media-limit-help" /><button class="btn" type="submit">{{ copy.limit_save }}</button></form>
+<h3>{{ copy.other_limits }}</h3><p>{{ copy.preparation_count }} : {{ policy.preparations }}.</p><p>{{ copy.storage_count }}</p></details>{% endif %}
 {% if item %}<section class="card" {% if item.state in ['proposal','queued','running','review'] %}data-media-watch="{{ base }}/{{ item.id }}/status" data-state="{{ item.state }}" data-error="{{ item.error_code or '' }}"{% endif %}>
 <p class="social-eyebrow">{{ copy.pipeline }}</p><h2>{{ item.packet.title }}</h2><p role="status">{{ copy.states.get(item.state, item.state) }}</p>
 {% if item.error_code %}<p class="alert warning">{{ copy.errors.get(item.error_code, copy.errors.changed) }}</p>{% endif %}

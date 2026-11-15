@@ -35,7 +35,8 @@ son texte d'accompagnement. Aucun visage, imitation d'une personne ou musique.
   pistes natives du studio gardent leurs dossiers textuels. Pas d'adaptation
   automatique d'un article, de calendrier ni de publication Instagram/TikTok.
 - Fournisseur fixe : OpenAI `gpt-audio-1.5`, voix `coral`, WAV, un appel par
-  fabrication. Au plus deux tentatives vocales par 24 heures glissantes et
+  fabrication. Plafond propriétaire réglable de 1 à 100 tentatives par 24 heures
+  glissantes (10 par défaut depuis le 15/11 ; les anciens mandats gardent 2) et
   2 048 jetons de sortie par appel ; ce n'est pas un plafond en euros. Aucun
   quota SEO client. Aucune tentative fournisseur réelle pendant cette recette.
 - La clé OpenAI et le bot privé doivent être déjà configurés. Le mandat lie le
@@ -48,7 +49,8 @@ son texte d'accompagnement. Aucun visage, imitation d'une personne ou musique.
   Une fabrication active au plus par propriétaire ; la suivante reste en file
   pour préserver les ressources du service web.
   Un arrêt définitif retire aussi la voix intermédiaire.
-- Dix demandes préparées par 24 h et dix rendus conservés avant nouvelle
+- Demandes gratuites préparées limitées à max(10, 2 × plafond vocal) par 24 h,
+  avec erreur distincte ; dix rendus conservés avant nouvelle
   fabrication. Le contrôle du stockage est revérifié avant l'appel vocal.
   Le propriétaire retire un ancien rendu via une confirmation sur la page.
 - Chaque vidéo fait moins de 12 Mo ; données binaires privées dans la base
@@ -175,3 +177,46 @@ FR/EN, quatre largeurs et repli sans JavaScript. Heure locale Paris vérifiée e
 FR 24 h et EN AM/PM ; repli UTC explicite. Aucune erreur JavaScript, requête
 externe ou débordement global ; captures relues. Preuves temporaires sous
 `/tmp/noyaru-quota-browser-proof/` ; référence de CI dans la PR.
+
+## Réglage propriétaire du plafond — 15 novembre 2026
+
+Tony juge le plafond fixe de deux appels trop contraignant et autorise son
+augmentation. Le défaut devient **10 appels commencés / 24 h glissantes**,
+réglable de 1 à 100 dans « Régler mon plafond vocal » sur la page vidéo. Ce
+réglage Noyaru ne correspond ni au quota OpenAI ni au forfait SEO d’un client.
+La limite de 2 048 jetons par appel demeure ; aucun budget en euros n’est promis.
+
+- Paramètre durable par propriétaire, formulaire POST propriétaire + CSRF,
+  contrôle de version pour les onglets concurrents et journal avant/après.
+  Même verrou transactionnel que la réservation d’un appel ; lecture pure en GET.
+- Une hausse garde les dates et états de toutes les tentatives, y compris les
+  échecs, annulations et résultats inconnus ; elle ne lance aucun travail.
+  Un nouveau dossier prend une copie du plafond dans son empreinte approuvée.
+  L’ancien mandat reste plafonné à son chiffre initial (2 pour un dossier
+  antérieur à ce lot), même après une hausse. Un réglage abaissé est toujours
+  revérifié avant une nouvelle réservation ; le plus petit des deux plafonds
+  s’applique. Voix déjà reçue et relecture n’exigent aucun nouvel appel vocal.
+- Chaque nouvel appel payant reste lié à sa décision Telegram exacte. Aucun
+  ancien essai arrêté ou incertain n’est relancé. Nouvelle fabrication et nouvel
+  accord nécessaires ; la relecture du MP4 reste une décision distincte.
+- Les préparations gratuites disposent d’un plafond distinct, affiché avec les
+  limites de stockage : max(10, deux fois le plafond vocal) par 24 h. Cela évite
+  que les préparations gratuites consomment le compteur vocal ou que leur ancien
+  plafond fixe de dix empêche d’utiliser un plafond vocal plus élevé.
+- Migration additive `20261115_0032` après 0031 : table de réglage seule, vide
+  initialement ; aucune réécriture d’un média ou d’un mandat existant. Sans
+  réglage enregistré, le défaut 10 s’applique aux prochaines demandes. Rollback
+  de la table et reprise des migrations contrôlés localement.
+
+Recette de ce lot : comptes fictifs, bot et voix simulés ; aucun appel vocal
+payant, donnée SAV, site client ou accès privé de production. Vérifications et
+PR consignées au journal partagé lors de la livraison.
+
+Validation locale finale : 153 cas ciblés uniques (média, politique, audio,
+préservation des migrations, décisions Telegram et inventaire) ; 26 observations
+Chromium FR/EN à 1 440/768/390/360 px, dont les deux enregistrements du plafond
+sans JavaScript. Hausse réelle du formulaire 2 → 10 : deux tentatives conservées,
+8 appels disponibles ; baisse à 1 : nouvelle préparation bloquée. Aucun message
+Telegram réel, appel vocal, débordement global ou erreur JavaScript ; captures
+relues, champ de 48 px et libellé associé. Contrôles compilation, Ruff F/E9 et
+Bandit medium/high réussis. Preuves temporaires `/tmp/noyaru-limit-browser-proof`.

@@ -50,11 +50,12 @@ def page(
     goal: str = "discovery",
     audience: str = "freelance",
     err: str = "",
+    msg: str = "",
 ):
     m = media
     user = m.s.module()._require_system_owner(request)
     row, packet, recent, issue, unavailable = None, None, [], "", False
-    budget = None
+    budget, policy = None, None
     try:
         with m.s.module().DB.session() as db:
             recent = list(
@@ -65,6 +66,8 @@ def page(
                     .limit(10)
                 )
             )
+            policy = m.policy(db, user.id)
+            budget = m.audio_budget(db, user.id)
             if media_id:
                 row = m.scope(db, user.id, media_id, current=False)
                 packet = row.packet
@@ -80,7 +83,6 @@ def page(
                         issue = str(exc)
             else:
                 packet = m.packet(db, i18n.current_lang(), goal, audience)
-            budget = m.audio_budget(db, user.id)
             if not row:
                 try:
                     channel = m.approvals().active(db)
@@ -115,6 +117,8 @@ def page(
             unavailable=unavailable,
             blocked=bool(issue) or bool(not row and budget and not budget["remaining"]),
             budget=budget,
+            policy=policy,
+            saved=msg == "limit_saved",
             base=m.PATH,
             key=uuid.uuid4().hex,
             lang=i18n.current_lang(),
@@ -122,6 +126,39 @@ def page(
         status_code=503 if unavailable else 200,
         headers=HEADERS,
     )
+
+
+@router.post("/settings/system/social/media/limits")
+def limits(
+    request: Request,
+    daily_calls: str = Form(""),
+    policy_token: str = Form(""),
+    goal: str = Form("discovery"),
+    audience: str = Form("freelance"),
+):
+    user = media.s.module()._require_system_owner(request)
+    own_seo_routes.throttle(request)
+    try:
+        media.set_policy(user.id, daily_calls, policy_token)
+        return RedirectResponse(
+            media.PATH
+            + "?"
+            + urlencode(
+                {
+                    "msg": "limit_saved",
+                    "lang": i18n.current_lang(),
+                    "goal": goal,
+                    "audience": audience,
+                }
+            )
+            + "#media-limits",
+            status_code=303,
+            headers=HEADERS,
+        )
+    except ValueError as exc:
+        return redirect(error=str(exc))
+    except SQLAlchemyError:
+        return redirect(error="unavailable")
 
 
 @router.post("/settings/system/social/media/prepare")

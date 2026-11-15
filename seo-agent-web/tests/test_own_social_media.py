@@ -48,6 +48,7 @@ def result():
 def media(bot, monkeypatch):
     x = bot
     activate(x)
+    m.set_policy(x["owner"].id, "2", "")
     monkeypatch.setenv("OPENAI_API_KEY", "fictional-voice-key")
     monkeypatch.setattr(m.render, "executable", lambda: "/fixture/ffmpeg")
     monkeypatch.setattr(m.approvals(), "run_result", lambda *args: None)
