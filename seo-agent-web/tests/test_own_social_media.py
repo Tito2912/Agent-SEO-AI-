@@ -452,6 +452,8 @@ def test_duplicate_submission_returns_existing_request_without_new_authority_at_
         spent(x, m.s.clock())
     assert prepare(x, key) == ident
     assert read(x, ident).state == "proposal" and not x["voice_calls"]
+    m.approvals().sync()
+    assert not rows(x)  # Even delayed first delivery waits while the voice cap is full.
 
 
 def test_tampered_video_cannot_be_approved_or_downloaded(media):

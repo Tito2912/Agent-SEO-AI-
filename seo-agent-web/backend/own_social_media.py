@@ -376,6 +376,7 @@ def approval_document(db, owner, ident, kind, lang):
 
 
 def candidates(db, owner):
+    voice_available = bool(audio_budget(db, owner)["remaining"])
     for row in db.execute(
         select(Media.id, Media.state)
         .where(
@@ -386,6 +387,8 @@ def candidates(db, owner):
         .order_by(Media.created_at)
         .limit(10)
     ):
+        if row.state == "proposal" and not voice_available:
+            continue  # A delayed/idempotent preparation must not create a futile new card.
         yield ("social_render" if row.state == "proposal" else "social_review"), row.id
 
 

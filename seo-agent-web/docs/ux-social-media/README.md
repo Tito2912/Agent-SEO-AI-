@@ -152,6 +152,9 @@ affichage : la date ne réserve aucun appel. Le lien de disponibilité conduit �
 une nouvelle lecture, sans création ni relance. Le formulaire et l’invitation à
 préparer un nouvel essai restent masqués au plafond ; le POST direct est aussi
 refusé avant toute création de demande/carte Telegram.
+Une proposition déjà préparée mais pas encore notifiée attend aussi une place
+avant la création d’une nouvelle carte de fabrication ; les cartes de relecture
+restent disponibles.
 
 La fenêtre de 24 h exclut les appels ayant exactement 24 h ou plus. Les appels
 commencés restent comptés quels que soient le résultat ou le retrait du rendu ;
