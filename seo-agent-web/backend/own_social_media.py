@@ -357,6 +357,23 @@ def script(packet):
     return " ".join(scene["text"] for scene in packet["scenes"])
 
 
+def progress_phase(row):
+    """Read durable milestones only; neither a percentage nor a worker heartbeat."""
+    if row.state in {"proposal", "queued", "running", "review"} and (
+        s.seo_watch.utc(row.expires_at) <= s.clock()
+    ):
+        return "expired"
+    if row.state == "running":
+        if not row.lease_until or s.seo_watch.utc(row.lease_until) <= s.clock():
+            return "unconfirmed"
+        if row.render_attempts:
+            return "montage"
+        return "voice" if row.provider_started_at else "starting"
+    if row.state == "queued" and row.render_attempts:
+        return "montage_queued"
+    return row.state
+
+
 def valid_transcript(value):
     return (
         isinstance(value, str)

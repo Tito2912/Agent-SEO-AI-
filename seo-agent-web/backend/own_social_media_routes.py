@@ -120,6 +120,7 @@ def page(
             budget=budget,
             comparison=comparison,
             policy=policy,
+            phase=m.progress_phase(row) if row else "",
             saved=msg == "limit_saved",
             base=m.PATH,
             key=uuid.uuid4().hex,
@@ -253,14 +254,24 @@ def status(request: Request, ident: str):
         with media.s.module().DB.session() as db:
             media.s.actor(db, user.id)
             row = db.execute(
-                select(media.Media.state, media.Media.error_code).where(
-                    media.Media.id == ident, media.Media.owner_id == user.id
-                )
+                select(
+                    media.Media.state,
+                    media.Media.error_code,
+                    media.Media.expires_at,
+                    media.Media.lease_until,
+                    media.Media.render_attempts,
+                    media.Media.provider_started_at,
+                ).where(media.Media.id == ident, media.Media.owner_id == user.id)
             ).first()
             if not row:
                 raise ValueError("missing")
             return JSONResponse(
-                {"state": row.state, "error": row.error_code}, headers=HEADERS
+                {
+                    "state": row.state,
+                    "error": row.error_code,
+                    "phase": media.progress_phase(row),
+                },
+                headers=HEADERS,
             )
     except ValueError:
         raise HTTPException(404, "media_missing")
