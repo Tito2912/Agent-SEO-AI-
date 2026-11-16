@@ -14,6 +14,156 @@ def strings(lang):
         studio=t("Studio réseaux sociaux", "Social content studio"),
         bot=t("Valider dans Telegram", "Decide in Telegram"),
         reload=t("Actualiser", "Reload"),
+        progress=t("Suivi de votre vidéo", "Video progress"),
+        progress_steps=t("Étapes de la fabrication", "Production steps"),
+        steps=[
+            t("Accord", "Approval"),
+            t("Voix off", "Voiceover"),
+            t("Montage", "Montage"),
+            t("Relecture", "Review"),
+        ],
+        follow=t("Voir l’avancement", "View progress"),
+        listen=t("Écouter la vidéo", "Play the video"),
+        nojs=t(
+            "Actualisez la page pour voir la prochaine étape. La fabrication ne dépend pas de cet onglet.",
+            "Reload the page to see the next step. Production does not depend on this tab.",
+        ),
+        monitor_checking=t("Vérification du suivi…", "Checking progress…"),
+        monitor_failed_title=t(
+            "Suivi automatique interrompu", "Automatic tracking stopped"
+        ),
+        monitor_access_title=t(
+            "Le suivi n’est plus accessible", "Tracking is no longer accessible"
+        ),
+        monitor_ok=t("Dernier état lu à", "Last status read at"),
+        monitor_retrying=t(
+            "Le suivi rencontre une difficulté. Nouvelle vérification en cours…",
+            "Tracking encountered a problem. Checking again…",
+        ),
+        monitor_failed=t(
+            "Le suivi automatique est interrompu. La fabrication peut continuer. Actualisez pour retrouver son état.",
+            "Automatic tracking stopped. Production may continue. Reload to check its status.",
+        ),
+        monitor_access=t(
+            "Ce suivi n’est plus accessible. Actualisez pour vérifier votre session et vos droits.",
+            "This status is no longer accessible. Reload to check your session and permissions.",
+        ),
+        phase_titles={
+            key: t(fr, en)
+            for key, fr, en in [
+                ("proposal", "Votre accord est attendu", "Waiting for your approval"),
+                (
+                    "queued",
+                    "Accord reçu · fabrication en attente",
+                    "Approved · waiting to start",
+                ),
+                ("starting", "La fabrication démarre", "Production is starting"),
+                ("voice", "Création de la voix off en cours", "Creating the voiceover"),
+                (
+                    "montage",
+                    "Assemblage de votre vidéo en cours",
+                    "Assembling your video",
+                ),
+                (
+                    "montage_queued",
+                    "Reprise du montage en attente",
+                    "Waiting to resume the montage",
+                ),
+                (
+                    "review",
+                    "Votre vidéo est prête à relire",
+                    "Your video is ready to review",
+                ),
+                ("approved", "Votre vidéo a été relue", "Your video has been reviewed"),
+                (
+                    "unconfirmed",
+                    "L’activité reste à vérifier",
+                    "Activity needs checking",
+                ),
+                ("expired", "La demande a expiré", "The request expired"),
+                ("stopped", "La fabrication est arrêtée", "Production stopped"),
+                (
+                    "uncertain",
+                    "Le résultat vocal reste incertain",
+                    "The audio result is uncertain",
+                ),
+                (
+                    "cancelled",
+                    "Cette fabrication a été retirée",
+                    "This production was removed",
+                ),
+            ]
+        },
+        phase_help={
+            key: t(fr, en)
+            for key, fr, en in [
+                (
+                    "proposal",
+                    "Validez la fabrication dans Telegram pour démarrer. Aucun appel vocal n’a encore commencé pour cette demande.",
+                    "Approve production in Telegram to start. No audio call has started for this request yet.",
+                ),
+                (
+                    "queued",
+                    "La demande est autorisée et attend son tour. Aucune autre validation n’est nécessaire pour le moment.",
+                    "The request is authorized and waiting for its turn. No further approval is needed right now.",
+                ),
+                (
+                    "starting",
+                    "Le démarrage est enregistré. La prochaine étape apparaîtra ici automatiquement.",
+                    "The start is recorded. The next step will appear here automatically.",
+                ),
+                (
+                    "voice",
+                    "L’appel vocal a commencé. La prochaine étape est le montage des captures avec la voix reçue. Vous pouvez quitter cette page.",
+                    "The audio call has started. Next comes combining the captures with the received voice. You can leave this page.",
+                ),
+                (
+                    "montage",
+                    "La voix a été reçue. Noyaru assemble les captures, les textes et le son dans votre vidéo privée. Vous pouvez quitter cette page.",
+                    "The voice has been received. Noyaru is combining the captures, text and audio into your private video. You can leave this page.",
+                ),
+                (
+                    "montage_queued",
+                    "La voix est sauvegardée ; le montage attend une reprise locale. Aucun nouvel appel vocal n’est nécessaire.",
+                    "The voice is saved; the montage is waiting for a local retry. No new audio call is needed.",
+                ),
+                (
+                    "review",
+                    "Écoutez la vidéo entière et vérifiez-la, puis acceptez ou refusez ce fichier dans Telegram. Il reste privé.",
+                    "Watch the entire video and check it, then accept or reject this file in Telegram. It remains private.",
+                ),
+                (
+                    "approved",
+                    "Ce fichier est marqué prêt à diffuser. Rien n’a été publié sur un réseau social.",
+                    "This file is marked ready for distribution. Nothing has been published to a social network.",
+                ),
+                (
+                    "unconfirmed",
+                    "Le traitement est encore marqué en cours, mais sa fenêtre d’activité a expiré. Son avancement ne peut plus être confirmé ici. Ne lancez pas un autre essai avant vérification.",
+                    "The job is still marked running, but its activity window expired. Its progress can no longer be confirmed here. Do not start another attempt before checking.",
+                ),
+                (
+                    "expired",
+                    "Consultez le dossier ci-dessous. L’expiration n’autorise aucun nouvel appel automatique.",
+                    "Check the pack below. Expiry does not authorize another automatic call.",
+                ),
+                (
+                    "stopped",
+                    "Consultez le diagnostic ci-dessous avant de préparer un nouvel essai.",
+                    "Check the diagnosis below before preparing another attempt.",
+                ),
+                (
+                    "uncertain",
+                    "Aucun nouvel appel vocal n’est lancé automatiquement. Vérifiez le résultat avant de recommencer.",
+                    "No further audio call is made automatically. Check the result before starting again.",
+                ),
+                (
+                    "cancelled",
+                    "Le fichier conservé a été retiré. Un appel déjà commencé peut rester facturé.",
+                    "The stored file was removed. A call that already started may still be billed.",
+                ),
+            ]
+        },
         limits=t("Régler mon plafond vocal", "Set my audio call limit"),
         limit_label=t(
             "Appels vocaux au plus par 24 h glissantes",
@@ -81,7 +231,9 @@ def strings(lang):
             "You reviewed and accepted this version. The difference remains visible as a record of your decision.",
         ),
         comparison=t("Écart de narration à relire", "Narration difference to review"),
-        comparison_done=t("Écart de narration accepté", "Narration difference accepted"),
+        comparison_done=t(
+            "Écart de narration accepté", "Narration difference accepted"
+        ),
         compare_help=t(
             "La transcription reçue diffère du script. Écoutez la vidéo entière, puis vérifiez les deux textes. La transcription du fournisseur aide cette relecture ; elle ne prouve pas les mots réellement prononcés. Rien n’est marqué prêt sans votre décision explicite dans Telegram.",
             "The received transcript differs from the script. Listen to the entire video, then check both texts. The provider transcript helps this review; it does not prove what was actually spoken. Nothing is marked ready without your explicit Telegram decision.",
@@ -95,8 +247,8 @@ def strings(lang):
         ),
         download=t("Télécharger la vidéo", "Download video"),
         waiting=t(
-            "La progression se met à jour ici. Vous pouvez quitter cette page ; retrouvez la décision dans votre bot privé.",
-            "Progress updates here. You can leave this page; find the decision in your private bot.",
+            "Retrouvez l’étape actuelle dans le suivi en haut de la page. Aucune nouvelle fabrication n’est lancée en actualisant.",
+            "Find the current step in the status panel at the top. Reloading starts no new production.",
         ),
         cancel=t("Arrêter et retirer ce rendu", "Stop and remove this output"),
         cancel_info=t(

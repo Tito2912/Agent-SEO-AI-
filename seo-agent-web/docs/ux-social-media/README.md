@@ -291,3 +291,49 @@ Reproduction : `python -m pytest -q tests/test_own_social_narration.py
 tests/test_own_social_media.py tests/test_own_social_audio.py
 tests/test_own_social_media_policy.py tests/test_telegram_approvals.py
 tests/test_current_ux_inventory.py` depuis `seo-agent-web/`.
+
+## Fabrication visible et suivi explicite — 16 novembre 2026
+
+Base `f24bfe10`, après #89. Constat opérateur par capture : « Fabrication en
+cours » ressemble à un texte ordinaire, sous les réglages. L'écran conserve
+« Valider dans Telegram » pendant le travail. Le code du suivi confirme aussi
+un arrêt silencieux après trois erreurs réseau. Ces constats ne prouvent pas
+que le worker réel avance ou qu'il est bloqué ; aucune session de production
+n'est utilisée pour les compléter.
+
+| Écran / état | Problème constaté | Conséquence | Correction | Priorité |
+| --- | --- | --- | --- | --- |
+| Fabrication autorisée / en cours | Statut discret sous les réglages | Impression que rien ne se passe | Panneau avant les quotas, titre de l'étape et animation discrète | P1 |
+| Création de la voix / montage | Même libellé pour plusieurs étapes | Impossible de comprendre l'attente | Quatre repères : accord, voix off, montage, relecture | P1 |
+| Fabrication en cours | Invitation Telegram permanente | Validation supplémentaire supposée nécessaire | Action Telegram réservée à l'accord et à la relecture | P1 |
+| Erreurs du suivi / perte d'accès | Arrêt silencieux du polling | Un écran ancien semble encore à jour | Avertissement visible, animation arrêtée, lien d'actualisation sans relance | P1 |
+| Traitement encore marqué en cours mais bail expiré | Texte trop affirmatif | Confusion entre état enregistré et activité confirmée | « L'activité reste à vérifier », aucun nouveau travail déclenché | P1 |
+
+Le parcours reste : accord Telegram → file d'attente → appel vocal → montage
+→ lecteur privé → relecture Telegram. La page permet de rejoindre directement
+le lecteur et de retrouver le panneau d'avancement. Elle n'ajoute ni décision,
+appel IA, crédit consommé, changement de plafond ou publication.
+
+Les étapes viennent des marqueurs durables existants : appel commencé,
+tentative de montage enregistrée après sauvegarde de la voix, état de
+relecture. Le bail du travail et l'expiration de la demande sont contrôlés en
+lecture seule. Un bail expiré donne un état « à vérifier », sans modifier la
+ligne, renouveler le bail ou relancer le worker. Une reprise locale de montage
+est distinguée d'un nouvel appel vocal. Aucun pourcentage ou délai de fin
+estimé n'est inventé ; la lecture du statut n'est pas un heartbeat du worker.
+
+Le GET privé de statut ne sélectionne que les métadonnées nécessaires, jamais
+le WAV, MP4, la clé ou le texte. Le suivi actualise la page à chaque changement
+de phase. Trois erreurs consécutives, une réponse illisible ou une perte d'accès
+deviennent visibles au lieu de laisser une animation rassurante. Les requêtes
+ont un délai d'attente de dix secondes et le polling n'est pas cumulé ; dans un
+onglet masqué, il attend. La date de dernière lecture réussie est distincte de
+l'activité du worker. Le lien d'actualisation ne relance aucun travail.
+
+Les mouvements réduits désactivent l'animation. Les étapes et l'état restent
+lisibles sans JavaScript, avec une invitation à actualiser manuellement. Le
+profil vocal v2, les quotas, les confirmations et la comparaison de narration
+de #89 sont conservés. Aucun changement de schéma, migration, fournisseur,
+capture produit, règle SAV/CMS ou fichier juridique. Les tests utilisent des
+comptes et états fictifs ; la recette visuelle ne vaut pas diagnostic du
+traitement réel. Les validations locales et la CI sont consignées dans la PR.
