@@ -67,7 +67,7 @@ def test_every_sitemap_page_has_one_complete_share_card_and_honest_lengths() -> 
             if len(metas.get(key, [])) != 1:
                 problemes.append(f"{path}: {key} x{len(metas.get(key, []))}")
         image = (metas.get("og:image") or [""])[0]
-        if not (image.startswith("http") and image.endswith("/static/brand/noyaru-partage.png")):
+        if not (image.startswith("http") and image.endswith("/static/brand/noyaru-partage.png?v=4")):
             problemes.append(f"{path}: og:image {image!r}")
         if (metas.get("twitter:card") or [""])[0] != "summary_large_image":
             problemes.append(f"{path}: twitter:card {metas.get('twitter:card')}")
