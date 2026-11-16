@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Le pack « Noyaru — logo & favicons » (28/09/2026) est branché partout, et rien ne pointe dans le vide.
+"""Le pack « Noyaru — logo & favicons » (16/11/2026) est branché partout, et rien ne pointe dans le vide.
 
 Une icône déclarée mais absente ne casse rien de visible : le navigateur garde l'ancienne, ou
 n'en affiche aucune, sans erreur. Ces tests lisent donc les DÉCLARATIONS et vérifient chaque
@@ -44,7 +44,7 @@ def _fichier(url: str) -> Path:
 def _declares() -> list[str]:
     """Toutes les adresses /static/ citees par les declarations et le logo."""
     textes = [FAVICONS] + [(TEMPLATES / t).read_text(encoding="utf-8")
-                           for t in ("layout.html", "public_layout.html")]
+                           for t in ("layout.html", "public_layout.html", "_auth_entry_intro.html")]
     return sorted({u for t in textes for u in re.findall(r'(?:href|src|srcset)="(/static/[^"]+)"', t)})
 
 
@@ -58,6 +58,11 @@ def test_les_tailles_annoncees_sont_les_VRAIES() -> None:
         assert "%dx%d" % Image.open(_fichier(u)).size == taille, u
     for icone in MANIFESTE["icons"]:
         assert "%dx%d" % Image.open(_fichier(icone["src"])).size == icone["sizes"], icone["src"]
+    png = Image.open(STATIC / "brand/noyaru-logo.png").convert("RGBA")
+    webp = Image.open(STATIC / "brand/noyaru-logo.webp").convert("RGBA")
+    assert png.size == webp.size == (1200, 316)
+    assert png.getchannel("A").getextrema() == (0, 255)
+    assert png.tobytes() == webp.tobytes(), "le WebP doit garder exactement les couleurs du PNG valide"
 
 
 def test_le_manifeste_est_celui_de_NOYARU() -> None:
@@ -86,7 +91,7 @@ def test_les_adresses_RACINE_menent_aux_nouveaux_fichiers_dans_la_meme_version()
 
 def test_le_logo_remplace_la_loupe_et_SEO_Agent_dans_la_barre_laterale() -> None:
     layout = (TEMPLATES / "layout.html").read_text(encoding="utf-8")
-    assert 'src="/static/brand/noyaru-logo.png?v=3"' in layout and 'alt="Noyaru"' in layout
+    assert 'src="/static/brand/noyaru-logo.png?v=4"' in layout and 'alt="Noyaru"' in layout
     assert ">SEO Agent</a>" not in layout and "brand-logo" not in layout
 
 
@@ -94,5 +99,5 @@ def test_les_pages_PUBLIQUES_affichent_le_logo_et_les_nouvelles_icones() -> None
     client = TestClient(m.app)
     for chemin in ("/pricing", "/docs"):
         page = client.get(chemin).text
-        assert 'class="pub-nav-brand"' in page and "/static/brand/noyaru-logo.png?v=3" in page, chemin
-        assert "/static/favicon.ico?v=3" in page and "favicon.svg" not in page, chemin
+        assert 'class="pub-nav-brand"' in page and "/static/brand/noyaru-logo.png?v=4" in page, chemin
+        assert "/static/favicon.ico?v=4" in page and "favicon.svg" not in page, chemin
