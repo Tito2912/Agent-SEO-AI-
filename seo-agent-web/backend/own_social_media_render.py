@@ -1,6 +1,7 @@
 """Fixed branded frames and local FFmpeg. No arbitrary URLs, paths, HTML or commands."""
 
 import base64
+import errno
 import hashlib
 import io
 import json
@@ -17,6 +18,34 @@ from PIL import Image, ImageDraw, ImageFont
 WEB = Path(__file__).resolve().parents[1]
 CAPTURES = WEB / "content/social-demo"
 MAX_FILE = 12_000_000
+LOCAL_ERRORS = frozenset(
+    {
+        "render_failed",
+        "render_timeout",
+        "render_resources",
+        "render_interrupted",
+        "render_unavailable",
+        "render_invalid",
+    }
+)
+
+
+def process_error(result):
+    """Classify fixed encoder failures without exposing stderr or inferring OOM."""
+    if result.returncode in {-9, -15}:
+        return "render_interrupted"
+    message = (result.stderr or b"")[-8192:].lower()
+    if any(
+        part in message
+        for part in (
+            b"cannot allocate memory",
+            b"out of memory",
+            b"resource temporarily unavailable",
+            b"pthread_create() failed",
+        )
+    ):
+        return "render_resources"
+    return "render_failed"
 
 
 def sha(value):
@@ -199,6 +228,8 @@ def render(packet, audio):
         (root / "scenes.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
         command = [
             executable(),
+            "-filter_threads",
+            "1",
             "-v",
             "error",
             "-nostdin",
@@ -207,12 +238,17 @@ def render(packet, audio):
             "concat",
             "-safe",
             "1",
+            "-threads",
+            "1",
             "-i",
             "scenes.txt",
+            "-threads",
+            "1",
             "-i",
             "voice.wav",
             "-vf",
-            "fps=24,format=yuv420p",
+            # Convert three stills before duplicating them, not every RGB copy.
+            "format=yuv420p,fps=24",
             "-c:v",
             "libx264",
             "-preset",
@@ -243,18 +279,22 @@ def render(packet, audio):
                 check=False,
                 env={**os.environ, "OMP_NUM_THREADS": "1"},
             )
-        except (subprocess.TimeoutExpired, OSError):
-            raise ValueError("render_failed") from None
+        except subprocess.TimeoutExpired:
+            raise ValueError("render_timeout") from None
+        except OSError as exc:
+            raise ValueError(
+                "render_resources"
+                if exc.errno in {errno.ENOMEM, errno.EAGAIN}
+                else "render_unavailable"
+            ) from None
         path = root / "video.mp4"
-        if (
-            result.returncode
-            or not path.is_file()
-            or not 1000 < path.stat().st_size < MAX_FILE
-        ):
-            raise ValueError("render_failed")
+        if result.returncode:
+            raise ValueError(process_error(result))
+        if not path.is_file() or not 1000 < path.stat().st_size < MAX_FILE:
+            raise ValueError("render_invalid")
         video = path.read_bytes()
         if b"ftyp" not in video[:32]:
-            raise ValueError("render_failed")
+            raise ValueError("render_invalid")
     return {
         "video": base64.b64encode(video).decode("ascii"),
         "sha256": sha(video),
