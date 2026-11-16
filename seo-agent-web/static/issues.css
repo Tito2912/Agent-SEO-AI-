@@ -1,0 +1,16 @@
+/* Loaded only by Anomalies; use the existing project overview's muted palette. */
+:root {
+  --err: #ce8c87;
+  --warn: #c2aa7c;
+  --notice: #96a89b;
+}
+
+/* These badges use literal colors in the shared stylesheet. */
+.badge.error {
+  color: var(--err);
+  border-color: color-mix(in srgb, var(--err) 40%, transparent);
+}
+.badge.warning {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 38%, transparent);
+}
