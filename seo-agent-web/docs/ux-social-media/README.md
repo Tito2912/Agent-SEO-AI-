@@ -337,3 +337,80 @@ de #89 sont conservés. Aucun changement de schéma, migration, fournisseur,
 capture produit, règle SAV/CMS ou fichier juridique. Les tests utilisent des
 comptes et états fictifs ; la recette visuelle ne vaut pas diagnostic du
 traitement réel. Les validations locales et la CI sont consignées dans la PR.
+
+
+## Montage local borné et diagnostic — 16 novembre 2026
+
+Base `c9cfc9dc`, après #90. La capture de Tony confirme un arrêt de montage
+après plus de cinq minutes. L'ancien code ne gardait que `render_failed` pour
+une sortie FFmpeg, un dépassement des trois minutes et un MP4 absent. La cause
+de cet ancien essai ne peut donc pas être attribuée après coup à la mémoire.
+La recette suivante est locale, avec captures fictives et silence synthétique.
+
+| Écran / état | Problème observé | Conséquence | Amélioration | Priorité |
+| --- | --- | --- | --- | --- |
+| Montage arrêté | Erreur générique, détail sous les réglages | Impossible de distinguer attente trop longue, ressources et interruption | Diagnostic traduit directement dans le panneau de suivi | P1 |
+| Encodage local | Seul le nombre de threads de sortie est limité ; conversion RGB après répétition des images | Pic mémoire élevé malgré une vidéo courte | Borner aussi décodage et filtres, convertir les images avant leur répétition | P1 |
+| Recette du service | Un nouvel essai vocal serait payant sans isoler le moteur local | Coût et diagnostic confondus | Commande autonome avec silence et décodage complet, sans base ni fournisseur | P1 |
+
+Sur le même banc de trois captures et 30 secondes de silence, pic RSS du seul
+processus d'encodage (échantillonnage `/proc` toutes les 20 ms) :
+
+| Encodeur local | Avant | Après les deux corrections |
+| --- | ---: | ---: |
+| FFmpeg 6.1.1 Ubuntu | 819 312 KiB | 144 480 KiB |
+| FFmpeg 9.0.2 statique | 480 404 KiB | 129 412 KiB |
+
+Ces versions permettent de comparer deux moteurs ; elles ne prouvent ni la
+version installée, ni la mémoire libre, ni la cause passée sur Render. La
+limite expérimentale d'espace d'adressage n'est pas utilisée comme une limite
+RSS. Le test automatisé exerce réellement l'encodeur en lui exposant 24 CPU,
+contrôle un pic RSS inférieur à 256 MiB et décode entièrement le résultat.
+Il est ignoré si Linux, FFmpeg ou ffprobe manque. Un pic du processus enfant
+n'est pas la consommation totale du service Web.
+
+Le format demeure H.264/AAC, 720 × 1280, 24 images/s, `veryfast`, 900 kbit/s
+vidéo et 96 kbit/s audio, 12 Mo maximum et trois minutes par montage. Les options
+de décodage sont placées avant chaque entrée ; le filtre de conversion YUV
+précède `fps`. FFmpeg documente les pools automatiques et la portée des options
+dans sa [référence de ligne de commande](https://ffmpeg.org/ffmpeg.html).
+Aucun changement de modèle, voix, profil, capture, durée de mandat ou quota.
+
+Les nouvelles erreurs fixes distinguent délai, ressources explicitement
+signalées par l'encodeur, interruption, impossibilité de démarrer et fichier
+invalide. Une interruption seule ne signifie pas « manque de mémoire ».
+La sortie brute de FFmpeg n'est ni stockée en base ni affichée. Les anciens
+échecs génériques gardent leur diagnostic historique. Une erreur locale garde
+la reprise déjà prévue : au plus deux tentatives de montage avec le WAV sauvé,
+sans refaire la voix. Après arrêt terminal, le fichier intermédiaire est retiré
+comme auparavant ; ce lot ne rouvre aucun ancien essai.
+
+### Contrôle opérateur sur le moteur installé
+
+Après le déploiement automatique, dans la console du service `seo-agent-web` :
+
+```sh
+python /app/seo-agent-web/ops/social_media_doctor.py --language fr --seconds 30
+```
+
+La commande ne charge pas l'application ni la base, ne lit aucun dossier client,
+clé ou opération et ne fait aucun appel vocal, Telegram ou autre réseau. Elle
+encode les captures fictives fixes avec un WAV silencieux créé localement,
+contrôle codecs, dimensions et durée via ffprobe, puis décode tout le MP4. Les
+fichiers temporaires sont supprimés. Le JSON contient version, résultat, durée,
+taille, temps écoulé et pic mémoire des processus enfants sous Linux ; aucun
+stderr brut. Les options sont bornées à FR/EN et 8, 30 ou 60 secondes.
+`ok: true` et `full_decode: true` confirment ce banc local sur cet hôte, pas la
+qualité d'une voix ni la réussite d'une fabrication privée. Si `ok` est faux,
+conserver le code fixe et examiner le service avant toute nouvelle voix.
+
+Preuves locales finales : commande exécutée avec une URL de base volontairement
+invalide ; 60 secondes EN / FFmpeg 6.1.1 (144 652 KiB), 60 secondes FR / FFmpeg
+9.0.2 (130 076 KiB), durée exacte et décodage intégral réussis. Le banc de
+30 secondes FR avait également réussi avec FFmpeg 6.1.1. Aucun appel payé.
+Tests ciblés des arrêts, de la reprise bornée sans double appel et de la
+confidentialité du diagnostic ; 52 observations Chromium fictives FR/EN à
+1440, 768, 390 et 360 px, dont sans JavaScript et mouvements réduits. Diagnostics
+visibles avant les quotas, aucun débordement, erreur JS ou requête externe.
+Les captures desktop/mobile ont été relues. La CI et le contrôle anonyme du
+déploiement sont consignés dans la PR ; la recette privée reste opérateur.

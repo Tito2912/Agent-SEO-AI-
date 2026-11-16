@@ -446,6 +446,31 @@ def strings(lang):
                     "Local montage failed. No new audio call is made.",
                 ),
                 (
+                    "render_timeout",
+                    "Le montage a dépassé son délai de trois minutes. Aucun nouvel appel vocal n’est lancé.",
+                    "The montage exceeded its three-minute limit. No new audio call is made.",
+                ),
+                (
+                    "render_resources",
+                    "L’encodeur a signalé un manque de mémoire ou de ressources. Aucun nouvel appel vocal n’est lancé.",
+                    "The encoder reported insufficient memory or resources. No new audio call is made.",
+                ),
+                (
+                    "render_interrupted",
+                    "L’encodeur a été interrompu. Ce constat ne précise pas la cause. Aucun nouvel appel vocal n’est lancé.",
+                    "The encoder was interrupted. This does not identify the cause. No new audio call is made.",
+                ),
+                (
+                    "render_unavailable",
+                    "L’encodeur local n’a pas pu démarrer. Aucun nouvel appel vocal n’est lancé.",
+                    "The local encoder could not start. No new audio call is made.",
+                ),
+                (
+                    "render_invalid",
+                    "Le montage n’a pas produit de fichier vidéo exploitable. Aucun nouvel appel vocal n’est lancé.",
+                    "The montage did not produce a usable video file. No new audio call is made.",
+                ),
+                (
                     "voice_uncertain",
                     "Le résultat de l’appel vocal est inconnu. Ne relancez pas sans vérifier le fournisseur.",
                     "The audio request result is unknown. Check the provider before starting again.",

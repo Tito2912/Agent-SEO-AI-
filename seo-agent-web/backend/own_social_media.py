@@ -815,9 +815,8 @@ def run(ident):
             "audio_format",
             "audio_incomplete",
             "audio_duration",
-            "render_failed",
             "mandate_required",
-        }
+        } | render.LOCAL_ERRORS
         reason = (
             str(exc)
             if isinstance(exc, ValueError) and str(exc) in allowed
@@ -837,7 +836,7 @@ def run(ident):
             ):
                 row.state = (
                     "queued"
-                    if reason == "render_failed"
+                    if reason in render.LOCAL_ERRORS
                     and row.result.get("audio")
                     and row.render_attempts < 2
                     else "uncertain"

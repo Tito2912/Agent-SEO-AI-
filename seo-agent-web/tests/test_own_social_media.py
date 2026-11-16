@@ -13,6 +13,7 @@ import pytest
 from sqlalchemy import func, select
 
 from backend import own_social_media as m, app
+from backend.own_social_media_copy import strings
 from backend.models import UsageEvent
 from test_customer_activation import lab as lab, client, user
 from test_telegram_approvals import bot as bot, activate, decision, rows
@@ -274,14 +275,19 @@ def test_restart_uses_saved_voice_or_stops_uncertainty(media, saved):
     )
 
 
-def test_local_montage_retries_once_without_repeating_narration(media, monkeypatch):
+@pytest.mark.parametrize(
+    "reason", sorted(m.render.LOCAL_ERRORS), ids=sorted(m.render.LOCAL_ERRORS)
+)
+def test_local_montage_retries_once_without_repeating_narration(
+    media, monkeypatch, reason
+):
     x = media
     ident = prepare(x)
     approve(x, ident)
     monkeypatch.setattr(
         m.render,
         "render",
-        lambda *args: (_ for _ in ()).throw(ValueError("render_failed")),
+        lambda *args: (_ for _ in ()).throw(ValueError(reason)),
     )
     m.run(ident)
     assert read(x, ident).state == "queued" and read(x, ident).render_attempts == 1
@@ -292,6 +298,13 @@ def test_local_montage_retries_once_without_repeating_narration(media, monkeypat
         and read(x, ident).render_attempts == 2
         and len(x["voice_calls"]) == 1
     )
+    assert read(x, ident).error_code == reason and read(x, ident).result == {}
+    page = client(x["owner"]).get(m.PATH + "?media=" + ident)
+    assert strings("fr")["errors"][reason] in page.text
+    assert page.text.index(strings("fr")["errors"][reason]) < page.text.index(
+        'id="media-availability"'
+    )
+    assert reason not in page.text  # Show translated copy, never an internal code.
 
 
 def test_concurrent_worker_does_not_duplicate_the_paid_call(media, monkeypatch):
