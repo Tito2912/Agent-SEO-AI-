@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% from "_report_exports.html" import report_exports with context %}
 {% block title %}{{ tr("Anomalies") }} - {{ project.site_name if project else slug }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/journey.css?v=1" /><link rel="stylesheet" href="/static/report-exports.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/journey.css?v=1" /><link rel="stylesheet" href="/static/report-exports.css?v=1" /><link rel="stylesheet" href="/static/issues.css?v=1" />{% endblock %}
 
 {% block crumbs %}
   <a href="/">{{ tr("Projets") }}</a>
