@@ -1,6 +1,6 @@
 {
   "captured": "2026-11-16",
-  "base": "3bc812d7e9a94296cedd7619a25705b86f249baf",
+  "base": "fb8b1411933ce224338d9ed3fb85f7f3d60a9ee1",
   "scope": "Real local Noyaru routes, fictional atelier.example project, no external requests",
   "files": {
     "en-explanation.png": "dd85dcadbfe3a60b10e78f46f5cbbcb3a46d51a5069b405634c656e59fdfbef8",
@@ -12,7 +12,7 @@
   },
   "sources": {
     "templates/project_overview.html": "fd62a3eccc7d6c45bb30bbaad904f2140fbd4fbaa28fec04575705425edab87b",
-    "templates/layout.html": "9e5fb959dc3866d6f24b8d986235f79f4d73426e114f8ff9f5e94f8ec458bbee",
+    "templates/layout.html": "8ba83196e9e802ab1278a3365ab80281f9f80320643e282b7b374983c7f2ff83",
     "static/project_overview.css": "d79217fd5530727f1c586d769b1e0dca3e6b2bdebaeae374e021257e404e6ad5",
     "static/styles.css": "0b858eac30e0c25ca47b996b1b026948e43079fdf13b5af2a8edbc7c97454bb8"
   }

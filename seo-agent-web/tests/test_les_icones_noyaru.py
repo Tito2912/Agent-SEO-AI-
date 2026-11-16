@@ -91,7 +91,7 @@ def test_les_adresses_RACINE_menent_aux_nouveaux_fichiers_dans_la_meme_version()
 
 def test_le_logo_remplace_la_loupe_et_SEO_Agent_dans_la_barre_laterale() -> None:
     layout = (TEMPLATES / "layout.html").read_text(encoding="utf-8")
-    assert 'src="/static/brand/noyaru-logo.png?v=4"' in layout and 'alt="Noyaru"' in layout
+    assert 'src="/static/brand/noyaru-logo.png?v=5"' in layout and 'alt="Noyaru"' in layout
     assert ">SEO Agent</a>" not in layout and "brand-logo" not in layout
 
 
@@ -99,5 +99,5 @@ def test_les_pages_PUBLIQUES_affichent_le_logo_et_les_nouvelles_icones() -> None
     client = TestClient(m.app)
     for chemin in ("/pricing", "/docs"):
         page = client.get(chemin).text
-        assert 'class="pub-nav-brand"' in page and "/static/brand/noyaru-logo.png?v=4" in page, chemin
-        assert "/static/favicon.ico?v=4" in page and "favicon.svg" not in page, chemin
+        assert 'class="pub-nav-brand"' in page and "/static/brand/noyaru-logo.png?v=5" in page, chemin
+        assert "/static/favicon.ico?v=5" in page and "favicon.svg" not in page, chemin
