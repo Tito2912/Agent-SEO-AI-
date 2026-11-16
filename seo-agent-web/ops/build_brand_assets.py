@@ -15,7 +15,7 @@ import reportlab
 from PIL import Image, ImageDraw, ImageFont
 
 WEB = Path(__file__).resolve().parents[1]
-VERSION = "4"
+VERSION = "5"
 BG = (17, 17, 19, 255)
 FONT = Path(reportlab.__file__).resolve().parent / "fonts" / "Vera.ttf"
 
@@ -73,7 +73,7 @@ def build(source: Path, static: Path) -> dict:
     large.thumbnail((760, 210), Image.Resampling.LANCZOS)
     card.alpha_composite(large, ((1200 - large.width) // 2, 110))
     draw = ImageDraw.Draw(card)
-    parts = [("L'audit SEO qui livre ", "#f1f4f1"), ("le correctif", "#3fba7a"),
+    parts = [("L'audit SEO qui livre ", "#f1f4f1"), ("le correctif", "#65b588"),
              (", pas la liste de tâches.", "#f1f4f1")]
     size = 42
     headline = ImageFont.truetype(str(FONT), size=size)
@@ -86,7 +86,7 @@ def build(source: Path, static: Path) -> dict:
         x += draw.textlength(text, font=headline)
     draw.text((600, 452), "Corrections SEO en pull request, vérifiées par votre CI.",
               font=ImageFont.truetype(str(FONT), size=29), anchor="mm", fill="#929497")
-    draw.text((600, 590), "noyaru.com", font=ImageFont.truetype(str(FONT), size=30), anchor="mm", fill="#54b883")
+    draw.text((600, 590), "noyaru.com", font=ImageFont.truetype(str(FONT), size=30), anchor="mm", fill="#65b588")
     card.convert("RGB").save(brand / "noyaru-partage.png", optimize=True)
     return {"version": VERSION, "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
             "source_size": list(approved.size), "word_bounds": list(bounds),

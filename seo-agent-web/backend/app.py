@@ -10841,9 +10841,9 @@ app.mount("/static", StaticFiles(directory=str(REPO_ROOT / "seo-agent-web" / "st
 
 
 # Les adresses a la RACINE que navigateurs et robots demandent d'eux-memes, sans lire le <head>.
-# Meme version que `_favicons.html` (v=4, logo C2 Noyaru du 16/11/2026) : une redirection vers
+# Meme version que `_favicons.html` (v=5, logo C2 harmonise aux verts du site) : une redirection vers
 # l'ancienne version garderait l'ancienne icone en cache pour qui passe par la racine.
-_VERSION_ICONES = "4"
+_VERSION_ICONES = "5"
 
 
 @app.api_route("/favicon.ico", methods=["GET", "HEAD"], include_in_schema=False)

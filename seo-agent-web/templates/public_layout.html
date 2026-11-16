@@ -74,12 +74,12 @@
        incomplet » et 7 sans carte X chez Ahrefs comme chez Noyaru. Posee ICI une seule fois :
        aucune page ne declare d'image, donc aucun doublon possible. La carte X passe en grand
        format pour toutes les pages ; les pages ne declarent plus la leur. #}
-    <meta property="og:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png?v=4') }}" />
+    <meta property="og:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png?v=5') }}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="{{ app_name }} — {{ tr("l'audit SEO qui livre le correctif") }}" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png?v=4') }}" />
+    <meta name="twitter:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png?v=5') }}" />
     {# Une page publique a une adresse par langue (/pricing, /en/pricing) : chacune annonce les
        autres a Google. Le francais est la version par defaut (x-default). #}
     {% set page_versions = page_alternates() %}
@@ -95,8 +95,8 @@
     <header class="pub-nav">
       <a href="{{ campaign_link(request, '/') }}" class="pub-nav-brand" aria-label="{{ app_name }} - {{ tr('Accueil') }}">
         <picture>
-          <source srcset="/static/brand/noyaru-logo.webp?v=4" type="image/webp" />
-          <img src="/static/brand/noyaru-logo.png?v=4" alt="{{ app_name }}" width="1200" height="316"
+          <source srcset="/static/brand/noyaru-logo.webp?v=5" type="image/webp" />
+          <img src="/static/brand/noyaru-logo.png?v=5" alt="{{ app_name }}" width="1200" height="316"
                style="display:block;height:30px;width:auto;" />
         </picture>
       </a>
