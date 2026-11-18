@@ -36,12 +36,23 @@ le nouveau menu, traductions ajoutées, parsing XML avec defusedxml et environne
 conforme au verrouillage du dépôt. Les 168 tests en régression repassent (un ignoré),
 ainsi que 200 tests ciblés finaux CMS/GitHub/accords/migrations/anglais. Audit des
 dépendances : aucune vulnérabilité connue ; Bandit moyen/élevé : aucune alerte.
-Un rejeu complet sur copie Linux du candidat `642784f` est en cours ; les derniers
-correctifs de reçu/date sont couverts par les 66 tests finaux ci-dessus et feront
-également l’objet de la CI sur le commit de PR. Le lanceur `ops/ci_local.py` lit les cibles réelles de
-`.github/workflows/ci.yml` : compilation, Ruff F/E9, suite complète, audit et Bandit.
-Le journal complet Linux est `/tmp/noyaru-agent-full-ci-linux-20261118.log` ;
-les 66 tests finaux sont dans `/tmp/noyaru-agent-final-receipts-20261118.log`.
+Le passage complet Linux du candidat `642784f` a obtenu 10 428 tests passés,
+45 ignorés et deux échecs dans les anciens tests de taille/ton GitHub : ils
+n’envoyaient pas le nouveau consentement obligatoire. Compilation, Ruff, audit
+des dépendances et Bandit sont verts sur cette passe. La première CI GitHub
+(`3a7fbced`) retrouve ces deux cas : 10 434 passés et 46 ignorés.
+Le helper de ces tests envoie désormais explicitement l’accord pour une demande
+consentie ; les assertions taille/ton/quota et le refus sans accord sont conservés.
+Les 30 tests taille/ton et parcours complets passent après cette adaptation.
+Le résultat de la **CI finale sur le dernier commit** est consultable dans
+[la PR nº 95](https://github.com/Tito2912/Agent-SEO-AI-/pull/95/checks) ; ces nombres
+historiques ne constituent pas une déclaration de réussite du dernier commit.
+
+Le lanceur `ops/ci_local.py` lit les cibles réelles de `.github/workflows/ci.yml` :
+compilation, Ruff F/E9, suite complète, audit et Bandit. Journal complet Linux :
+`/tmp/noyaru-agent-full-ci-linux-20261118.log`. Les 66 tests finaux sont dans
+`/tmp/noyaru-agent-final-receipts-20261118.log`, les 132 tests transport/workflow/média
+et 48 tests de contrat dans leurs journaux `transport-final`/`adapter-final`.
 Les tests HTTP sont exécutés hors limitation de boucle asynchrone du bac à sable,
 avec une base et des comptes fictifs, sans branche ni base de production.
 

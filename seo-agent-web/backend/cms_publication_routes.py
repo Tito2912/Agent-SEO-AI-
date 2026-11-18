@@ -236,7 +236,6 @@ def publication_review(request: Request, slug: str, publication_id: str, msg: st
     response = m.templates.TemplateResponse("cms_publication_review.html", {
         "request": request, "project": project, "slug": slug, "publication": row,
         "platform_label": LABELS.get(row.platform, row.platform), "msg": msg, "err": err,
-        "can_publish": policy(m, row.platform)["publish"],
     })
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -278,8 +277,6 @@ def publication_execute(request: Request, slug: str, publication_id: str,
         limit_operation(m, project, "execute")
         row = workflow.load(m.DB, project_id=str(project.id), publication_id=publication_id)
         require_enabled(m, row.platform)
-        if operation == "publish" and not policy(m, row.platform)["publish"]:
-            raise workflow.PublicationError("publish_policy", "Le brouillon est enregistré. Effectuez sa publication dans Webflow.")
         credentials, _ = connection(m, project, row.platform)
         transport, _ = bound_transport(project, row.platform, credentials)
         fp = connection_fingerprint(m, credentials)
