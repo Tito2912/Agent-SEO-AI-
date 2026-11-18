@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% block title %}{{ tr("Publier dans mon CMS") }} — {{ project.site_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=1">{% endblock %}
+{% block crumbs %}<a href="/projects/{{ slug }}/content">{{ tr("Contenu") }}</a><span class="crumb-sep">/</span><span>{{ tr("Publication") }}</span>{% endblock %}
+{% block content %}
+<div class="cms-page"><div class="page-header"><h1>{{ tr("Publier dans votre site") }}</h1><p class="muted">{{ tr("Choisissez un article, relisez son aperçu, puis enregistrez-le en brouillon dans votre CMS.") }}</p></div>
+{% if err %}<p class="alert error" role="alert">{{ tr(err) }}</p>{% elif msg %}<p class="alert ok" role="status">{{ tr(msg) }}</p>{% endif %}
+<section class="card"><form method="get" class="cms-form"><label>{{ tr("Votre plateforme") }}<select name="platform">{% for key,label in platforms.items() %}<option value="{{ key }}" {% if platform == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="btn">{{ tr("Choisir cette plateforme") }}</button></form></section>
+{% if platform == 'prestashop' %}<p class="muted">{{ tr("Sur PrestaShop, ce parcours crée une page CMS. Les blogs fournis par une extension demandent une intégration propre à cette extension.") }}</p>{% endif %}
+{% if not policy.enabled %}<section class="card"><h2>{{ tr("Intégration en préparation") }}</h2><p>{{ tr("Le connecteur technique est préparé pour un pilote. La connexion publique et sa disponibilité pour les comptes clients restent à valider.") }}</p></section>
+{% elif not meta %}
+<section class="card"><h2>{{ tr("Connecter {cms}",cms=platforms[platform]) }}</h2>
+<form method="post" action="/projects/{{ slug }}/content/publication/connect" class="cms-form">
+<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><input type="hidden" name="platform" value="{{ platform }}">
+{% if platform in ['wordpress','ghost','prestashop'] %}<label>{{ tr("Adresse HTTPS de votre CMS") }}<input type="url" name="base_url" required placeholder="https://exemple.fr"></label>{% endif %}
+{% if platform == 'wordpress' %}<label>{{ tr("Identifiant WordPress") }}<input name="username" required autocomplete="off"></label><label>{{ tr("Mot de passe d’application WordPress") }}<input type="password" name="password" required autocomplete="new-password"></label><p class="muted small">{{ tr("Le compte doit pouvoir modifier et publier des articles. La publication ne nécessite pas Yoast.") }}</p>
+{% elif platform == 'shopify' %}<label>{{ tr("Adresse de votre boutique Shopify") }}<input name="shop" required placeholder="ma-boutique.myshopify.com"></label><label>{{ tr("Jeton Admin de l’application installée") }}<input type="password" name="token" required autocomplete="new-password"></label>
+{% elif platform in ['webflow','wix'] %}<label>{{ tr("Identifiant du site dans votre plateforme") }}<input name="site_id" required autocomplete="off"></label><label>{{ tr("Clé ou jeton de l’intégration") }}<input type="password" name="token" required autocomplete="new-password"></label>
+{% else %}<label>{{ tr("Clé de l’intégration CMS") }}<input type="password" name="key" required autocomplete="new-password"></label>{% endif %}
+<p class="muted small">{{ tr("Cette connexion est dédiée à la publication. Les droits de modification des métadonnées seuls ne suffisent pas.") }}</p>
+<button class="btn primary">{{ tr("Vérifier et enregistrer la connexion") }}</button>
+</form></section>
+{% else %}
+<section class="card"><h2>{{ platforms[platform] }}</h2><p>{{ tr("Connexion vérifiée") }} · {{ meta.label }}</p>
+{% if versions %}<form method="post" action="/projects/{{ slug }}/content/publication/prepare" class="cms-form">
+<input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><input type="hidden" name="platform" value="{{ platform }}">
+<label>{{ tr("Article et langue") }}<select name="version" required>{% for v in versions %}<option value="{{ v.task_id }}|{{ v.language }}">{{ v.title }} · {{ v.label }}</option>{% endfor %}</select></label>
+{% if platform in ['shopify','webflow'] %}<label>{{ tr("Blog ou collection de destination") }}<select name="destination" id="publication-destination" required><option value="">{{ tr("Choisir une destination") }}</option>{% for d in meta.destinations %}<option value="{{ d.id }}">{{ d.title }}</option>{% endfor %}</select></label>{% endif %}
+{% if platform == 'webflow' %}<label>{{ tr("Champ qui contient le texte de l’article") }}<select name="body_field" id="publication-body" required><option value="">{{ tr("Choisissez d’abord la collection") }}</option></select></label><p class="muted small" id="publication-fields-status" role="status"></p>{% endif %}
+{% if platform in ['shopify','wix'] %}<label>{% if platform == 'wix' %}{{ tr("Identifiant du membre auteur dans Wix") }}{% else %}{{ tr("Nom de l’auteur affiché") }}{% endif %}<input name="author" required maxlength="255"></label>{% endif %}
+{% if platform == 'prestashop' %}<label>{{ tr("Numéro de la langue PrestaShop") }}<input name="id_lang" type="number" min="1" required></label><label>{{ tr("Numéro de la boutique PrestaShop") }}<input name="id_shop" type="number" min="1" required></label>{% endif %}
+{% if platform in ['wordpress','ghost'] %}<label><input type="checkbox" name="approved_media" value="true"> {{ tr("Si cet article contient des images privées Noyaru, j’autorise leur transfert vers les médias de mon CMS pour préparer l’aperçu.") }}</label>{% endif %}
+<button class="btn primary">{{ tr("Préparer l’aperçu de publication") }}</button>
+</form>{% else %}<p>{{ tr("Rédigez d’abord un article dans Noyaru pour le retrouver ici.") }}</p><a class="btn primary" href="/projects/{{ slug }}/content">{{ tr("Rédiger un article") }}</a>{% endif %}
+<form method="post" action="/projects/{{ slug }}/content/publication/disconnect"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><input type="hidden" name="platform" value="{{ platform }}"><button class="btn">{{ tr("Déconnecter la publication") }}</button></form>
+</section>{% endif %}
+<p class="muted small">{{ tr("Les images privées de l’éditeur doivent être transférées au CMS avant publication. Aucun transfert n’est annoncé comme réussi sans confirmation.") }}</p>
+<a href="/projects/{{ slug }}/agent">{{ tr("Retrouver mon plan d’action") }}</a></div>
+{% if platform == 'webflow' and meta %}<script>
+(function(){
+  var destination=document.getElementById('publication-destination'),body=document.getElementById('publication-body'),status=document.getElementById('publication-fields-status');
+  if(!destination||!body)return;
+  destination.addEventListener('change',async function(){
+    body.replaceChildren();body.disabled=true;status.textContent={{ tr("Lecture des champs de cette collection…")|tojson }};
+    var selected=destination.value;
+    try{
+      var response=await fetch('/api/projects/'+encodeURIComponent({{ slug|tojson }})+'/content/destinations/'+encodeURIComponent(selected),{credentials:'same-origin'});
+      if(!response.ok)throw new Error('fields');var data=await response.json();if(destination.value!==selected)return;
+      var placeholder=document.createElement('option');placeholder.value='';placeholder.textContent={{ tr("Choisir le champ de contenu")|tojson }};body.appendChild(placeholder);
+      (data.fields||[]).forEach(function(field){if(String(field.type).toLowerCase().replace('-','')==='richtext'&&field.editable!==false){var option=document.createElement('option');option.value=field.slug;option.textContent=field.title||field.slug;body.appendChild(option);}});
+      body.disabled=body.options.length<2;status.textContent=body.disabled?{{ tr("Cette collection ne présente pas de champ de contenu riche modifiable.")|tojson }}:'';
+    }catch(error){if(destination.value===selected)status.textContent={{ tr("Les champs n’ont pas pu être chargés. Vérifiez la connexion et réessayez.")|tojson }};}
+  });
+})();
+</script>{% endif %}
+{% endblock %}

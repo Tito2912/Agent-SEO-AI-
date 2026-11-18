@@ -1,0 +1,103 @@
+{
+  "data": "fictional demonstration account only",
+  "checks": [
+    {
+      "viewport": "desktop",
+      "page": "plan",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "desktop",
+      "page": "results",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "desktop",
+      "page": "wordpress",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "desktop",
+      "page": "webflow",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "desktop",
+      "page": "wix",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "desktop",
+      "page": "prestashop",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "desktop",
+      "page": "review",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "mobile",
+      "page": "plan",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "mobile",
+      "page": "results",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "mobile",
+      "page": "wordpress",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "mobile",
+      "page": "webflow",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "mobile",
+      "page": "wix",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "mobile",
+      "page": "prestashop",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "viewport": "mobile",
+      "page": "review",
+      "http": 200,
+      "horizontal_overflow": false,
+      "page_errors": []
+    }
+  ]
+}

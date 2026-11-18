@@ -95,6 +95,8 @@ def _audit(db, pub, action):
                 "reads": pub.reads,
                 "writes": pub.writes,
                 "lang": pub.lang,
+                **({"approved": True, "consent": True, "preview_key": pub.preview_key,
+                    "environment": pub.environment} if action == "authorized" else {}),
             },
         )
     )

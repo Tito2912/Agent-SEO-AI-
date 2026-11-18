@@ -70,7 +70,10 @@ def connection_key(project, cx=None):
 
 def connection_keys(project):
     """Toutes les connexions CMS possibles du projet (suppression du projet)."""
-    return [connection_key(project, cx) for cx in CONNECTEURS.values()]
+    return [connection_key(project, cx) for cx in CONNECTEURS.values()] + [
+        "CMS_CONTENT_" + platform.upper() + ":" + str(project.id)
+        for platform in ("wordpress", "ghost", "shopify", "webflow", "wix", "prestashop")
+    ]
 
 
 def etat_du_projet(project):

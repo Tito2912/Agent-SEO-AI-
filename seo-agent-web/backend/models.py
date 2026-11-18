@@ -1049,3 +1049,85 @@ class DpaAcceptance(Base):
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
     accepte_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     termine_le: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True, nullable=True)
+
+
+class AgentActionChoice(Base):
+    """A customer's decision is not a server receipt of completed SEO work."""
+    __tablename__ = "agent_action_choices"
+    __table_args__ = (UniqueConstraint("project_id", "action_key", name="uq_agent_action_choice"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    action_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(24), nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class CmsPublication(Base):
+    """Durable intent before remote I/O. Ambiguous writes must never be blindly repeated."""
+    __tablename__ = "cms_publications"
+    __table_args__ = (UniqueConstraint("project_id", "intent_key", name="uq_cms_publication_intent"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("issue_tasks.id", ondelete="CASCADE"), index=True)
+    created_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
+    intent_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    platform: Mapped[str] = mapped_column(String(24), nullable=False)
+    language: Mapped[str] = mapped_column(String(12), nullable=False)
+    state: Mapped[str] = mapped_column(String(24), nullable=False, default="prepared", index=True)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    remote_id: Mapped[str | None] = mapped_column(String(255))
+    remote_url: Mapped[str | None] = mapped_column(String(2048))
+    remote_revision: Mapped[str | None] = mapped_column(String(255))
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AgentPageEvent(Base):
+    """An observed action and its source, without an inferred ranking or revenue gain."""
+    __tablename__ = "agent_page_events"
+    __table_args__ = (UniqueConstraint("project_id", "event_key", name="uq_agent_page_event"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    event_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    page_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CmsMediaTransfer(Base):
+    """A journaled native asset upload; never retry an ambiguous upload automatically."""
+    __tablename__ = "cms_media_transfers"
+    __table_args__ = (UniqueConstraint("project_id", "media_key", name="uq_cms_media_transfer"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("issue_tasks.id", ondelete="CASCADE"), nullable=False)
+    media_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    platform: Mapped[str] = mapped_column(String(24), nullable=False)
+    source_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    state: Mapped[str] = mapped_column(String(24), nullable=False, default="uploading")
+    remote_url: Mapped[str | None] = mapped_column(String(2048))
+    remote_id: Mapped[str | None] = mapped_column(String(2048))
+    approved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
+    consent_digest: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CmsPublicationConsent(Base):
+    """One authenticated, explicit approval for one precise remote operation."""
+    __tablename__ = "cms_publication_consents"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    publication_id: Mapped[str] = mapped_column(String(36), ForeignKey("cms_publications.id", ondelete="CASCADE"), index=True)
+    actor_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
+    operation: Mapped[str] = mapped_column(String(24), nullable=False)
+    content_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    targets: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    approved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

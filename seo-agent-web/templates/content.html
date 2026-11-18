@@ -8,6 +8,7 @@
 <div class="content-journey-page">
   <div class="page-header">
     <h1>{{ tr("Contenu") }}</h1>
+    <a class="btn" href="/projects/{{ slug }}/content/publication">{{ tr("Publier dans mon CMS") }}</a>
     <p class="muted">
       {{ project.site_name }} · {{ tr("rédigez un article à relire, puis à publier dans votre site") }}
     </p>
@@ -195,6 +196,7 @@
           <p id="c-destination" class="muted small">{{ tr("Article en Markdown et HTML à publier vous-même.") }}</p>
           <p id="c-cout" class="muted small" role="status" aria-live="polite">{{ tr("{n} version : {n} article décompté du quota.", n=1) }}</p>
         </div>
+        <label id="c-github-consent-line" {% if not a_depot %}hidden{% endif %}><input id="c-github-consent" type="checkbox"> {{ tr("Je demande la création de cette proposition de contenu sur GitHub.") }}</label>
         <div class="modal-actions between">
           <span class="muted small">
             {{ tr_html('Besoin d\'idées ? <a href="{url}">Concurrents</a> liste des sujets repérés chez eux et absents des pages analysées de votre site.', url='/projects/' ~ slug ~ '/competitors') }}
@@ -1057,11 +1059,22 @@
         if (q) { sujet.value = q; sujet.dispatchEvent(new Event('input')); sujet.focus(); }
       } catch (e) { /* URL exotique : le formulaire reste vide, ce n'est pas une panne */ }
 
+      function resetCodeConsent() {
+        document.getElementById('c-github-consent').checked = false;
+        document.getElementById('c-github-consent-line').hidden = mode() !== 'github';
+      }
+      document.querySelectorAll('input[name="c-mode"]').forEach(function (input) { input.addEventListener('change', resetCodeConsent); });
+      sujet.addEventListener('input', resetCodeConsent);
+      route.addEventListener('input', resetCodeConsent);
+      resetCodeConsent();
       btn.addEventListener('click', function () {
         if (mode() === 'contenu') { redigerArticle(); return; }
+        var consentement = document.getElementById('c-github-consent');
+        if (!consentement.checked) { say({{ tr("Cochez votre accord pour créer cette proposition sur GitHub.")|tojson }}, 'error'); consentement.focus(); return; }
         var s = (sujet.value || '').trim(), r = (route.value || '').trim();
         if (!s || !r) { say({{ tr("Renseignez un sujet et une adresse.")|tojson }}, 'error'); (!s ? sujet : route).focus(); return; }
         var langues = cochees();
+        consentement.checked = false;
         writing(true);
         btn.textContent = {{ tr("Rédaction…")|tojson }};
         say(langues.length > 1
@@ -1071,7 +1084,7 @@
         suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/draft', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sujet: s, route: r, langues: langues, suivi: jeton,
+          body: JSON.stringify({ sujet: s, route: r, langues: langues, suivi: jeton, consent: true,
                                  taille: choixStyle('c-taille'), ton: choixStyle('c-ton') })
         })
           .then(readResponse)

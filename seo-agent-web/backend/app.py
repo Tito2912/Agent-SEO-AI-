@@ -1099,7 +1099,7 @@ def _content_security_policy(request: Request) -> str:
 
     # Only the editor embeds an article preview. The iframe has an opaque sandbox origin
     # and a restrictive srcdoc policy; every other screen continues to forbid frames.
-    article_preview = bool(re.fullmatch(r"/projects/[^/]+/content", str(getattr(request.url, "path", ""))))
+    article_preview = bool(re.fullmatch(r"/projects/[^/]+/content(?:/publication/[a-f0-9-]+)?", str(getattr(request.url, "path", ""))))
     # GOOGLE ANALYTICS, SEULEMENT LA OU LA PAGE L'A DEMANDE (02/11/2026). Une page publique qui
     # affiche le bandeau de consentement le note pendant son rendu (`_mesure_audience`) ; les
     # ecrans de l'application ne le font jamais, et gardent une politique sans hote tiers —
@@ -35039,6 +35039,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
 
 
 class _ContentDraftBody(BaseModel):
+    consent: bool = False
     sujet: str = ""
     route: str = ""
     # Les langues cochees, celle de `route` comprise ou non ; "" est la langue servie a la
@@ -35094,6 +35095,8 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     user = getattr(request.state, "user", None)
     if not user:
         return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    if not body.consent:
+        return JSONResponse({"ok": False, "error": "Cochez votre accord pour créer cette proposition sur GitHub."}, status_code=400)
     sujet = (body.sujet or "").strip()
     route = (body.route or "").strip()
     if not sujet or not route:
@@ -35132,12 +35135,22 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     if not _github_branch_allowed(branch):
         return JSONResponse({"ok": False, "error": "Branche GitHub invalide."}, status_code=400)
 
+    consent_operation = uuid.uuid4().hex
+    consent_scope = {"route": route, "languages": list(body.langues), "repo": cfg["repo"], "branch": branch}
+    _audit_log(request, action="content.github.authorized", target_type="project", target_id=str(proj.id),
+               meta={"consent": True, "operation_id": consent_operation, "scope": consent_scope,
+                     "request_sha256": hashlib.sha256(json.dumps({"subject": sujet, **consent_scope},
+                                              sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()})
     out = _proposer_une_page(
         user, project_id=str(proj.id), site_name=str(proj.site_name or slug),
         slug=slug, sujet=sujet, route=route, base_url=str(proj.base_url or ""),
         owner=owner, repo_name=repo_name, branch=branch, token=token,
         langues=list(body.langues),
         suivi=_ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id)), style=style)
+    _audit_log(request, action="content.github.completed", status="ok" if out.get("ok") else "error",
+               target_type="project", target_id=str(proj.id), meta={"operation_id": consent_operation,
+               "pr_url": str(out.get("pr_url") or ""), "pages": out.get("pages") or [],
+               "task_id": str(out.get("task_id") or "")})
     return JSONResponse(out, status_code=int(out.pop("status", 200)))
 
 
@@ -40220,6 +40233,15 @@ except ImportError:
                             connection_keys as cms_connection_keys, connection_report as cms_connection_report,
                             etat_du_projet as cms_etat_du_projet, router as cms_router)
 app.include_router(cms_router)
+
+try:
+    from .agent_routes import router as agent_router
+    from .cms_publication_routes import router as cms_publication_router
+except ImportError:
+    from backend.agent_routes import router as agent_router
+    from backend.cms_publication_routes import router as cms_publication_router
+app.include_router(agent_router)
+app.include_router(cms_publication_router)
 
 
 customer_activation.install()
