@@ -249,3 +249,16 @@ def test_prestashop_sends_xml_unchanged_and_preserves_installation_prefix(wire):
     assert wire["calls"][-1]["body"] == xml.encode("utf-8")
     assert wire["calls"][-1]["path"] == "/shop/api/content_management_system"
     assert wire["calls"][-1]["headers"]["Authorization"].startswith("Basic ")
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"], ids=["read", "write"])
+@pytest.mark.parametrize("raw,parser", [(b"not-json", "json"), (b"\xff", "text")], ids=["invalid-json", "invalid-utf8"])
+def test_unreadable_success_body_preserves_write_uncertainty_without_exposing_it(wire, method, raw, parser):
+    client = wp()
+    verify_wp(client, wire)
+    wire["responses"].append(Response(raw=raw))
+    response = client(method, "/wp-json/wp/v2/posts", {"status": "draft"} if method == "POST" else None)
+    with pytest.raises(CmsError) as error:
+        getattr(response, parser)()
+    assert error.value.code == "reponse_illisible" and error.value.uncertain is (method == "POST")
+    assert "not-json" not in str(error.value) and len(wire["calls"]) == 2

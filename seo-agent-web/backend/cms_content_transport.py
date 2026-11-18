@@ -33,12 +33,19 @@ class TransportResponse:
     status: int
     headers: Mapping[str, str]
     body: bytes
+    write: bool = False
 
     def json(self):
-        return json.loads(self.body.decode("utf-8"))
+        try:
+            return json.loads(self.body.decode("utf-8"))
+        except (ValueError, UnicodeError):
+            raise _fail("reponse_illisible", uncertain=self.write) from None
 
     def text(self):
-        return self.body.decode("utf-8")
+        try:
+            return self.body.decode("utf-8")
+        except UnicodeError:
+            raise _fail("reponse_illisible", uncertain=self.write) from None
 
 
 def _fail(code, *, uncertain=False):
@@ -313,7 +320,7 @@ class ContentTransport:
                 value = response.getheader(field)
                 if value and len(value) <= 256 and not any(ord(c) < 32 for c in value):
                     safe_headers[field.lower()] = value
-            return TransportResponse(status, safe_headers, raw)
+            return TransportResponse(status, safe_headers, raw, write=write)
         except CmsError:
             raise
         except (OSError, http.client.HTTPException, ValueError, UnicodeError):

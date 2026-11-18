@@ -1,4 +1,4 @@
-# Noyaru : relecture ciblée du contrat de traitement des données, et deux autres questions
+# Noyaru : relecture ciblée du contrat de traitement des données, et une autre question
 
 **À l'attention de l'avocat.** E-Com Shop (SASU, 934 934 308 R.C.S. Paris) édite Noyaru, un logiciel en ligne
 d'audit et de correction SEO pour les professionnels. Petite structure : 7 comptes, 1 abonnement actif au
@@ -34,16 +34,9 @@ EUR-Lex : il n'a pas à être relu. Seuls comptent les deux écarts, les annexes
 7. **L'acceptation en ligne (B1).** Une case à cocher avec déclaration de pouvoir, et une preuve gardée pendant
    l'accord puis cinq ans : est-ce suffisant, y compris pour une nouvelle version ?
 
-## Deux questions hors du contrat de traitement
+## Une question hors du contrat de traitement
 
-8. **Des CGU complétées sans préavis (article 13).** Les 3 et 4 novembre 2026, les articles 1, 3 et 6 des CGU ont
-   été étendus à quatre nouveaux CMS (Ghost, PrestaShop, Wix, Webflow), avec les règles déjà prévues pour
-   WordPress : corrections décomptées de la même façon, accès confié par une clé que le client peut retirer,
-   modification enregistrée seulement à sa demande. Nous avons jugé ces ajouts non substantiels, puisqu'ils
-   ajoutent des options sans rien retirer ni coûter de plus : ils ont été publiés et datés sans le préavis de
-   30 jours par e-mail que l'article 13 prévoit pour une modification substantielle. Est-ce juste ? Sinon, que
-   faire pour les clients déjà inscrits ?
-9. **Les contenus produits par IA (règlement (UE) 2024/1689, article 50, applicable depuis le 2 août 2026).**
+8. **Les contenus produits par IA (règlement (UE) 2024/1689, article 50, applicable depuis le 2 août 2026).**
    Noyaru rédige des articles et des corrections avec des modèles d'IA ; sur les plans qui l'incluent, il génère
    aussi des illustrations d'articles avec un modèle d'OpenAI. Chaque illustration porte un marquage lisible par
    machine (métadonnée IPTC « trainedAlgorithmicMedia »), sans mention visible ; les textes ne portent aucun
@@ -55,7 +48,7 @@ EUR-Lex : il n'a pas à être relu. Seuls comptent les deux écarts, les annexes
 ## Ce que nous pouvons fournir
 
 Les contrats de nos prestataires, les 14 captures du registre du cadre UE–États-Unis (06/11/2026), la preuve du
-test de restauration de la sauvegarde (06/11/2026), notre politique de confidentialité (noyaru.com/privacy), nos
-CGU (noyaru.com/terms) et le relevé daté de leurs modifications.
+test de restauration de la sauvegarde (06/11/2026), notre politique de confidentialité (noyaru.com/privacy) et nos
+CGU (noyaru.com/terms).
 
 Contact : Tony Caron, contact@noyaru.com.

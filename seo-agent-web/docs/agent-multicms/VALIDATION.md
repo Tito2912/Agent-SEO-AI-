@@ -45,10 +45,28 @@ les 66 tests finaux sont dans `/tmp/noyaru-agent-final-receipts-20261118.log`.
 Les tests HTTP sont exécutés hors limitation de boucle asynchrone du bac à sable,
 avec une base et des comptes fictifs, sans branche ni base de production.
 
+## Recette WordPress native locale réussie
+
+`ops/wordpress-lab/check.py` exerce les formulaires réels de Noyaru face à
+WordPress 6.9.11 temporaire (PHP 8.3, Yoast 28.7 présent pour les anciens parcours).
+L’article utilise REST natif, sans requête Yoast : aperçu sans écriture, refus
+sans case, accord persisté, brouillon relu, second accord, publication relue et
+texte visible dans le HTML public local. Les double envois n’écrivent pas ; une
+modification directe dans WordPress bloque la publication du brouillon périmé.
+26 requêtes de contenu, quatre écritures au total, dont la modification externe
+simulée. Rapport sans identifiants : `WORDPRESS-LOCAL.json`.
+
+Le laboratoire dirige seulement la frontière DNS/TLS du processus de test vers
+127.0.0.1 ; le reste du transport natif et les adaptateurs sont ceux de Noyaru.
+Les protections de production ne possèdent aucun réglage de contournement.
+Le transfert média de ce nouveau parcours et la liaison à un hébergeur HTTPS
+externe ne sont pas validés par ce test. Les 132 tests transport/workflow/média
+et les tests du contrat adaptateur complètent la recette pour les erreurs simulées.
+
 ## Ce que ces résultats ne prouvent pas
 
-Pas de connexion/relecture/publication réelle dans une instance WordPress, Ghost,
-Wix, Webflow, Shopify ou PrestaShop. Pas de déploiement, validation App Store,
+Pas de connexion/relecture/publication réelle dans Ghost, Wix, Webflow ou
+PrestaShop ; Shopify n’est pas exposé. Pas de déploiement, validation App Store,
 activation de permission CMS client, évolution SEO ou conversion commerciale
 constatée. Les CGU et la confidentialité publiques n’ont pas changé.
 
@@ -64,3 +82,9 @@ La création manuelle de contenu GitHub exige désormais une case et un contrôl
 serveur, puis lie l’audit aux pages/PR effectivement produites. Le mandat des modes
 planifiés existants reste à distinguer d’une case par déclenchement avant toute
 formulation juridique générale ; aucune publication native automatique introduite.
+
+## Portabilité des captures
+
+Un clone configuré avec `core.autocrlf=true` conserve les quatre sources hachées
+en LF grâce au `.gitattributes` ciblé. Leurs quatre SHA-256 correspondent exactement
+au manifeste ; le garde n’a pas été normalisé ni désactivé.

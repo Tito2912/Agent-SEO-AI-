@@ -149,8 +149,8 @@ du dépôt (commit entre parenthèses).
   CMS), accès confié (clé Admin API, clé Webservice), modification enregistrée seulement à la demande du
   client et rétablissable depuis son suivi.
 - 04/11 (`f68d983`, `abe0f4e`) — mêmes articles : Wix (clé API) puis Webflow (jeton de site).
-- Publiées sans le préavis de 30 jours de l'article 13 : ajouts jugés non substantiels, à confirmer
-  (question 8 de `QUESTIONS-AVOCAT.md`).
+- Publiées sans le préavis de 30 jours de l'article 13 : ajouts jugés non substantiels. La question posée
+  à l'avocat sur ce point a été retirée le 18/11/2026, sur décision du propriétaire.
 
 **Politique de confidentialité**
 

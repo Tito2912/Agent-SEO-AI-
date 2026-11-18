@@ -293,3 +293,13 @@ def test_transport_response_refuses_oversize():
     with pytest.raises(AdapterError) as excinfo:
         response.json()
     assert excinfo.value.code == "unreadable"
+
+
+@pytest.mark.parametrize("write", [False, True], ids=["read", "write"])
+def test_a_structured_certain_transport_refusal_remains_retryable_after_new_consent(write):
+    from backend.cms_commun import CmsError
+    def refused():
+        raise CmsError("Permission refused before any change", code="acces_refuse", uncertain=False)
+    with pytest.raises(AdapterError) as error:
+        wrap_transport_errors(refused, write=write, cms="WordPress")
+    assert error.value.uncertain is False and error.value.code == "acces_refuse"

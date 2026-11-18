@@ -1,7 +1,9 @@
 # Agent Noyaru — première livraison multi-CMS
 
 État du 18 novembre 2026 : code en branche isolée, contrôles locaux et recettes simulées.
-Aucun déploiement ni contenu client publié. Ce document distingue le code, les tests et la recette réelle.
+Aucun déploiement ni contenu client publié. Une recette WordPress locale réelle,
+jetable, est réussie ; les autres environnements restent à éprouver. Ce document
+distingue le code, les tests et la recette réelle.
 
 ## Ce que contient ce lot
 
@@ -16,7 +18,7 @@ Aucun déploiement ni contenu client publié. Ce document distingue le code, les
 
 | Plateforme | Contenu natif préparé | Images privées Noyaru | Publication dans ce lot | Recette réelle |
 |---|---|---|---|---|
-| WordPress autohébergé | Articles REST natifs, indépendamment de Yoast | Transfert natif | Demande explicite après brouillon | À faire sur un site de test |
+| WordPress autohébergé | Articles REST natifs, indépendamment de Yoast | Transfert natif | Demande explicite après brouillon | Texte : réussie sur WordPress 6.9.11 local jetable ; hébergeur HTTPS et médias à faire |
 | Ghost | Articles Admin API ; aucun envoi newsletter | Transfert natif | Demande explicite après brouillon | À faire |
 | Webflow | Éléments d’une collection choisie ; mapping explicite du champ de contenu | Non ; images déjà hébergées | Uniquement les éléments choisis, après case d’accord ; publication du site entier interdite | À faire |
 | Wix Blog | Nouveaux articles Draft Posts v3 ; sous-ensemble Ricos explicite | Non ; images déjà hébergées | Demande explicite ; Manage Blog + auteur requis | À faire ; ne lève pas l’ancienne limitation SEO sur articles existants |
@@ -38,7 +40,7 @@ Les aperçus Chromium dans `previews/` emploient uniquement un compte et un site
 
 ## Avant activation publique
 
-1. Rejouer sur des environnements CMS de test les droits de lecture, création, relecture, modification concurrente, publication, échec ambigu et média. Ne pas utiliser de site client pour un essai de publication sans accord.
+1. Compléter la recette WordPress locale (voir `WORDPRESS-LOCAL.json`) par un hébergeur HTTPS externe et les médias ; rejouer sur les autres environnements CMS de test les droits de lecture, création, relecture, modification concurrente, publication, échec ambigu et média. Ne pas utiliser de site client pour un essai de publication sans accord.
 2. Faire relire la matrice et les formulations par le Claude historique, comme demandé sous C078. C079 autorise Webflow page par page et garde Shopify hors interface client ; les CGU/confidentialité restent à mettre à jour avec le lot livré ; aucun fichier juridique public modifié dans ce lot.
 3. Ne pas annoncer de compatibilité générale à partir des seuls tests de transport et d’adaptateur. Une API documentée n’est pas une recette réelle.
 

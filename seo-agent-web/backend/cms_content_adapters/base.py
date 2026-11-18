@@ -216,7 +216,7 @@ def wrap_transport_errors(fn: Callable[[], Any], *, write: bool, cms: str) -> An
             raise AdapterError(
                 str(error) or ("La reponse %s n'a pas pu etre confirmee." % cms),
                 code=inner_code or "network",
-                uncertain=inner_uncertain or write,
+                uncertain=inner_uncertain if has_uncertain else write,
             ) from error
         raise AdapterError(
             "La reponse %s n'a pas pu etre confirmee." % cms,
