@@ -32,7 +32,7 @@
     {% if has_verification %}
     <form method="post" action="/projects/{{ slug }}/content/valider/{{ task_id }}" class="content-approval">
       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-      <label class="checkbox"><input type="checkbox" required />{{ tr("J’ai relu ce contenu et j’autorise sa fusion dans le dépôt.") }}</label>
+      <label class="checkbox"><input type="checkbox" name="approved" value="true" required />{{ tr("J’ai relu ce contenu et j’autorise sa fusion dans le dépôt.") }}</label>
       <p class="muted small">{{ tr("La fusion peut avoir lieu dès que les vérifications du dépôt le permettent. Si ce dépôt ne comporte aucune vérification, votre validation suffit. Votre hébergeur peut ensuite déployer automatiquement cette branche.") }}</p>
       <button class="btn primary" type="submit">{{ tr('Réessayer la fusion') if approved else tr('Autoriser la fusion') }}</button>
     </form>

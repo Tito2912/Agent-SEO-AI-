@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import secrets
 import time
 from datetime import date, datetime
 from typing import Any
@@ -1137,3 +1138,37 @@ class CmsPublicationConsent(Base):
     targets: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     approved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class AutomationMandate(Base):
+    """Current functional authorization; archived evidence has its own retention period."""
+    __tablename__ = "automation_mandates"
+    __table_args__ = (UniqueConstraint("project_id", "mode", name="uq_automation_mandate_project_mode"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    mode: Mapped[str] = mapped_column(String(32), nullable=False)
+    scope_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    signing_secret: Mapped[str] = mapped_column(String(64), nullable=False, default=lambda: secrets.token_hex(32))
+    config: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    actor_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
+    receipt_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("cms_publication_consents.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class AutomationRun(Base):
+    """One reserved automatic action; interrupted remote mutations are never blindly repeated."""
+    __tablename__ = "automation_runs"
+    __table_args__ = (UniqueConstraint("project_id", "mode", "request_key", name="uq_automation_run_request"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    mode: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Historical identity, deliberately not a cascading FK to the current authorization.
+    mandate_key: Mapped[str] = mapped_column(String(36), nullable=False)
+    request_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(24), nullable=False, default="running", index=True)
+    reason: Mapped[str | None] = mapped_column(String(48))
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    provider_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    writes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

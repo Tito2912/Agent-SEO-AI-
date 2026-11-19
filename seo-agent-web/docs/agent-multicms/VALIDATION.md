@@ -152,3 +152,27 @@ PostgreSQL 16.15 jetable). Ghost final : trois preuves durables contrôlées,
 11 requêtes natives et quatre écritures. Rapports CONSERVATION-LOCAL-20261119.json
 et GHOST-CONSENTS-LOCAL-20261119.json ; empreintes des sources conservées.
 Ruff global, compilation ciblée et Bandit ciblé réussis.
+
+
+## Complément C084 — autorisations des modes existants
+
+`MODES-AUTOMATIQUES.md` décrit les deux modes, le retrait, les limites et les
+accords manuels. Migration 0035 sur SQLite et deux scénarios PostgreSQL 16.15
+réel jetable (schéma ancien/modèles déjà créés), montée répétée, refus de descente
+avec autorisations et suppression des seules données fonctionnelles éprouvés.
+Le service PostgreSQL est arrêté, données et marqueur du laboratoire supprimés.
+
+Première passe : 153 tests passés, deux cas PostgreSQL ignorés puis exécutés à part
+avec succès. Passe élargie : 314 tests passés, dont publication/autocorrection et
+CMS manuels. Les derniers compléments de signature, déduplication et statut sont
+rééprouvés dans la passe finale de **707 tests réussis, deux ignorés** consignée dans `MODES-LOCAL-20261119.json` ; ces
+groupes se recoupent. Quatre écrans Chromium réels locaux FR/EN sur 1440×1100
+et 390×844 : aucune requête externe, erreur JS ou débordement horizontal.
+
+Ruff, compilation et Bandit moyen/élevé contrôlés. L’ancienne commande `app:app`
+rencontre une importation relative préexistante dans db.py ; point d’entrée
+éprouvé : backend.app:app. Aucun résultat de Claude n’est attribué à cette revue
+(limite d’usage encore active). Les rapports Ghost/PrestaShop/C083 restent leurs
+preuves historiques sur les sources hachées d’alors, pas une recette externe du
+candidat C084. La CI complète et le pilote WordPress doivent porter sur le dernier
+head de la PR 95 ; leur ancien vert n’est pas réutilisé comme nouveau résultat.

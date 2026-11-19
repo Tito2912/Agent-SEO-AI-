@@ -19,7 +19,7 @@ distingue le code, les tests et la recette réelle.
 
 | Plateforme | Contenu natif préparé | Images privées Noyaru | Publication dans ce lot | Recette réelle |
 |---|---|---|---|---|
-| WordPress autohébergé | Articles REST natifs, indépendamment de Yoast | Transfert natif | Demande explicite après brouillon | Texte : réussie sur WordPress 6.9.11 local jetable ; hébergeur HTTPS et médias à faire |
+| WordPress autohébergé | Articles REST natifs, indépendamment de Yoast | Transfert natif | Demande explicite après brouillon | Texte : réussie sur WordPress 6.9.12 local jetable (pilote C083) ; hébergeur HTTPS et médias à faire |
 | Ghost | Articles Admin API ; aucun envoi newsletter | Transfert natif | Demande explicite après brouillon | Ghost 6.73 local jetable : média, accords, HTML et conflit rapide réussis ; HTTPS externe à faire |
 | Webflow | Éléments d’une collection choisie ; mapping explicite du champ de contenu | Non ; images déjà hébergées | Uniquement les éléments choisis, après case d’accord ; publication du site entier interdite | À faire |
 | Wix Blog | Nouveaux articles Draft Posts v3 ; sous-ensemble Ricos explicite | Non ; images déjà hébergées | Demande explicite ; Manage Blog + auteur requis | À faire ; ne lève pas l’ancienne limitation SEO sur articles existants |
@@ -43,7 +43,7 @@ Les aperçus Chromium dans `previews/` emploient uniquement un compte et un site
 
 1. Compléter les recettes locales WordPress/Ghost/PrestaShop (rapports JSON de ce dossier) par les liaisons HTTPS externes ; vérifier WordPress avec média, PrestaShop 9, Wix et Webflow sur leurs environnements CMS de test les droits de lecture, création, relecture, modification concurrente, publication, échec ambigu et média. Ne pas utiliser de site client pour un essai de publication sans accord.
 2. Faire relire la matrice et les formulations par le Claude historique, comme demandé sous C078. C079 autorise Webflow page par page et garde Shopify hors interface client ; les CGU/confidentialité restent à mettre à jour avec le lot livré ; aucun fichier juridique public modifié dans ce lot.
-3. Les preuves CMS manuelles et médias conservées cinq ans sont intégrées par C083, avec export et purge. Intégrer séparément les mandats des modes automatiques confirmés par Tony : accord unique à l’activation et retrait à la désactivation, sans nouvelle case par tâche automatique. Les textes publics restent à stabiliser avec Claude avant activation.
+3. Les preuves CMS manuelles et médias conservées cinq ans sont intégrées par C083, avec export et purge. C084 ajoute l’accord unique à l’activation des deux modes automatiques existants, le retrait avant les prochains appels et le lien des tâches à cette activation ; voir `MODES-AUTOMATIQUES.md`. Les cas sans preuve demandent confirmation et les résultats incertains ne sont pas rejoués. Les textes publics restent à stabiliser avec Claude avant activation.
 4. Ne pas annoncer de compatibilité générale à partir des seuls tests de transport et d’adaptateur. Une API documentée n’est pas une recette réelle.
 
 ## Plan complet accepté : lots suivants

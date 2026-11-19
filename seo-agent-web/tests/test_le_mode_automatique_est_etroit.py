@@ -123,6 +123,10 @@ def projet(monkeypatch):
         db.commit()
         db.refresh(proj)
         pid = str(proj.id)
+        # This fixture represents a real prior activation, not just an enabled JSON flag.
+        from backend import automation_mandates
+        automation_mandates.change(db, project=proj, actor_id=uid, mode="content_schedule", consent=True, active=True)
+        db.commit()
         db.add(CompetitorSite(project_id=pid, user_id=uid, domain="rival.fr",
                               base_url="https://rival.fr", status="ready",
                               pages=RIVAL_PAGES, pages_count=len(RIVAL_PAGES)))
@@ -165,6 +169,9 @@ def github(monkeypatch):
                                            "app/blog/page.tsx": INDEX_MANUEL}}
 
     def _get(path, **kw):
+        if "/pulls/" in path:
+            return {"state": "open", "number": 91, "node_id": "PR_node", "head": {"sha": "head-sha"},
+                    "base": {"ref": "main", "repo": {"full_name": "client/site.fr"}}}
         if "/git/trees/" in path:
             return {"tree": [{"path": p, "type": "blob"} for p in calls["tree"]]}
         if "/git/ref/" in path or "/git/refs/heads/" in path:
@@ -209,12 +216,15 @@ def modele(monkeypatch):
     return vus
 
 
-def _eteindre(pid: str, **champs) -> None:
+def _eteindre(pid: str, *, consent=False, **champs) -> None:
     with app_module.DB.session() as db:
         p = db.get(Project, pid)
         reglages = dict(p.settings or {})
         reglages["content_auto"] = {**(reglages.get("content_auto") or {}), **champs}
         p.settings = reglages
+        if consent:
+            from backend import automation_mandates
+            automation_mandates.change(db, project=p, actor_id=p.owner_user_id, mode="content_schedule", consent=True, active=bool(reglages["content_auto"]["enabled"]))
         db.commit()
 
 
@@ -319,7 +329,7 @@ def test_la_semaine_ECOULEE_rouvre_le_passage(projet, plan, github, modele) -> N
     from datetime import datetime as _dt, timedelta as _td
     from zoneinfo import ZoneInfo as _Z
     hier = (_dt.now(_Z("Europe/Paris")) - _td(days=1)).weekday()
-    _eteindre(pid, last_run=time.time() - 8 * 86400, jour=hier, heure=0)
+    _eteindre(pid, consent=True, last_run=time.time() - 8 * 86400, jour=hier, heure=0)
     assert app_module._balayer_contenu_auto()["proposees"] == 1
     seconde = _pages_neuves(github)
     assert seconde and not (seconde & premiere), (premiere, seconde)
@@ -398,7 +408,7 @@ def test_un_ECHEC_consomme_quand_meme_la_semaine(projet, plan, github, modele) -
     """Sinon un projet dont le placement est refusé est réessayé à chaque passage : le coût
     d'un refus est petit, mais il se paierait à chaque tour et pour toujours."""
     slug, pid, _uid = projet
-    _eteindre(pid, section="/section-inexistante")
+    _eteindre(pid, consent=True, section="/section-inexistante")
     res = app_module._balayer_contenu_auto()
     assert res["refusees"] == 1 and github["put"] == [], res
     assert _auto(pid)["last_run"] > 0, "le refus sera rejoué à chaque passage"
@@ -431,7 +441,7 @@ def test_allumer_SANS_SECTION_est_refuse(client_connecte, plan) -> None:
 
 def test_l_interrupteur_se_regle_et_se_relit(client_connecte, plan) -> None:
     client, slug, pid = client_connecte
-    assert _regler(client, slug, enabled=True, section="guides").status_code == 200
+    assert _regler(client, slug, enabled=True, section="guides", consent=True).status_code == 200
     auto = _auto(pid)
     assert (auto["enabled"], auto["section"], auto["last_run"]) == (True, "/guides", 0), auto
     page = client.get(f"/projects/{slug}/content").text
@@ -446,7 +456,7 @@ def test_ETEINDRE_puis_RALLUMER_ne_rend_pas_une_page_de_plus(client_connecte, pl
     avant = _auto(pid)["last_run"]
     assert avant > 0
     assert _regler(client, slug, enabled=False, section="/blog").status_code == 200
-    assert _regler(client, slug, enabled=True, section="/blog").status_code == 200
+    assert _regler(client, slug, enabled=True, section="/blog", consent=True).status_code == 200
     assert _auto(pid)["last_run"] == avant, _auto(pid)
 
 

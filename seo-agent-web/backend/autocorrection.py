@@ -15,11 +15,13 @@ from starlette.requests import Request
 
 try:
     from . import correction_decisions as decisions, correction_execution as execution
+    from . import cms_consent
     from . import correction_guard, correction_journal, correction_memory as memory, first_correction
     from .models import AuditLog, AutocorrectionRun, CorrectionDecision, CorrectionOperation, IssueTask, Project, User
 except ImportError:
     import correction_decisions as decisions
     import correction_execution as execution
+    from backend import cms_consent
     import correction_guard
     import correction_journal
     import correction_memory as memory
@@ -137,7 +139,11 @@ def authorize(project_id, task_id, owner_id, decision_key, *, consent, publicati
                 lang='en' if str(lang).startswith('en') else 'fr', state='queued', reason='authorized',
                 expires_at=now+timedelta(hours=24), limits=dict(LIMITS), reserved_credits=0,
                 provider_calls=0, input_chars=0, output_tokens=0)
-            db.add(run);db.flush();audit(db, run, 'authorized');db.commit()
+            db.add(run);db.flush()
+            cms_consent.capture(db, project=project, actor=owner, operation="autocorrection_preview",
+                content_digest=decision_key, targets={"platform": "github", "run_id": run.id,
+                    "task_id": task.id, "url": cms_consent.public_url(task.url), "config_key": run.config_key})
+            audit(db, run, 'authorized');db.commit()
             return run
 
 

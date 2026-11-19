@@ -22,6 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import json
+
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -155,7 +157,7 @@ def test_VERIFICATION_la_PR_attend_et_un_e_mail_mene_a_la_page_de_validation(
     slug, pid, _uid = projet
     envois = []
     monkeypatch.setattr(m, "_send_email", lambda **kw: envois.append(kw))
-    _m._eteindre(pid, taille="court", ton="expert", publication="verification")
+    _m._eteindre(pid, taille="court", ton="expert", publication="verification", consent=True)
     assert m._balayer_contenu_auto()["proposees"] == 1
     assert "environ 800 mots" in modele[0] and "expert :" in modele[0], "le style arrive a la redaction"
     with m.DB.session() as db:
@@ -173,7 +175,7 @@ def test_AUTOMATIQUE_la_PR_est_marquee_pour_fusion_et_rien_n_est_envoye(
     slug, pid, _uid = projet
     envois = []
     monkeypatch.setattr(m, "_send_email", lambda **kw: envois.append(kw))
-    _m._eteindre(pid, publication="auto")
+    _m._eteindre(pid, publication="auto", consent=True)
     assert m._balayer_contenu_auto()["proposees"] == 1
     with m.DB.session() as db:
         note = m.json.loads(db.scalars(m.select(m.IssueTask).where(
@@ -191,7 +193,7 @@ def test_AUTOMATIQUE_sans_CI_previent_UNE_fois(projet, plan, github, modele, mon
     monkeypatch.setattr(m, "_verifications_du_commit", lambda **kw: [])
     monkeypatch.setattr(m, "_decider_de_la_pr", lambda verifs, age_s: ("inconnu", "Aucune vérification"))
     monkeypatch.setattr(m, "_pr_marquer_prete", lambda **kw: None)
-    _m._eteindre(pid, publication="auto")
+    _m._eteindre(pid, publication="auto", consent=True)
     m._balayer_contenu_auto()
     with m.DB.session() as db:
         tache = db.scalars(m.select(m.IssueTask).where(
@@ -246,7 +248,7 @@ def _valider(client, slug, task_id):
     page = client.get(f"/projects/{slug}/content/valider/{task_id}")
     token = client.cookies.get(m._CSRF_COOKIE_NAME, "")
     return page, client.post(f"/projects/{slug}/content/valider/{task_id}",
-                             data={"_csrf": token}, follow_redirects=False)
+                             data={"_csrf": token, "approved": "true"}, follow_redirects=False)
 
 
 @pytest.fixture()
@@ -361,3 +363,51 @@ def test_le_journal_offre_VALIDER_pour_une_page_en_attente(client_connecte, plan
     client, slug, pid = client_connecte
     task_id = _une_page_en_attente(projet, github, modele, monkeypatch)
     assert f"/projects/{slug}/content/valider/{task_id}" in client.get(f"/projects/{slug}/content").text
+
+
+def test_manual_merge_requires_the_submitted_checkbox(client_connecte, plan, github, modele, monkeypatch, projet, depot):
+    browser, slug, _pid = client_connecte
+    task_id = _une_page_en_attente(projet, github, modele, monkeypatch)
+    page = browser.get(f"/projects/{slug}/content/valider/{task_id}")
+    from bs4 import BeautifulSoup
+    checkbox = BeautifulSoup(page.text, "html.parser").select_one('input[type="checkbox"][name="approved"][required]')
+    assert checkbox and checkbox.get("value") == "true"
+    response = browser.post(f"/projects/{slug}/content/valider/{task_id}",
+        data={"_csrf": browser.cookies.get(m._CSRF_COOKIE_NAME)}, follow_redirects=False)
+    assert "err=" in response.headers["location"] and _statut(task_id) != "done"
+    assert not any(g.endswith("/merge") for g in depot["gestes"])
+
+
+def test_manual_merge_evidence_is_saved_before_any_transport(client_connecte, plan, github, modele, monkeypatch, projet, depot):
+    from sqlalchemy import event
+    from sqlalchemy.exc import OperationalError
+    from backend.models import CmsPublicationConsent
+    browser, slug, _pid = client_connecte
+    task_id = _une_page_en_attente(projet, github, modele, monkeypatch)
+    before = list(depot["gestes"])
+    def fail(_mapper, _connection, row):
+        if row.operation == "github_publication":
+            raise OperationalError("receipt unavailable", {}, RuntimeError("injected test storage failure"))
+    event.listen(CmsPublicationConsent, "before_insert", fail)
+    try:
+        _page, response = _valider(browser, slug, task_id)
+        assert "err=" in response.headers["location"]
+    finally:
+        event.remove(CmsPublicationConsent, "before_insert", fail)
+    assert depot["gestes"] == before and _statut(task_id) != "done"
+
+
+def test_manual_approval_cannot_follow_an_edited_sha(client_connecte, plan, github, modele, monkeypatch, projet, depot):
+    browser, slug, _pid = client_connecte
+    task_id = _une_page_en_attente(projet, github, modele, monkeypatch)
+    depot["decision"] = ("attendre", "Checks running")
+    _valider(browser, slug, task_id)
+    with m.DB.session() as db:
+        task = db.get(m.IssueTask, task_id)
+        note = json.loads(task.note)
+        note["verification"]["sha"] = "changed-after-approval"
+        task.note = json.dumps(note)
+        db.commit()
+    before = list(depot["gestes"])
+    assert m._reprendre_une_verification(task) == "autorisation_retiree"
+    assert depot["gestes"] == before

@@ -3642,5 +3642,18 @@
   "Évaluer un nouveau contenu utile à votre activité": "Evaluate new content useful to your business",
   "Je demande la création de cette proposition de contenu sur GitHub.": "I request the creation of this content proposal on GitHub.",
   "Cochez votre accord pour créer cette proposition sur GitHub.": "Check the consent box to create this proposal on GitHub.",
-  "Pour créer une page, indiquez la langue par défaut de votre boutique.": "To create a page, enter your shop’s default language."
+  "Pour créer une page, indiquez la langue par défaut de votre boutique.": "To create a page, enter your shop’s default language.",
+  "Accord à confirmer": "Approval to confirm",
+  "Confirmez que vous autorisez ce mode de rédaction planifiée.": "Confirm that you authorize this scheduled writing mode.",
+  "J’autorise la rédaction planifiée avec ces réglages jusqu’à sa désactivation. Avec la publication automatique, les articles sont fusionnés sans relecture humaine dès que les contrôles du dépôt passent.": "I authorize scheduled writing with these settings until it is disabled. With automatic publishing, articles are merged without human review once the repository checks pass.",
+  "Confirmez que vous autorisez la fusion de ce contenu.": "Confirm that you authorize merging this content.",
+  "L’autorisation du mode a été retirée ou modifiée. Relisez cette proposition avant de poursuivre.": "This mode’s authorization was withdrawn or changed. Review this proposal before continuing.",
+  "Une tentative a déjà commencé. Vérifiez son résultat sur GitHub avant de poursuivre.": "An attempt has already started. Check its result on GitHub before continuing.",
+  "Relisez cette proposition et confirmez sa fusion sur la cible actuelle.": "Review this proposal and confirm merging it into the current destination.",
+  "Automatisations à vérifier": "Automations to check",
+  "Automatisation arrêtée": "Automation stopped",
+  "La préparation a commencé mais son résultat n’est pas confirmé. Vérifiez son état avant de la relancer.": "Preparation started but its result is not confirmed. Check its status before starting it again.",
+  "L’automatisation s’est arrêtée avant une modification.": "Automation stopped before a change.",
+  "Consulter la proposition sur GitHub": "View the proposal on GitHub",
+  "Votre accord n’a pas pu être enregistré. Actualisez l’état avant de réessayer.": "Your approval could not be saved. Refresh the state before trying again."
 }

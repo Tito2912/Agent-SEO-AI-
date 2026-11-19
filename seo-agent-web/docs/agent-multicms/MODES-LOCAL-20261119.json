@@ -1,0 +1,113 @@
+{
+  "date_utc": "2026-11-19T20:31:14.541969+00:00",
+  "baseline_remote": "396b172aa0310fb9e77cd131dd30b85fe50b901a",
+  "data": "fictional local accounts only",
+  "sources": {
+    "alembic/versions/20261119_0035_automation_mandates.py": "1ee9c44c465429184d356f3f1212664eeea0f8d479b24b4a5b22e4342fb05126",
+    "backend/app.py": "d8ebba2ae342ce5b75549282f5a1357ee19c9a32ba32446e3b4974cfedea9e4b",
+    "backend/autocorrection.py": "b233ff60b4d411921c29df33d5e6913cfd2685220c76728ad99e51bf6ac33bb5",
+    "backend/automation_mandates.py": "3c32d03b413f6aee9f3cfc913ea7ed8ce04f009fba6f9d2c8e3d0adb06265474",
+    "backend/correction_execution.py": "e328d1938b36b225d9c0cb4f4d3a940a4219af1a8e842421f3c26267a2c19641",
+    "backend/correction_publication.py": "bebf14b3e975b7f2027230ab45d3c6a81df7c68675193e1461e5a8ec376a23ba",
+    "backend/models.py": "912e3e1296bc94e1fe5694c3b1b5f3ea845d7bebe49877925c84bc37a251230f",
+    "locales/en.json": "9d5f9ca2e506aec8757c2f84f23a6c5327633543916de08dfe87bb465de719df",
+    "static/analysis-github.js": "f89ee4c6cb72c70c9afd57fce923c9d977768910a53a561e6e95386b04dbb64c",
+    "templates/content.html": "fa349cdf28dca16070c8f2e9b1a9272e6de324611894f82247917c8b4614f186",
+    "templates/content_valider.html": "368140d63f3038b6fe8efe5e07d31064fae15ac169ac19216bbcdee26c9862a5",
+    "templates/crawl_settings.html": "b8603ce7a05b55dc4a901863b016dee50bd3e8a60d840af9fa6348e368334acf",
+    "templates/project_automation.html": "4b654c795b7a45f5e4f1b836083b3a503a504902e67f32c014b9db36d62d93c6",
+    "tests/test_automation_consent_integrity.py": "007878afb59fc1e2022f24611c6b3a40cde014b8a8cd376d55b09c3ebca82514",
+    "tests/test_automation_mandates.py": "ae70bbb77979626e4e45b43c68145a5bf49838d0bbec3bec9f463cb9960af713",
+    "tests/test_automation_mandates_migration.py": "620540671b785908334226420e4c131881063a230f65a764d586e016fa749295",
+    "tests/test_automation_scheduler_revocation.py": "075ef6237084344dc4e153ad5b3f49aa9b40acbfc7ce010979610081b48f0a7d",
+    "tests/test_corrector_operational.py": "c25ca0bb684fa44179fc7aa2d3640f94f6d5a78388904b778301d7b0a54c298d",
+    "tests/test_la_pr_attend_le_verdict_du_depot.py": "e0de7970ab8fa862c023eef4cb3194aa2cf16d367dca3016a1671570d62e8544",
+    "tests/test_le_mode_automatique_est_etroit.py": "21138093436eca974e34dfbeb0dac503d807d8f45acbd03fe5d3051df2c692c4",
+    "tests/test_le_mode_automatique_se_regle.py": "9854c84ba0c337a04650d4833d8aadf0df3467dc1e7eeb5b6d69478f83395ff3"
+  },
+  "tests": {
+    "final_modes_and_verifier_regression": {
+      "passed": 707,
+      "skipped": 2,
+      "skipped_reason": "PostgreSQL lab is opt-in; both cases passed separately",
+      "log_sha256": "bb60d7886e83bb909f94358ffaa76279d2ff9e0552c0a37a54fe4cffadb74e5f"
+    },
+    "postgresql_16_15": {
+      "passed": 2,
+      "deselected_sqlite": 2,
+      "shutdown_and_data_removal": true,
+      "log_sha256": "c442d2e62ff21bfe95bee3df31d565fdfeb8abb2d2696b7bb9b6504f69929562"
+    },
+    "earlier_extended_regression": {
+      "passed": 314,
+      "note": "Before final policy/deduplication/minimal-receipt additions. Groups overlap; full final CI is in PR checks."
+    }
+  },
+  "browser": {
+    "data": "fictional demonstration only",
+    "external_requests": [],
+    "checks": [
+      {
+        "lang": "fr",
+        "viewport": [
+          1440,
+          1100
+        ],
+        "page": "content",
+        "http": 200,
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "fr-1440-content.png"
+      },
+      {
+        "lang": "fr",
+        "viewport": [
+          1440,
+          1100
+        ],
+        "page": "automation",
+        "http": 200,
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "fr-1440-automation.png"
+      },
+      {
+        "lang": "en",
+        "viewport": [
+          390,
+          844
+        ],
+        "page": "content",
+        "http": 200,
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "en-390-content.png"
+      },
+      {
+        "lang": "en",
+        "viewport": [
+          390,
+          844
+        ],
+        "page": "automation",
+        "http": 200,
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "en-390-automation.png"
+      }
+    ]
+  },
+  "checks": {
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "bandit_medium_high": "passed"
+  },
+  "limitations": [
+    "No customer CMS, provider AI or external GitHub mutation in recipes",
+    "Withdrawal stops subsequent calls; cannot recall an in-flight request",
+    "Unknown runs remain blocked pending explicit result inspection; no automatic resolver",
+    "Only existing GitHub merge and content scheduling modes; no new continuous autocorrection",
+    "No merge or deployment; no new legal text or new Claude review",
+    "Legacy app:app entrypoint has preexisting db.py relative import error; backend.app:app tested"
+  ]
+}
