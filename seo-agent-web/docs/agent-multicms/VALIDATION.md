@@ -1,6 +1,6 @@
 # Validation locale — première livraison multi-CMS
 
-État au 18 novembre 2026. Branche `feature/agent-multicms-first-delivery`, base de code
+État au 19 novembre 2026. Branche `feature/agent-multicms-first-delivery`, base de code
 identique à l’arbre `d0c7cd17` de `main` `6a72509f` avant changements.
 
 ## Éléments déjà contrôlés
@@ -76,8 +76,9 @@ et les tests du contrat adaptateur complètent la recette pour les erreurs simul
 
 ## Ce que ces résultats ne prouvent pas
 
-Pas de connexion/relecture/publication réelle dans Ghost, Wix, Webflow ou
-PrestaShop ; Shopify n’est pas exposé. Pas de déploiement, validation App Store,
+Pas de connexion native authentifiée chez un hébergeur externe ni sur Wix/Webflow.
+Ghost et PrestaShop ont été éprouvés seulement sur les laboratoires ci-dessous ;
+PrestaShop 9 reste à éprouver. Shopify n’est pas exposé. Pas de déploiement, validation App Store,
 activation de permission CMS client, évolution SEO ou conversion commerciale
 constatée. Les CGU et la confidentialité publiques n’ont pas changé.
 
@@ -99,3 +100,33 @@ formulation juridique générale ; aucune publication native automatique introdu
 Un clone configuré avec `core.autocrlf=true` conserve les quatre sources hachées
 en LF grâce au `.gitattributes` ciblé. Leurs quatre SHA-256 correspondent exactement
 au manifeste ; le garde n’a pas été normalisé ni désactivé.
+
+## C082 — Ghost et PrestaShop réels locaux (19 novembre)
+
+- Ghost 6.73.0 / Node 22.23.5 / SQLite : image WebP native avec accord conservé,
+  réutilisation sans second transfert, brouillon puis publication avec deux
+  accords distincts, texte dans le HTML local et absence de newsletter attachée.
+  Une édition externe de titre a été confirmée au même updated_at ; l’empreinte
+  de contenu a bloqué la publication avant un nouveau PUT. 11 requêtes natives,
+  quatre écritures. Rapport GHOST-LOCAL-20261119.json, avec empreintes des sources.
+- PrestaShop 8.2.8 / PHP 8.1 / MariaDB 10.11, fr/en : création inactive en français,
+  anglais modifié sans perte du français, activation sans mutation des textes,
+  HTML local 200 et conflit de révision refusé avant PATCH. La création en langue
+  non défaut est refusée par cette boutique sans nouvelle langue inventée.
+  18 requêtes, cinq écritures. Rapport PRESTASHOP-LOCAL-20261119.json.
+- 275 tests ciblés passés (contrats, transport, workflow, accords, médias, parcours
+  et anglais), Ruff et Bandit ciblés verts. La CI complète de ce complément est
+  à consulter sur le dernier head de la PR #95 ; la CI #806 citée plus haut
+  concerne le candidat précédent.
+
+Les scripts native_publication.py des deux laboratoires sont rejouables et leurs
+README précisent les dépendances et le périmètre. Le dernier saut DNS/TLS est
+adapté uniquement dans le processus de recette : aucune option de contournement
+n’est ajoutée à Noyaru. Comptes, bases et pages fictifs ; pas d’accès client, de
+clé existante utilisée, de newsletter envoyée ni de coût d’hébergement. Les
+rapports ne contiennent aucun identifiant de connexion.
+
+Décisions du 19/11 transmises par Claude : modes automatiques autorisés par une
+case unique à l’activation et accords conservés cinq ans. L’intégration au
+modèle, à la purge et aux parcours reste un travail distinct de C082 ; aucune
+conformité à ces décisions n’est encore revendiquée ici.

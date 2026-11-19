@@ -1,8 +1,9 @@
 # Agent Noyaru — première livraison multi-CMS
 
-État du 18 novembre 2026 : code en branche isolée, contrôles locaux et recettes simulées.
-Aucun déploiement ni contenu client publié. Une recette WordPress locale réelle,
-jetable, est réussie ; les autres environnements restent à éprouver. Ce document
+État du 19 novembre 2026 : code en branche isolée, contrôles locaux et recettes simulées.
+Aucun déploiement ni contenu client publié. Les recettes locales réelles
+WordPress, Ghost et PrestaShop sont réussies ; les liaisons HTTPS externes et
+Wix/Webflow restent à éprouver. Ce document
 distingue le code, les tests et la recette réelle.
 
 ## Ce que contient ce lot
@@ -19,10 +20,10 @@ distingue le code, les tests et la recette réelle.
 | Plateforme | Contenu natif préparé | Images privées Noyaru | Publication dans ce lot | Recette réelle |
 |---|---|---|---|---|
 | WordPress autohébergé | Articles REST natifs, indépendamment de Yoast | Transfert natif | Demande explicite après brouillon | Texte : réussie sur WordPress 6.9.11 local jetable ; hébergeur HTTPS et médias à faire |
-| Ghost | Articles Admin API ; aucun envoi newsletter | Transfert natif | Demande explicite après brouillon | À faire |
+| Ghost | Articles Admin API ; aucun envoi newsletter | Transfert natif | Demande explicite après brouillon | Ghost 6.73 local jetable : média, accords, HTML et conflit rapide réussis ; HTTPS externe à faire |
 | Webflow | Éléments d’une collection choisie ; mapping explicite du champ de contenu | Non ; images déjà hébergées | Uniquement les éléments choisis, après case d’accord ; publication du site entier interdite | À faire |
 | Wix Blog | Nouveaux articles Draft Posts v3 ; sous-ensemble Ricos explicite | Non ; images déjà hébergées | Demande explicite ; Manage Blog + auteur requis | À faire ; ne lève pas l’ancienne limitation SEO sur articles existants |
-| PrestaShop 8/9 | Pages CMS natives, une langue/boutique par appel | Non ; images déjà hébergées | Activation explicite de la page ; pas de blog universel | À faire |
+| PrestaShop 8/9 | Pages CMS natives ; création dans la langue par défaut de la boutique | Non ; images déjà hébergées | Activation explicite de la page ; pas de blog universel | 8.2.8 local bilingue : texte/langues et HTML contrôlés ; 9 et HTTPS externe à faire |
 
 Le connecteur vérifie l’association au domaine du projet avant toute écriture. Les anciennes clés de métadonnées ne reçoivent aucun droit supplémentaire. Les nouvelles connexions sont chiffrées, propres au projet, et supprimées avec lui. Chaque écriture CMS exige une case d’accord et conserve avant l’envoi l’acteur, l’horodatage, la destination et l’empreinte du contenu. Les transferts médias conservent leur propre accord.
 
@@ -40,9 +41,10 @@ Les aperçus Chromium dans `previews/` emploient uniquement un compte et un site
 
 ## Avant activation publique
 
-1. Compléter la recette WordPress locale (voir `WORDPRESS-LOCAL.json`) par un hébergeur HTTPS externe et les médias ; rejouer sur les autres environnements CMS de test les droits de lecture, création, relecture, modification concurrente, publication, échec ambigu et média. Ne pas utiliser de site client pour un essai de publication sans accord.
+1. Compléter les recettes locales WordPress/Ghost/PrestaShop (rapports JSON de ce dossier) par les liaisons HTTPS externes ; vérifier WordPress avec média, PrestaShop 9, Wix et Webflow sur leurs environnements CMS de test les droits de lecture, création, relecture, modification concurrente, publication, échec ambigu et média. Ne pas utiliser de site client pour un essai de publication sans accord.
 2. Faire relire la matrice et les formulations par le Claude historique, comme demandé sous C078. C079 autorise Webflow page par page et garde Shopify hors interface client ; les CGU/confidentialité restent à mettre à jour avec le lot livré ; aucun fichier juridique public modifié dans ce lot.
-3. Ne pas annoncer de compatibilité générale à partir des seuls tests de transport et d’adaptateur. Une API documentée n’est pas une recette réelle.
+3. Intégrer les décisions de Tony transmises par Claude le 19/11 : accord unique à l’activation d’un mode automatique, accord à chaque tâche manuelle, preuves minimales conservées cinq ans après l’accord avec purge et survie à la suppression du compte/projet. Ce complément de recette native ne les implémente pas encore.
+4. Ne pas annoncer de compatibilité générale à partir des seuls tests de transport et d’adaptateur. Une API documentée n’est pas une recette réelle.
 
 ## Plan complet accepté : lots suivants
 

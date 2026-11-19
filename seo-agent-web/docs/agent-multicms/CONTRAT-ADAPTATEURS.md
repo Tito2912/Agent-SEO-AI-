@@ -134,16 +134,22 @@ Le transport reste responsable de :
 | Plateforme | Revision (jeton)                         | Origine de lecture                           | `status` renvoye                  |
 |------------|------------------------------------------|----------------------------------------------|-----------------------------------|
 | WordPress  | `modified_gmt` (fallback `modified`)     | GET `/wp-json/wp/v2/posts/{id}?context=edit` | `draft` / `published` / `scheduled` |
-| Ghost      | `updated_at`                              | GET `/ghost/api/admin/posts/{id}/?formats=html` | `draft` / `published` / `scheduled` |
+| Ghost      | SHA-256 du snapshot (dont `updated_at`)                              | GET `/ghost/api/admin/posts/{id}/?formats=html` | `draft` / `published` / `scheduled` |
 | Shopify    | `updatedAt`                                | query GraphQL `article(id)`                   | `draft` / `published` / `scheduled` |
 | Webflow    | `lastUpdated`                              | GET `/v2/collections/{c}/items/{id}`          | `draft` / `published`             |
 | Wix        | `revision`                                 | GET `/blog/v3/draft-posts/{id}`               | `draft` / `published`             |
-| PrestaShop | `date_upd` (element XML)                   | GET `/api/content_management_system/{id}`     | `draft` (`active=0`) / `published` (`active=1`) |
+| PrestaShop | SHA-256 du GET canonique, toutes langues                   | GET `/api/content_management_system/{id}`     | `draft` (`active=0`) / `published` (`active=1`) |
 
 Ghost exige `updated_at` dans toute mise a jour (422 sans) : l'adaptateur le relit
 avant chaque ecriture et le renvoie tel quel. Wix exige `revision` dans tout PATCH.
-PrestaShop ne fournit pas de controle de version natif : la revision locale est
-comparee a `date_upd` relu juste avant le PATCH.
+Ghost conserve le vrai `updated_at` pour le PUT, mais sa revision Noyaru est une
+empreinte du snapshot (id, titre, slug, HTML, extrait, statut et date). Elle detecte
+aussi une edition au meme horodatage. Les appels demandent `formats=html`.
+PrestaShop ne fournit pas de date_upd pour les pages CMS : la revision locale est
+une empreinte de toutes les valeurs du GET canonique (toutes langues et etat).
+POST/PATCH peuvent renvoyer un document partiel ; une relecture suit chaque succes.
+Une erreur de relecture apres ecriture reste incertaine, sans nouvel envoi.
+Voir PRESTASHOP-CONTRAT-NATIF.md pour les gardes de conservation multilingue.
 
 ## Mapping Webflow (field_mapping)
 

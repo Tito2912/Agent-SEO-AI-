@@ -42,3 +42,36 @@ Dans un dossier vide hors du dépôt, désigné par `PRESTASHOP_LAB` :
     PRESTASHOP_LAB=<dossier> python ops/prestashop-lab/essai_local.py
 
 Le script modifie la boutique de laboratoire : jamais contre une vraie boutique.
+
+## Recette des pages CMS natives (C082)
+
+Le scénario ci-dessus concernait les anciennes corrections SEO. La nouvelle
+recette `native_publication.py` concerne des pages CMS fictives du lot #95 :
+création inactive, révision par empreinte, modification de la seconde langue sans
+perdre la première, activation sans changement du texte, HTML public local et
+conflit de version. Elle observe séparément la création dans une langue non défaut.
+
+Préparer une **nouvelle boutique jetable 8.2.8**, française par défaut, hors dépôt,
+sur un domaine `127.0.0.1:PORT` ou `localhost:PORT`. Les mêmes PHP 8.1 et MariaDB
+portables que ci-dessus conviennent ; une extraction Linux en `/tmp` évite toute
+installation système. L'installateur CLI doit recevoir explicitement son serveur
+et son port de base de données. Aucun site marchand existant ne doit servir ici.
+
+```sh
+PRESTASHOP_LAB=/chemin/labo php ops/prestashop-lab/prepare_native.php
+# Retirer/renommer le dossier shop/install après l'installation, comme le demande PrestaShop.
+# La recette attend shop/install-disabled pour identifier cette préparation.
+PRESTASHOP_LAB=/chemin/labo php -S 127.0.0.1:8091 -t /chemin/labo/shop ops/prestashop-lab/router.php
+python ops/prestashop-lab/native_publication.py --lab-root /chemin/labo --server http://127.0.0.1:8091 --report /tmp/prestashop-native-report.json
+```
+
+`prepare_native.php` vérifie le domaine local, désactive le courrier, ajoute une
+langue anglaise pour éprouver l'API et crée une clé aléatoire limitée à
+`content_management_system` GET/POST/PATCH. Cette clé reste dans `native-key.txt`
+(mode 0600) **hors racine web** ; elle n'est jamais affichée. Une préparation
+existante n'est pas écrasée. `fixture.json` ne contient que les métadonnées publiques.
+Ne pas copier ces fichiers dans Git. À la fin, arrêter PHP/MariaDB et supprimer les
+données de la boutique, la clé et la configuration générée. Aucun hébergement ni
+compte externe n'est nécessaire. Le scénario n'utilise pas le transport de
+production pour contourner ses refus des adresses privées : son dernier saut
+DNS/TLS est remplacé uniquement dans ce processus local de recette.
