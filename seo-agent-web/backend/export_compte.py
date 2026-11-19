@@ -78,6 +78,10 @@ def lignes_du_compte(session: Any, user_id: str, *, metadata: Any = None) -> dic
             continue
         if table.name == "users":
             condition = table.c.id == user_id
+        elif table.name == "cms_publication_consents":
+            # Project removal must not hide the owner's evidence. Actor membership or a
+            # recycled email address never grants access to another account's receipts.
+            condition = table.c.owner_user_id == user_id
         else:
             liens = [fk for fk in table.foreign_keys if fk.column.name == "id" and inclus.get(fk.column.table.name)]
             par_projet = [fk for fk in liens if fk.column.table.name == "projects"]

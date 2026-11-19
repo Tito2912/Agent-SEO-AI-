@@ -57,6 +57,7 @@
           </a>
 
           {% if project and project.slug %}
+            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/agent' %}active{% endif %}" href="/projects/{{ project.slug }}/agent">{{ tr("Plan d’action") }}</a>
             {% set project_path = '/projects/' ~ project.slug %}
             {% set correction_path = request.url.path == project_path ~ '/first-correction' or request.url.path.startswith(project_path ~ '/corrections') or request.url.path.startswith(project_path ~ '/cms/') %}
             {% set report_params = request.query_params if request.url.query else {} %}

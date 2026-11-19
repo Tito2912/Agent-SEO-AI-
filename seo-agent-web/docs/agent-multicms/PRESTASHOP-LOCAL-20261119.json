@@ -1,0 +1,26 @@
+{
+  "prestashop": "8.2.8",
+  "sources": {
+    "backend/cms_content_adapters/prestashop.py": "076aae893856e6644c8df771f17827db381918f5e5824c01638255dce394d6ce",
+    "backend/cms_content_transport.py": "fc6d93787bdb6bc1f26131b9406837b23fceff0dbf58ba099a7732e178eb9b67"
+  },
+  "languages": [
+    "1",
+    "2"
+  ],
+  "checks": [
+    "Native CMS document has no date_upd; draft identity and stable content revision confirmed",
+    "Updating the second language preserves every original-language field and remains a draft",
+    "Activation preserves all approved texts byte-for-byte; public local HTML confirmed",
+    "A stale revision is rejected before any new write"
+  ],
+  "nondefault_creation": {
+    "created": false,
+    "error": "refus",
+    "uncertain": false
+  },
+  "requests": 18,
+  "writes": 5,
+  "outcome": "passed",
+  "scope": "New fictitious CMS pages in disposable PrestaShop 8.2.8 only; test-only DNS/TLS mapping; no external HTTPS"
+}

@@ -63,6 +63,9 @@ from backend.models import IssueTask, Project, User  # noqa: E402
 def _repondre(monkeypatch, *, check_runs=None, statuses=None) -> None:
     """Remplace les deux lectures GitHub par ce que le depot est cense repondre."""
     def _faux_get(chemin, *, token, params=None, timeout_s=30.0):
+        if "/pulls/" in chemin:
+            return {"state": "open", "number": 7, "node_id": "PR_node", "head": {"sha": "d" * 40},
+                    "base": {"ref": "main", "repo": {"full_name": "/".join(chemin.split("/")[2:4])}}}
         if chemin.endswith("/check-runs"):
             return {"check_runs": list(check_runs or [])}
         if chemin.endswith("/status"):
@@ -150,6 +153,17 @@ def _projet_avec_tache(*, note: dict, depot: str = "agence/site") -> tuple[str, 
         db.add(p)
         db.commit()
         db.refresh(p)
+        if note.get("verification", {}).get("fusion_auto"):
+            # A real project activation, plus a proposal attested from GitHub's response.
+            p.settings = {**p.settings, "github_mode": "auto"}
+            m.automation_mandates.change(db, project=p, actor_id=uid,
+                mode="github_merge", consent=True, active=True)
+            db.commit()
+            verification = note["verification"]
+            attested = m._bloc_verification({"head": {"sha": verification["sha"]},
+                "node_id": verification["node_id"], "number": note["pr_number"]},
+                fusion_auto=True, project=p, controle_sitemap=verification.get("controle_sitemap"))
+            note = {**note, "verification": {**verification, "automation": attested["automation"]}}
         t = IssueTask(project_id=str(p.id), user_id=uid, issue_key="k", issue_label="l",
                       url="https://site.fr/", status="in_progress", severity="notice",
                       note=json.dumps(note, ensure_ascii=False))
@@ -185,7 +199,7 @@ def _brancher(monkeypatch, *, check_runs=None, statuses=None, ouverte=True) -> d
     monkeypatch.setattr(m, "_pr_marquer_prete",
                         lambda **kw: fait.__setitem__("prete", fait["prete"] + 1))
     monkeypatch.setattr(m, "_github_api_put",
-                        lambda *a, **k: fait.__setitem__("fusions", fait["fusions"] + 1))
+                        lambda *a, **k: (fait.__setitem__("fusions", fait["fusions"] + 1) or {"merged": True}))
     monkeypatch.setattr(m, "_github_api_post",
                         lambda *a, **k: fait["commentaires"].append(k.get("json_body", {})))
     return fait
@@ -395,7 +409,7 @@ def test_plus_AUCUNE_fusion_synchrone_dans_les_routes() -> None:
             continue
         englobantes = [p for p in portees if p[0] <= n.lineno <= p[1]]
         nom = max(englobantes, key=lambda p: p[0])[2] if englobantes else "<module>"
-        if nom == "_reprendre_une_verification":
+        if nom == "_reprendre_une_verification_autorisee":
             continue
         fautifs.append("app.py:%d (%s)" % (n.lineno, nom))
     assert not fautifs, (

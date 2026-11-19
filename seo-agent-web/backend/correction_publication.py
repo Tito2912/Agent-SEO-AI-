@@ -15,6 +15,7 @@ from sqlalchemy import select, or_
 from starlette.requests import Request
 
 try:
+    from . import cms_consent
     from . import (
         autocorrection as preparation,
         correction_execution as execution,
@@ -38,6 +39,7 @@ try:
         User,
     )
 except ImportError:
+    from backend import cms_consent
     import autocorrection as preparation
     import correction_execution as execution
     import correction_guard
@@ -95,6 +97,8 @@ def _audit(db, pub, action):
                 "reads": pub.reads,
                 "writes": pub.writes,
                 "lang": pub.lang,
+                **({"approved": True, "consent": True, "preview_key": pub.preview_key,
+                    "environment": pub.environment} if action == "authorized" else {}),
             },
         )
     )
@@ -173,6 +177,10 @@ def authorize(
             )
             db.add(pub)
             db.flush()
+            cms_consent.capture(db, project=project, actor=db.get(User, owner_id), operation="github_publication",
+                content_digest=approved_key, targets={"platform": "github", "publication_id": pub.id,
+                    "task_id": task.id, "url": cms_consent.public_url(task.url), "config_key": pub.config_key,
+                    "environment": environment, "pages_budget": pages_budget})
             _audit(db, pub, "authorized")
             db.commit()
             return pub

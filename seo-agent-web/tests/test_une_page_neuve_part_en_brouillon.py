@@ -234,7 +234,7 @@ def _demander(client, slug, **body):
     """Un POST JSON comme la page le fait : le jeton CSRF voyage dans l'en-tête."""
     client.get(f"/projects/{slug}")
     token = client.cookies.get(app_module._CSRF_COOKIE_NAME, "")
-    return client.post(f"/api/projects/{slug}/content/draft", json=body,
+    return client.post(f"/api/projects/{slug}/content/draft", json={"consent": True, **body},
                        headers={app_module._CSRF_HEADER_NAME: token})
 
 

@@ -14,6 +14,7 @@ const noyaruT = window.noyaruT || ((text) => text);
   const feedback = document.getElementById('gh-connect-msg');
   const badge = document.getElementById('gh-repo-badge');
   const consent = document.getElementById('gh-auto-confirm');
+  let saved = null;
   let mode = 'review', busy = false, picking = false, known = false, uncertain = false, touched = false;
   function changeTarget() { touched = true; consent.checked = false; }
   repo.addEventListener('input', changeTarget);
@@ -40,10 +41,12 @@ const noyaruT = window.noyaruT || ((text) => text);
       && (data.repo === '' || typeof data.branch === 'string') && ['review', 'auto'].includes(data.mode);
   }
   function confirmed(data, replaceChoices = true) {
+    saved = {repo:data.repo, branch:data.branch || "main", mode:data.mode, approved:data.automatic_approved === true};
     const connected = !!data.repo;
     badge.textContent = connected ? noyaruT('Dépôt sélectionné') : noyaruT('Aucun dépôt sélectionné');
     detach.style.display = connected ? '' : 'none';
     status.textContent = connected ? noyaruT('Dépôt enregistré : {repo}. Les corrections restent dans leur parcours de préparation et de validation.').replace('{repo}', data.repo) : noyaruT('Choisissez un dépôt pour préparer des corrections dans le code de ce site.');
+    if (data.mode === 'auto' && data.automatic_approved !== true) badge.textContent = noyaruT('Accord à confirmer');
     if (replaceChoices) { repo.value = data.repo || ''; branch.value = data.branch || 'main'; chooseMode(data.mode); }
   }
   async function refresh() {
@@ -78,7 +81,7 @@ const noyaruT = window.noyaruT || ((text) => text);
   }
   save.addEventListener('click', () => {
     if (!repo.value.trim().match(/^[^/\s]+\/[^/\s]+$/)) { feedback.textContent = noyaruT('Saisissez un dépôt sous la forme compte/nom-du-dépôt.'); repo.focus(); return; }
-    if (mode === 'auto' && !consent.checked) { feedback.textContent = noyaruT('Confirmez l’autorisation pour le mode Full Access.'); consent.focus(); return; }
+    if (mode === 'auto' && (!saved || !saved.approved || saved.mode !== 'auto' || saved.repo.toLowerCase() !== repo.value.trim().toLowerCase() || saved.branch !== (branch.value.trim() || 'main')) && !consent.checked) { feedback.textContent = noyaruT('Confirmez l’autorisation pour le mode Full Access.'); consent.focus(); return; }
     mutate({repo:repo.value.trim(),branch:branch.value.trim() || 'main',mode,consent:consent.checked});
   });
   detach.addEventListener('click', () => {

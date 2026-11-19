@@ -1,0 +1,6 @@
+# These capture sources are hashed byte-for-byte by the approved-media guard.
+# Keep the same bytes when Windows checks out with core.autocrlf=true.
+seo-agent-web/templates/layout.html text eol=lf
+seo-agent-web/templates/project_overview.html text eol=lf
+seo-agent-web/static/styles.css text eol=lf
+seo-agent-web/static/project_overview.css text eol=lf

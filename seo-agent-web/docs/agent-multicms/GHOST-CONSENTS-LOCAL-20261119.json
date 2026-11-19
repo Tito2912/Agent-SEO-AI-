@@ -1,0 +1,25 @@
+{
+  "ghost": "6.73.0",
+  "sources": {
+    "backend/cms_content_adapters/ghost.py": "faf56be94cab823e8b6afcc759c0fbb8c4287f5ad795eea14fa28d8b4a7889d1",
+    "backend/cms_content_transport.py": "fc6d93787bdb6bc1f26131b9406837b23fceff0dbf58ba099a7732e178eb9b67",
+    "backend/cms_publication.py": "f87553c0eb5ddec5f3aee2ab363a5a43bf84bb76976be111b1d53f5899a93886",
+    "backend/cms_media_workflow.py": "cad2c6159cc92a48178c8fbf10cdd93a41bb4b5a6a217794ad2fe88be12b96a0",
+    "backend/cms_consent.py": "243ec193bf5b3188d0426db4b1bc5579e78ae7cd6717b65ebd3d9e830d96cb13",
+    "backend/models.py": "e92827e30b0084364f2f3305f1a47b7f295e6cef5effb89189593b8a2dff56e4"
+  },
+  "checks": [
+    "Native WebP upload: explicit consent persisted, confirmed URL reused without another upload",
+    "Draft and publication require separate persisted approvals; public local HTML verified; no newsletter attached",
+    "Concurrent remote modification blocks publication before any additional write",
+    "Three distinct durable evidence rows have a captured actor email and original expiry: media upload, draft and publication"
+  ],
+  "requests": 11,
+  "writes": 4,
+  "outcome": "passed",
+  "scope": "Real disposable loopback Ghost, test-only URL/DNS/TLS mapping; no external HTTPS or customer site",
+  "rapid_edit_observation": {
+    "rapid_external_edit_confirmed": true,
+    "same_updated_at": true
+  }
+}

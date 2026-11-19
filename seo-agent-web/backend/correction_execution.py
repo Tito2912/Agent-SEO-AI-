@@ -43,12 +43,22 @@ def safe_to_abandon(operation):
                 and not row.data.get('preview') and policy.safe_to_abandon())
 
 
+def _automations():
+    try:
+        from . import automation_mandates
+    except ImportError:  # uvicorn app:app from backend/
+        from backend import automation_mandates
+    return automation_mandates
+
+
 def github_read(path):
+    _automations().transport(path, "GET")
     if policy := current():
         policy.github_read(path)
 
 
 def github_write(path, method, body=None):
+    _automations().transport(path, method)
     if policy := current():
         handler = getattr(policy, 'github_write_intent', None)
         if handler:
@@ -58,6 +68,7 @@ def github_write(path, method, body=None):
 
 
 def github_graphql(query, variables):
+    _automations().transport("/graphql", "POST", graphql=True)
     if policy := current():
         handler = getattr(policy, 'github_graphql', None)
         if handler:
@@ -71,13 +82,14 @@ def publication_id():
 
 
 def provider_request(*, system, user_msg, max_tokens, images=None):
+    _automations().transport(provider=True)
     if policy := current():
         policy.provider_request(system=system, user_msg=user_msg, max_tokens=max_tokens, images=images)
 
 
 def provider_failed():
     # A request may have reached the provider. No fallback after an unknown result.
-    if current():
+    if current() or _automations().current():
         raise ExecutionStopped('provider_uncertain')
 
 

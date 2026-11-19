@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block title %}{{ tr("Résultats par page") }} — {{ project.site_name }}{% endblock %}
+{% block crumbs %}<a href="/projects/{{ slug }}/agent">{{ tr("Plan d’action") }}</a><span class="crumb-sep">/</span><span>{{ tr("Résultats par page") }}</span>{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{{ tr("Ce qui évolue sur vos pages") }}</h1><p class="muted">{{ tr("Comparez les données Search Console de deux périodes de même durée, autour d’une modification. Le jour du changement est exclu.") }}</p></div>
+{% if err %}<p class="alert error" role="alert">{{ tr(err) }}</p>{% elif msg %}<p class="alert ok" role="status">{{ tr(msg) }}</p>{% endif %}
+<section class="card"><h2>{{ tr("Mesurer une page") }}</h2>
+<form method="post" class="cms-form"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}">
+<label>{{ tr("Adresse de la page sur votre site") }}<input type="url" name="page_url" required></label>
+<label>{{ tr("Date de modification indiquée par vous") }}<input type="date" name="change_date" required></label>
+<label>{{ tr("Durée de chaque période") }}<select name="days"><option value="28">{{ tr("28 jours avant et après") }}</option><option value="7">{{ tr("7 jours avant et après") }}</option></select></label>
+<button class="btn primary">{{ tr("Récupérer les données de cette page") }}</button></form>
+</section>
+{% if publications %}<details class="card"><summary>{{ tr("Mesurer une publication suivie par Noyaru") }}</summary>{% for publication in publications if publication.remote_url %}<form method="post"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><input type="hidden" name="publication_id" value="{{ publication.id }}"><input type="hidden" name="days" value="28"><button class="btn">{{ publication.data.article.title }}</button></form>{% endfor %}</details>{% endif %}
+{% for event in events %}{% set result=event.data.comparison %}<section class="card">
+<h2 style="overflow-wrap:anywhere">{{ event.page_url }}</h2>
+<p class="muted">{{ tr("Modification") }} : {{ event.data.change_date }} · {% if event.data.change_source == 'cms_publication' %}{{ tr("date de publication confirmée par le CMS") }}{% else %}{{ tr("date indiquée par vous") }}{% endif %}</p>
+{% if result.comparable %}
+<table class="table"><thead><tr><th>{{ tr("Mesure") }}</th><th>{{ tr("Avant") }}<br>{{ event.data.before_start }} → {{ event.data.before_end }}</th><th>{{ tr("Après") }}<br>{{ event.data.after_start }} → {{ event.data.after_end }}</th></tr></thead><tbody>
+{% for key,label in [('clicks','Clics'),('impressions','Impressions'),('ctr','Taux de clic'),('position','Position moyenne')] %}<tr><th>{{ tr(label) }}</th>{% for period in [result.before,result.after] %}<td>{% set value=period.metrics[key] %}{% if value is none %}—{% elif key == 'ctr' %}{{ '%.2f'|format(value*100) }} %{% elif key == 'position' %}{{ '%.2f'|format(value) }}{% else %}{{ value }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table>
+{% elif result.reason == 'period_not_final' %}<p>{{ tr("La période après modification n’est pas encore disponible en entier.") }} {{ tr("Nouvelle mesure possible à partir du") }} {{ event.data.available_from }}.</p>
+{% else %}<p>{{ tr("Les données disponibles ne permettent pas une comparaison fiable. Vérifiez la connexion Search Console et la période choisie.") }}</p>{% endif %}
+<p class="muted small">{{ tr("Ces chiffres décrivent une évolution observée. Ils ne prouvent pas qu’une modification précise l’a causée et ne mesurent pas les demandes de clients ni le chiffre d’affaires.") }}</p>
+</section>{% else %}<p class="muted">{{ tr("Vos mesures par page apparaîtront ici après leur récupération.") }}</p>{% endfor %}
+{% endblock %}
