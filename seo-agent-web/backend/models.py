@@ -1120,14 +1120,20 @@ class CmsMediaTransfer(Base):
 
 
 class CmsPublicationConsent(Base):
-    """One authenticated, explicit approval for one precise remote operation."""
+    """Minimal approval evidence survives project/account removal until its retention limit."""
     __tablename__ = "cms_publication_consents"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
-    publication_id: Mapped[str] = mapped_column(String(36), ForeignKey("cms_publications.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("projects.id", ondelete="SET NULL"), index=True)
+    publication_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("cms_publications.id", ondelete="SET NULL"), index=True)
     actor_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
+    # Ownership scopes exports even after project removal; actor alone never grants access.
+    owner_user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    actor_email: Mapped[str | None] = mapped_column(String(320))
+    site_url: Mapped[str | None] = mapped_column(String(2048))
+    snapshot_source: Mapped[str] = mapped_column(String(24), nullable=False, default="legacy", server_default="legacy")
     operation: Mapped[str] = mapped_column(String(24), nullable=False)
     content_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     targets: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     approved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)

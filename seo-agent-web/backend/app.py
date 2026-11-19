@@ -126,6 +126,7 @@ try:
     from . import sentry_filtre
     from . import export_compte
     from . import dpa
+    from . import cms_consent
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -157,6 +158,7 @@ except ImportError:
     import sentry_filtre  # type: ignore
     import export_compte  # type: ignore
     import dpa  # type: ignore
+    import cms_consent  # type: ignore
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -8829,22 +8831,32 @@ def _purger_preuves_dpa() -> None:
         logger.error("[RETENTION] preuves DPA : %s: %s", type(e).__name__, e)
 
 
+def _purger_preuves_cms() -> None:
+    """Approval evidence has its own retention period, even while the DPA is hidden."""
+    try:
+        with DB.session() as db:
+            effacees = cms_consent.purger(db, datetime.now(timezone.utc))
+        if effacees:
+            logger.info("[RETENTION] preuves CMS effacees : %s", effacees)
+    except Exception as e:
+        # Log the failure and retry on the next cycle; no PII or exception payload.
+        logger.error("[RETENTION] preuves CMS : %s", type(e).__name__)
+
+
 def _retention_loop() -> None:
     # Run quickly on boot, then every few hours.
     while not _WORKER_STOP.is_set():
         _cleanup_old_jobs()
         _cleanup_old_runs()
         _purger_preuves_dpa()
+        _purger_preuves_cms()
         _WORKER_STOP.wait(float(os.getenv("SEO_AGENT_RETENTION_EVERY_SECONDS", "21600")))  # 6h
 
 
 def _start_retention() -> None:
     global _RETENTION_STARTED
-    # Le fil tourne aussi des que le DPA est publie : ses preuves s'effacent apres cinq ans.
-    if _retention_cutoff_s(days_env="SEO_AGENT_JOBS_RETENTION_DAYS") is None and _retention_cutoff_s(
-        days_env="SEO_AGENT_RUNS_RETENTION_DAYS"
-    ) is None and not dpa.version():
-        return
+    # CMS approval evidence must be purged even when the DPA and optional job/run
+    # retention are disabled. Start once; the loop also handles an initially empty table.
     with _RETENTION_STARTED_GUARD:
         if _RETENTION_STARTED:
             return

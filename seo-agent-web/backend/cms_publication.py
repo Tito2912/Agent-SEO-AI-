@@ -11,9 +11,10 @@ from bs4 import BeautifulSoup
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
+from . import cms_consent
 from .cms_commun import CmsError
 from .cms_content_adapters import AdapterError, ArticleDraft
-from .models import AccountMember, AgentPageEvent, CmsPublication, CmsPublicationConsent, IssueTask, Project, User
+from .models import AccountMember, AgentPageEvent, CmsPublication, IssueTask, Project, User
 
 
 class PublicationError(Exception):
@@ -114,21 +115,25 @@ def require_actor(db, project_id, actor_id):
     if actor_id != project.owner_user_id and db.scalar(select(AccountMember.member_user_id).where(
             AccountMember.owner_user_id == project.owner_user_id, AccountMember.member_user_id == actor_id)) is None:
         raise PublicationError("approval_actor", "Cet accord ne concerne pas un compte autorisé sur ce projet.")
+    return project, db.get(User, actor_id)
 
 
 def _claim(database, row, expected, running, operation, actor_id):
     with database.session() as db:
-        require_actor(db, row.project_id, actor_id)
+        project, actor = require_actor(db, row.project_id, actor_id)
+        receipt = cms_consent.capture(db, project=project, actor=actor, publication_id=row.id,
+            operation=operation, content_digest=digest(row.data["article"]),
+            targets={"platform": row.platform, "language": row.language,
+                     "destination": cms_consent.destination(row.data.get("config") or {}),
+                     "slug": row.data["article"]["slug"], "remote_id": row.remote_id,
+                     "remote_url": cms_consent.public_url(row.remote_url)})
         result = db.execute(update(CmsPublication).where(CmsPublication.id == row.id,
                             CmsPublication.project_id == row.project_id, CmsPublication.state == expected)
-                            .values(state=running, error_code=None, data={**row.data, "last_operation": operation}))
+                            .values(state=running, error_code=None, data={**row.data, "last_operation": operation, "last_consent_id": receipt.id}))
         if result.rowcount != 1:
             raise PublicationError("state", "Cette opération a déjà commencé. Actualisez son suivi avant toute nouvelle demande.")
-        db.add(CmsPublicationConsent(project_id=row.project_id, publication_id=row.id, actor_id=actor_id,
-               operation=operation, content_digest=digest(row.data["article"]),
-               targets={"platform": row.platform, "language": row.language, "destination": row.data.get("config") or {},
-                        "slug": row.data["article"]["slug"], "remote_id": row.remote_id, "remote_url": row.remote_url}))
         db.commit()
+        return receipt.id
 
 
 def execute(database, *, project_id, publication_id, operation, adapter, connection_fingerprint,
@@ -143,7 +148,7 @@ def execute(database, *, project_id, publication_id, operation, adapter, connect
     if operation not in {"create", "publish"}:
         raise PublicationError("operation", "Opération inconnue.")
     expected, running = ("prepared", "creating") if operation == "create" else ("draft", "publishing")
-    _claim(database, row, expected, running, operation, actor_id)
+    receipt_id = _claim(database, row, expected, running, operation, actor_id)
     remote = None
     try:
         if operation == "create":
@@ -157,6 +162,7 @@ def execute(database, *, project_id, publication_id, operation, adapter, connect
             with database.session() as db:
                 saved = db.get(CmsPublication, row.id)
                 saved.remote_id, saved.remote_revision, saved.remote_url = remote.id, remote.revision, remote.url
+                cms_consent.record_result(db, receipt_id, remote_id=remote.id, remote_url=remote.url)
                 db.commit()
             remote = adapter.read(remote.id)
             if remote.status != "draft" or remote.id != expected_id or remote.revision != expected_revision:
@@ -174,6 +180,7 @@ def execute(database, *, project_id, publication_id, operation, adapter, connect
                               "publish_accepted_at": datetime.now(timezone.utc).isoformat()}
                 accepted_at = datetime.fromisoformat(saved.data["publish_accepted_at"])
                 expected_revision = remote.revision
+                cms_consent.record_result(db, receipt_id, remote_id=remote.id, remote_url=remote.url)
                 db.commit()
             remote = adapter.read(remote.id)
             if remote.status != "published" or remote.id != row.remote_id or remote.revision != expected_revision:
@@ -226,6 +233,7 @@ def reconcile(database, *, project_id, publication_id, adapter):
             raise PublicationError("state", "Le suivi a changé pendant la vérification. Actualisez-le.")
         saved.state = "draft" if remote.status == "draft" else "published" if confirmed else "published_unverified"
         saved.remote_url = remote.url
+        cms_consent.record_result(db, saved.data.get("last_consent_id"), remote_id=remote.id, remote_url=remote.url)
         if confirmed:
             saved.remote_revision = remote.revision
             key = "cms:" + row.id + ":published"

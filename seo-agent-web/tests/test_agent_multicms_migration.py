@@ -33,8 +33,8 @@ def test_upgrade_rollback_and_reupgrade_keep_existing_project_and_article(tmp_pa
                          url="https://atelier.example/article", note="Article existant")
         db.add(task); db.commit()
         uid, pid, tid = user.id, project.id, task.id
-    migrate("upgrade", "20261117_0033")
-    migrate("upgrade", "20261117_0033")
+    migrate("upgrade", "head")
+    migrate("upgrade", "head")
     schema = inspect(database.engine)
     for model in (AgentActionChoice, AgentPageEvent, CmsMediaTransfer, CmsPublication, CmsPublicationConsent):
         assert schema.has_table(model.__tablename__)
@@ -52,5 +52,5 @@ def test_upgrade_rollback_and_reupgrade_keep_existing_project_and_article(tmp_pa
         assert db.get(User, uid).email == "multicms-migration@example.invalid"
         assert db.get(Project, pid).settings == {"preserved": True}
         assert db.get(IssueTask, tid).note == "Article existant"
-    migrate("upgrade", "20261117_0033")
+    migrate("upgrade", "head")
     database.engine.dispose()

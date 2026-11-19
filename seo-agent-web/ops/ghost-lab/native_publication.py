@@ -236,7 +236,9 @@ def exercise(local, public, root, process, version):
     assert page.get("email") is None and page.get("newsletter_id") is None
     with database.session() as db:
         consents = list(db.scalars(select(CmsPublicationConsent)))
-        assert {c.operation for c in consents} == {"create", "publish"} and all(c.actor_id == actor.id for c in consents)
+        assert len(consents) == 3 and {c.operation for c in consents} == {"create", "publish", "media_upload"}
+        assert all(c.actor_id == actor.id and c.actor_email == actor.email and c.expires_at for c in consents)
+        assert len([c for c in consents if c.publication_id == saved.id]) == 2
     checks.append("Draft and publication require separate persisted approvals; public local HTML verified; no newsletter attached")
     changed = adapter.create_draft(ArticleDraft(title="Concurrent edit", html="<p>Version initiale.</p>", slug="native-conflict"))
     initial_post = api("GET", "posts/" + changed.id + "/?formats=html")["posts"][0]
@@ -255,7 +257,7 @@ def exercise(local, public, root, process, version):
     engine.dispose()
     session.close()
     sources = {name: hashlib.sha256((Path(__file__).resolve().parents[2] / name).read_bytes()).hexdigest()
-               for name in ["backend/cms_content_adapters/ghost.py", "backend/cms_content_transport.py", "backend/cms_publication.py", "backend/cms_media_workflow.py"]}
+               for name in ["backend/cms_content_adapters/ghost.py", "backend/cms_content_transport.py", "backend/cms_publication.py", "backend/cms_media_workflow.py", "backend/cms_consent.py", "backend/models.py"]}
     return {"ghost": version, "sources": sources, "checks": checks, "requests": len(calls),
             "writes": sum(method != "GET" for method in calls), "outcome": "passed",
             "scope": "Real disposable loopback Ghost, test-only URL/DNS/TLS mapping; no external HTTPS or customer site"}

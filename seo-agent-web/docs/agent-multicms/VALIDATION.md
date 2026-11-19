@@ -130,3 +130,25 @@ Décisions du 19/11 transmises par Claude : modes automatiques autorisés par un
 case unique à l’activation et accords conservés cinq ans. L’intégration au
 modèle, à la purge et aux parcours reste un travail distinct de C082 ; aucune
 conformité à ces décisions n’est encore revendiquée ici.
+
+## C083 — preuves d’accord conservées cinq ans
+
+Tony confirme le point de départ à la date de chaque accord. Le complément ajoute
+les copies minimales, un reçu média durable, les suppressions SET NULL, l’export
+isolé et la purge par échéance ; voir CONSERVATION-ACCORDS.md. La migration0034
+est éprouvée sur SQLite et PostgreSQL locaux jetables. Le refus de descente en
+présence de preuves n’est pas contourné ; seules les preuves arrivées à échéance
+sont purgées avant un essai de descente sur table vide.
+
+Les résultats finaux du complément sont consignés dans les checks de la PR #95
+et dans les rapports C083 datés de ce dossier. La CI #807 ci-dessus concerne le
+candidat natif précédent. Aucun résultat de CI ultérieur n’est présumé ici.
+Ce lot ne modifie aucun texte juridique public et ne constitue pas leur validation.
+Les mandats automatiques et les essais CMS externes restent distincts.
+
+Résultats C083 locaux : 201 tests ciblés réussis, deux cas PostgreSQL ignorés
+dans cette passe puis exécutés séparément avec succès (deux réussis sur
+PostgreSQL 16.15 jetable). Ghost final : trois preuves durables contrôlées,
+11 requêtes natives et quatre écritures. Rapports CONSERVATION-LOCAL-20261119.json
+et GHOST-CONSENTS-LOCAL-20261119.json ; empreintes des sources conservées.
+Ruff global, compilation ciblée et Bandit ciblé réussis.
