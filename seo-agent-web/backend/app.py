@@ -35454,18 +35454,20 @@ def rediger_un_article(
 
 
 def _article_en_html(markdown_texte: str) -> str:
-    """Le corps HTML d'un article, SANS aucun HTML ecrit par le modele.
+    """Le corps HTML d'un article, SANS aucun HTML ni code actif ecrit par le modele.
 
     L'extension `extra` de python-markdown laisse passer le HTML brut. Le texte vient d'un
     modele et finira colle dans le site du client : on echappe tout chevron AVANT la conversion,
-    pour que seul le Markdown produise des balises.
+    pour que seul le Markdown produise des balises. Le Markdown sait aussi poser du code actif
+    sans chevron (`{: onclick=...}`, lien `javascript:`) : le convertisseur des articles
+    (`content_library._article_markdown_instance`) les refuse — revue du 20/11/2026.
     """
     from backend import content_library as _cl
     source = str(markdown_texte or "").replace("<", "&lt;").replace(">", "&gt;")
     # Les citations Markdown commencent par `>` : on les rend a la ligne, ou elles ne peuvent
     # pas ouvrir de balise.
     source = re.sub(r"(?m)^(\s*)&gt;", r"\1>", source)
-    return _cl._markdown_instance().convert(source)
+    return _cl._article_markdown_instance().convert(source)
 
 
 def _valider_les_visuels(brut: Any, *, markdown: str, demande: "dict[str, Any]",

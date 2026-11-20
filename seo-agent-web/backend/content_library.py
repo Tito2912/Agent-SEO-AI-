@@ -35,6 +35,8 @@ import yaml
 
 try:  # pragma: no cover - exercised by the import itself
     import markdown as _markdown
+    from markdown.extensions import Extension as _Extension
+    from markdown.treeprocessors import Treeprocessor as _Treeprocessor
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError(
         "The 'markdown' package is required to serve /docs and /ressources-seo. "
@@ -83,6 +85,64 @@ def _markdown_instance() -> Any:
     # among them) and reset() has historically leaked footnote ids between documents.
     return _markdown.Markdown(
         extensions=list(_MARKDOWN_EXTENSIONS),
+        extension_configs=dict(_MARKDOWN_EXTENSION_CONFIGS),
+        output_format="html",
+    )
+
+
+# ── LE HTML D'UN ARTICLE RÉDIGÉ (20/11/2026) ─────────────────────────────────────────────────────
+#
+# Le Markdown d'un article vient d'un MODÈLE et repart chez le client : .zip, copier-coller du mode
+# contenu seul, publication dans son CMS. Les chevrons sont échappés avant la conversion
+# (`app._article_en_html`), mais le Markdown sait poser du code actif SANS chevron :
+#   * `attr_list`, comprise dans `extra` : `{: onclick="..." }` devient `<p onclick="...">` ;
+#   * un lien `[x](javascript:...)`, au besoin déguisé en entité (`&#106;avascript:`,
+#     `javascript&colon;`) : le sérialiseur garde l'entité telle quelle, le navigateur la décode.
+# Les articles prennent donc `extra` SANS `attr_list`, et un dernier passage sur l'arbre retire tout
+# attribut `on*` et toute adresse dont le protocole n'est pas http(s), mailto ou tel. La
+# documentation et le blog, écrits par nous, gardent le convertisseur ci-dessus.
+_ARTICLE_MARKDOWN_EXTENSIONS = ["fenced_code", "footnotes", "def_list", "tables", "abbr",
+                                "md_in_html", "sane_lists", "toc", "admonition"]
+_PROTOCOLE_RE = re.compile(r"^([a-z][a-z0-9+.\-]*):", re.IGNORECASE)
+_PROTOCOLES_SURS = frozenset({"http", "https", "mailto", "tel"})
+_ATTRIBUTS_ADRESSE = frozenset({"href", "src"})
+
+
+def adresse_sans_code_actif(valeur: Any) -> bool:
+    """Vrai si un navigateur ne peut pas lire `valeur` comme un protocole actif.
+
+    Il décode les entités et ignore blancs et caractères de contrôle dans le protocole
+    (`java&#9;script:` vaut `javascript:`) : on fait de même avant de lire le protocole. Une
+    adresse relative, une ancre ou une adresse sans protocole passent.
+    """
+    compacte = re.sub(r"[\x00-\x20\x7f]", "", html.unescape(str(valeur or "")))
+    trouve = _PROTOCOLE_RE.match(compacte)
+    return trouve is None or trouve.group(1).lower() in _PROTOCOLES_SURS
+
+
+class _SansCodeActif(_Treeprocessor):
+    """Dernier passage sur l'arbre : aucun attribut d'événement, aucune adresse active."""
+
+    def run(self, root: Any) -> None:
+        for element in root.iter():
+            for nom in list(element.attrib):
+                bas = nom.lower()
+                if bas.startswith("on") or (bas in _ATTRIBUTS_ADRESSE
+                                            and not adresse_sans_code_actif(element.attrib[nom])):
+                    del element.attrib[nom]
+
+
+class _ExtensionSansCodeActif(_Extension):
+    def extendMarkdown(self, md: Any) -> None:
+        # Priorité -1 : APRÈS `unescape` (0), qui restaure les échappements jusque dans les
+        # attributs. Plus rien ne réécrit l'arbre ensuite.
+        md.treeprocessors.register(_SansCodeActif(md), "sans_code_actif", -1)
+
+
+def _article_markdown_instance() -> Any:
+    """Le convertisseur des ARTICLES rédigés par le modèle (voir le commentaire ci-dessus)."""
+    return _markdown.Markdown(
+        extensions=list(_ARTICLE_MARKDOWN_EXTENSIONS) + [_ExtensionSansCodeActif()],
         extension_configs=dict(_MARKDOWN_EXTENSION_CONFIGS),
         output_format="html",
     )
