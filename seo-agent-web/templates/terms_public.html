@@ -22,7 +22,13 @@
    20/10/2026 : corrections de l'audit juridique (docs/legal/LEGAL-CHANGES.md) — TVA, limites des
    controles automatiques, contenus produits par IA, reserves de responsabilite, droit applicable,
    modifications, langue. La version anglaise (terms_public_en.html) porte les memes droits et
-   obligations ; l'editeur et le mediateur viennent de backend/legal.py. #}
+   obligations ; l'editeur et le mediateur viennent de backend/legal.py.
+   20/11/2026 (texte valide par le proprietaire, en ligne avec l'agent multi-CMS de la PR #95) :
+   publication d'articles dans le CMS (deux accords : brouillon puis publication ; Webflow = les
+   seuls elements choisis ; PrestaShop = activation de la page ; images Noyaru = accord), plan
+   d'actions et suivi par page, accord expres avant toute modification du site, case unique a
+   l'activation d'un mode automatique valable jusqu'a sa desactivation, preuves d'accord gardees
+   cinq ans a compter de chaque accord (cms_consent, automation_mandates). #}
 {% include "_legal_styles.html" %}
 {% endblock %}
 
@@ -37,7 +43,7 @@
     Voir aussi les <a href="{{ campaign_link(request, '/mentions-legales') }}">mentions légales</a>.
     Ces conditions encadrent l'utilisation du service : l'analyse technique des sites que vous
     ajoutez, la correction de leur code par pull request sur votre dépôt ou dans votre CMS
-    (WordPress, Ghost, PrestaShop, Wix, Webflow), la rédaction de pages, l'analyse de vos concurrents, la recherche d'opportunités de
+    (WordPress, Ghost, PrestaShop, Wix, Webflow), la rédaction de pages et leur publication dans votre CMS, un plan d'actions et le suivi des résultats de vos pages, l'analyse de vos concurrents, la recherche d'opportunités de
     liens, l'assistant et les exports. En créant un compte, vous les acceptez.
   </p>
   <p>
@@ -58,7 +64,7 @@
     <li>Les prix sont indiqués en euros. Pour les consommateurs, ils s'entendent <strong>toutes taxes comprises</strong>.</li>
     <li>Les prix applicables sont ceux affichés lors de la commande. Les taxes sont déterminées selon les règles fiscales applicables, notamment en fonction du pays du client, de sa qualité de professionnel ou de consommateur et des informations fiscales fournies.{% if tva_detaillee %} Lorsqu'une opération relève du mécanisme d'autoliquidation de la TVA, la facture est établie selon les règles correspondantes.{% endif %} Le montant total à payer est présenté avant la validation définitive de la commande.</li>
     <li>Les quotas sont <strong>mensuels et se renouvellent le 1er de chaque mois</strong> (heure UTC). Un quota non utilisé n'est pas reporté.</li>
-    <li>Une correction décomptée est un fichier de votre dépôt, ou un texte proposé pour votre site dans WordPress, Ghost, PrestaShop, Wix ou Webflow, écrit par un modèle d'intelligence artificielle ; les réécritures mécaniques, qui n'en appellent aucun, ne sont pas décomptées. Un article rédigé est décompté une fois par langue.</li>
+    <li>Une correction décomptée est un fichier de votre dépôt, ou un texte proposé pour votre site dans WordPress, Ghost, PrestaShop, Wix ou Webflow, écrit par un modèle d'intelligence artificielle ; les réécritures mécaniques, qui n'en appellent aucun, ne sont pas décomptées. Un article rédigé est décompté une fois par langue ; sa publication dans votre CMS n'est pas décomptée.</li>
     <li>Le paiement est traité par Stripe. Les abonnements sont mensuels et sans engagement.</li>
     <li>Un passage au plan supérieur est immédiat : la différence pour la période en cours est facturée le jour même. Un retour au plan inférieur prend effet à la fin de la période déjà payée.</li>
   </ul>
@@ -104,11 +110,14 @@
 
   <h2>6. Votre dépôt, votre site et les modifications</h2>
   <ul>
-    <li>Pour corriger votre code ou publier une page, vous nous donnez accès à votre dépôt GitHub ; pour corriger un site dans WordPress, Ghost, PrestaShop, Wix ou Webflow, vous nous confiez un accès à ce CMS : mot de passe d'application, clé Admin API, clé Webservice, clé API ou jeton de site. Vous pouvez retirer ces accès à tout moment, depuis Mon compte et les réglages de votre site, ou depuis GitHub et votre CMS.</li>
+    <li>Pour corriger votre code ou publier une page, vous nous donnez accès à votre dépôt GitHub ; pour corriger un site dans WordPress, Ghost, PrestaShop, Wix ou Webflow, vous nous confiez un accès à ce CMS : mot de passe d'application, clé Admin API, clé Webservice, clé API ou jeton de site. Vous pouvez retirer ces accès à tout moment, depuis Mon compte et les réglages de votre site, ou depuis GitHub et votre CMS. Pour publier des articles, cet accès doit permettre de créer du contenu dans votre CMS.</li>
+    <li><strong>Rien n'est modifié sur votre site sans votre accord exprès.</strong> Pour une opération lancée à la main, vous le donnez au moment de la demande. Pour un mode automatique, vous le donnez une fois, en cochant une case à son activation.</li>
     <li>Lorsqu'une modification passe par GitHub, elle arrive dans une <strong>pull request</strong>, sur une branche dédiée. Par défaut, <strong>rien n'est fusionné sans votre validation</strong>.</li>
     <li>Dans WordPress, Ghost, PrestaShop, Wix ou Webflow, une modification n'est enregistrée qu'après votre demande d'application, page par page ou pour les pages que vous avez retenues ; elle peut ensuite être rétablie depuis son suivi.</li>
-    <li>Si vous activez une fusion automatique — le mode « Full Access » des corrections, ou la publication automatique du mode de rédaction —, les pull requests concernées sont fusionnées dès que les vérifications de votre dépôt passent, sans relecture humaine préalable. Ce choix vous appartient, et vous pouvez le retirer.</li>
+    <li>Pour publier un article dans votre CMS, deux accords vous sont demandés : le premier, après relecture du contenu et de sa destination, crée un brouillon ; le second publie cette version. Dans Webflow, seuls les éléments que vous avez choisis sont publiés, jamais le site entier ; dans PrestaShop, la publication active la page créée. L'envoi vers votre CMS des images hébergées par {{ app_name }} demande aussi votre accord. {{ app_name }} ne supprime pas un article publié : vous le modifiez ou le retirez depuis votre CMS.</li>
+    <li>Si vous activez un mode automatique — la fusion automatique des corrections (mode « Full Access ») ou la rédaction planifiée —, vous cochez une case d'accord à l'activation. Cet accord vaut pour toutes les tâches de ce mode, dans le périmètre que vous avez réglé (site, dépôt et branche ; pour la rédaction : rubrique, langues, taille, ton et calendrier), jusqu'à ce que vous le désactiviez. Élargir ce périmètre demande un nouvel accord. Avec la fusion ou la publication automatique, les pull requests concernées sont fusionnées dès que les vérifications de votre dépôt passent, sans relecture humaine préalable. La désactivation arrête les tâches suivantes, mais n'annule pas une opération déjà transmise.</li>
     <li>Les vérifications automatisées réalisées avant la proposition ou l'application d'une correction réduisent certains risques techniques, mais ne garantissent pas l'absence d'erreurs, de régressions fonctionnelles, de problèmes de compatibilité ou de conséquences sur le référencement naturel. Le client est informé de ces limites lorsqu'il choisit d'activer un mode de fusion ou de publication automatique. Cette information ne prive pas le client des garanties et droits impératifs applicables.</li>
+    <li>Nous gardons une trace de chaque accord (auteur, date, site, destination et empreinte du contenu, sans le contenu lui-même) pendant cinq ans à compter de l'accord, même après la suppression du projet ou du compte. Elle sert à établir ce qui a été demandé.</li>
   </ul>
 
   <h2>7. Contenus et corrections produits par intelligence artificielle</h2>

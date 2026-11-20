@@ -26,7 +26,12 @@
    illustrations d'articles (`_openai_generer_une_image`, /images/generations) ; il ne recoit
    alors que la description de l'image ecrite par le modele de texte. Accord du proprietaire.
    Le meme jour : la localisation de Sentry (_localisation_sentry) ajoute « traitement possible aux
-   Etats-Unis » a la region europeenne, comme le permet l'article 6.1 de son contrat. #}
+   Etats-Unis » a la region europeenne, comme le permet l'article 6.1 de son contrat.
+   20/11/2026 (texte valide par le proprietaire, en ligne avec l'agent multi-CMS de la PR #95) :
+   preuves d'accord (cms_consent, automation_mandates) gardees cinq ans a compter de chaque accord,
+   apres la suppression du projet ou du compte, sur l'interet legitime ; Wix et Webflow recoivent
+   aussi les articles que le client valide (Wix : identifiant du membre auteur). WordPress, Ghost
+   et PrestaShop restent hors du tableau : ce sont les serveurs du client, pas nos prestataires. #}
 {% include "_legal_styles.html" %}
 {% endblock %}
 
@@ -63,7 +68,8 @@
         <tr><th scope="row">Projets</th><td>Adresses des sites analysés, réglages, résultats des analyses — c'est-à-dire le contenu public des pages lues sur ces sites.</td></tr>
         <tr><th scope="row">Connexions</th><td>Jetons et clés d'accès que vous nous confiez (GitHub, Google Search Console, clé Bing Webmaster, Netlify, accès à votre CMS : mot de passe d'application WordPress, clé Admin API Ghost, clé Webservice PrestaShop, clé API Wix, jeton de site Webflow), chiffrés au repos.</td></tr>
         <tr><th scope="row">Assistance par e-mail</th><td>Adresse du correspondant, objet, identifiant du message et du fil, date, copie réduite de la demande, réponse proposée et reçu du fournisseur. Les demandes adressées à contact@noyaru.com peuvent être traitées dans une Gmail réservée au SAV, reliée séparément des connexions clientes.</td></tr>
-        <tr><th scope="row">Contenus produits</th><td>Corrections proposées, pages rédigées, messages envoyés à l'assistant et ses réponses.</td></tr>
+        <tr><th scope="row">Contenus produits</th><td>Corrections proposées, pages rédigées et leur suivi de publication dans votre CMS, messages envoyés à l'assistant et ses réponses.</td></tr>
+        <tr><th scope="row">Preuves d'accord</th><td>Pour chaque accord donné avant une modification de votre site ou l'activation d'un mode automatique : auteur et copie de son adresse e-mail, adresse du site, date, opération, destination et empreinte du contenu. Ni le texte des articles, ni les images.</td></tr>
         <tr><th scope="row">Équipe</th><td>Adresses e-mail des collaborateurs que vous invitez.</td></tr>
         <tr><th scope="row">Facturation</th><td>Plan, identifiants client et abonnement Stripe, factures. Le paiement se fait sur une page Stripe : aucune donnée de carte ne passe par nos serveurs.</td></tr>
         <tr><th scope="row">Données techniques</th><td>Journaux du serveur (adresse IP, navigateur, adresses demandées), utilisés pour la sécurité et le diagnostic.</td></tr>
@@ -80,6 +86,7 @@
     <li><strong>Vous écrire</strong> — vérification d'adresse, mot de passe oublié, validation d'une page rédigée, annonce d'un changement des conditions ou du service : exécution du contrat.</li>
     <li><strong>Sécuriser le service</strong> — limitation des abus, protection des comptes, diagnostic des erreurs : notre intérêt légitime à faire fonctionner un service sûr.</li>
     <li><strong>Améliorer le parcours client</strong> — statistiques des premières étapes du service : notre intérêt légitime à repérer les difficultés d’utilisation. Les résultats présentés sont des compteurs agrégés.</li>
+    <li><strong>Prouver vos accords</strong> — garder la trace des accords donnés avant une modification de votre site ou l'activation d'un mode automatique : notre intérêt légitime à pouvoir établir ce qui a été demandé, notamment en cas de litige.</li>
     {% if ga4_actif %}<li id="mesure-audience"><strong>Mesurer l'audience du site public</strong> — uniquement avec votre consentement, donné ou refusé sur le bandeau qui s'affiche à votre première visite, et modifiable à tout moment par le lien « Gérer les cookies » en bas de page. Refuser ne change rien au fonctionnement du site. Nous utilisons Google Analytics pour savoir quelles pages sont lues et d'où viennent les visiteurs ; les écrans de votre compte ne sont pas mesurés.</li>{% endif %}
     <li id="signup-attribution"><strong>Mesurer les campagnes qui font connaître Noyaru</strong> — uniquement avec votre consentement facultatif, demandé par une case non cochée à l’inscription. Nous relions les trois libellés du lien de campagne à vos premières étapes dans le service. Aucun cookie de suivi, pixel publicitaire ou identifiant de clic n’est utilisé pour cette mesure. Ces données ne sont envoyées à aucune plateforme publicitaire. Vous pouvez retirer votre accord et effacer cette origine à tout moment dans <a href="/settings/accounts#signup-attribution">Mon compte → Vie privée</a>. Votre compte et les fonctions du service restent accessibles si vous refusez ou retirez votre accord.</li>
   </ul>
@@ -102,8 +109,8 @@
         <tr><th scope="row">Microsoft Bing</th><td>Données Bing Webmaster, avec votre clé</td><td>Données de performance de votre site</td><td>États-Unis</td></tr>
         <tr><th scope="row">SerpAPI</th><td>Recherches Google pour trouver vos concurrents et des opportunités de liens</td><td>Requêtes de recherche dérivées de votre site</td><td>États-Unis</td></tr>
         <tr><th scope="row">Netlify</th><td>Si vous connectez votre compte : lecture de vos sites et de leurs déploiements</td><td>Liste des sites et déploiements Netlify</td><td>États-Unis</td></tr>
-        <tr><th scope="row">Wix</th><td>Si vous connectez votre site Wix : lecture et modification du titre SEO et de la méta-description de vos pages, après votre validation</td><td>Titres SEO et méta-descriptions des pages concernées</td><td>Israël, États-Unis, Irlande, Japon</td></tr>
-        <tr><th scope="row">Webflow</th><td>Si vous connectez votre site Webflow : lecture et modification du titre SEO et de la méta-description de vos pages, après votre validation ; la mise en ligne reste votre publication</td><td>Titres SEO et méta-descriptions des pages concernées</td><td>États-Unis</td></tr>
+        <tr><th scope="row">Wix</th><td>Si vous connectez votre site Wix : lecture et modification du titre SEO et de la méta-description de vos pages, après votre validation ; création et publication des articles de blog que vous validez</td><td>Titres SEO et méta-descriptions des pages concernées ; contenu des articles envoyés (titre, adresse, texte, liens des images) et identifiant du membre Wix indiqué comme auteur</td><td>Israël, États-Unis, Irlande, Japon</td></tr>
+        <tr><th scope="row">Webflow</th><td>Si vous connectez votre site Webflow : lecture et modification du titre SEO et de la méta-description de vos pages, après votre validation, leur mise en ligne restant votre publication ; création des éléments de collection que vous validez et publication de ces seuls éléments</td><td>Titres SEO et méta-descriptions des pages concernées ; contenu des articles envoyés (titre, adresse, texte, liens des images)</td><td>États-Unis</td></tr>
         {% if ahrefs_actif %}<tr><th scope="row">Ahrefs</th><td>Données de backlinks</td><td>Domaines des sites analysés</td><td>Singapour</td></tr>{% endif %}
         {% if gemini_actif %}<tr><th scope="row">Google (Gemini)</th><td>Intelligence artificielle de l'assistant</td><td>Questions posées à l'assistant et données du projet qui s'y rapportent</td><td>États-Unis</td></tr>{% endif %}
         {% if ga4_actif %}<tr><th scope="row">Google (Analytics)</th><td>Mesure d'audience du site public, avec votre accord</td><td>Pages vues, source de la visite, appareil et navigateur, identifiant aléatoire des cookies de mesure</td><td>États-Unis</td></tr>{% endif %}
@@ -149,7 +156,8 @@
   <ul>
     <li><strong>Compte, projets et contenus</strong> — tant que votre compte existe.</li>
     <li><strong>Origine de l’inscription</strong> — jusqu’au retrait de votre accord ou à la suppression du compte. Le retrait efface l’association à la campagne et la date d’accord dans la base active ; les statistiques sont recalculées sans cette attribution. Les sauvegardes antérieures disparaissent au terme de leurs 30 jours de conservation.</li>
-    <li><strong>À la suppression du compte</strong> — l'abonnement Stripe est résilié et le client Stripe supprimé, les accès Search Console révoqués, le compte et ses projets effacés ; dans le journal d'audit, votre identité est retirée des événements. Les sauvegardes qui les contiennent encore disparaissent au terme de leurs 30 jours de conservation. Restent seulement les données qu'une obligation légale impose de garder, comme les factures.</li>
+    <li><strong>À la suppression du compte</strong> — l'abonnement Stripe est résilié et le client Stripe supprimé, les accès Search Console révoqués, le compte et ses projets effacés ; dans le journal d'audit, votre identité est retirée des événements. Les sauvegardes qui les contiennent encore disparaissent au terme de leurs 30 jours de conservation. Restent seulement les données qu'une obligation légale impose de garder, comme les factures, et les preuves de vos accords.</li>
+    <li><strong>Preuves d'accord</strong> — cinq ans à compter de chaque accord, y compris après la suppression du projet ou du compte, puis effacées automatiquement. Tant que votre compte existe, elles figurent dans votre export « Mon compte → Mes données ».</li>
     <li><strong>Copies SAV dans Noyaru</strong> — les copies réduites des demandes, brouillons, réponses et pages de validation stockées dans Noyaru sont chiffrées et retirées de la base active après 30 jours. Les sauvegardes antérieures disparaissent au terme de leurs 30 jours de conservation. Les originaux dans Gmail et les copies déjà transmises à Telegram, au modèle IA ou au fournisseur d'envoi suivent leurs propres règles de conservation.</li>
     <li><strong>Factures</strong> — le temps des obligations comptables (dix ans en France), chez Stripe.</li>
     <li><strong>Journaux techniques</strong> — la durée de conservation appliquée par notre hébergeur, Render, selon l'offre utilisée.</li>
