@@ -30,6 +30,8 @@
 {% if platform in ['shopify','wix'] %}<label>{% if platform == 'wix' %}{{ tr("Identifiant du membre auteur dans Wix") }}{% else %}{{ tr("Nom de l’auteur affiché") }}{% endif %}<input name="author" required maxlength="255"></label>{% endif %}
 {% if platform == 'prestashop' %}<label>{{ tr("Numéro de la langue PrestaShop") }}<input name="id_lang" type="number" min="1" required><small class="muted">{{ tr("Pour créer une page, indiquez la langue par défaut de votre boutique.") }}</small></label><label>{{ tr("Numéro de la boutique PrestaShop") }}<input name="id_shop" type="number" min="1" required></label>{% endif %}
 {% if platform in ['wordpress','ghost'] %}<label><input type="checkbox" name="approved_media" value="true"> {{ tr("Si cet article contient des images privées Noyaru, j’autorise leur transfert vers les médias de mon CMS pour préparer l’aperçu.") }}</label>{% endif %}
+{% if media_retry_snapshot %}<input type="hidden" name="media_retry_snapshot" value="{{ media_retry_snapshot }}">
+<label><input type="checkbox" name="retry_media" value="true"> {{ tr("J’autorise un nouvel essai pour les images de l’article choisi dont le transfert a été refusé.") }}</label>{% endif %}
 <button class="btn primary">{{ tr("Préparer l’aperçu de publication") }}</button>
 </form>{% else %}<p>{{ tr("Rédigez d’abord un article dans Noyaru pour le retrouver ici.") }}</p><a class="btn primary" href="/projects/{{ slug }}/content">{{ tr("Rédiger un article") }}</a>{% endif %}
 <form method="post" action="/projects/{{ slug }}/content/publication/disconnect"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><input type="hidden" name="platform" value="{{ platform }}"><button class="btn">{{ tr("Déconnecter la publication") }}</button></form>

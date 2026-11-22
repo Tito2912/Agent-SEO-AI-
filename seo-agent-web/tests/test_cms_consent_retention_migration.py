@@ -67,11 +67,13 @@ def test_existing_receipts_and_media_survive_upgrade_deletion_and_refused_downgr
             actor_id=user.id, operation="create", content_digest="b" * 64, approved_at=stamp,
             targets={"platform": "ghost", "slug": "article", "html": "PRIVATE-CONTENT",
                      "destination": {"collection_id": "collection-1", "password": "PRIVATE"}}))
-        transfer = CmsMediaTransfer(project_id=project.id, task_id=task.id, media_key="c" * 64,
+        transfer_id = "existing-media"
+        transfers = Table("cms_media_transfers", MetaData(), autoload_with=db.connection())
+        db.execute(transfers.insert().values(id=transfer_id, project_id=project.id, task_id=task.id, media_key="c" * 64,
             platform="ghost", source_name="PRIVATE-FILENAME.webp", approved_by=user.id, consent_digest="d" * 64,
-            remote_id="asset-1", remote_url="https://current-site.example/one.webp?token=PRIVATE", created_at=stamp)
-        db.add(transfer); db.commit()
-        uid, pid, tid, transfer_id = user.id, project.id, task.id, transfer.id
+            state="ready", remote_id="asset-1", remote_url="https://current-site.example/one.webp?token=PRIVATE", created_at=stamp))
+        db.commit()
+        uid, pid, tid = user.id, project.id, task.id
     migrate("upgrade", "head")
     migrate("upgrade", "head")
     schema = inspect(database.engine)
@@ -89,6 +91,7 @@ def test_existing_receipts_and_media_survive_upgrade_deletion_and_refused_downgr
         assert old.content_digest == "b" * 64 and cms_consent.utc(old.approved_at) == stamp
         assert cms_consent.utc(old.expires_at) == datetime(2029, 2, 28, 12, tzinfo=timezone.utc)
         media = db.get(CmsPublicationConsent, cms_consent.media_receipt_id(transfer_id))
+        assert db.get(CmsMediaTransfer, transfer_id).attempt_id is None
         assert media.operation == "media_upload" and media.targets["legacy_digest_kind"] == "intent"
         assert media.content_digest == "d" * 64 and cms_consent.utc(media.approved_at) == stamp
         assert "PRIVATE" not in str([p.targets for p in proofs])

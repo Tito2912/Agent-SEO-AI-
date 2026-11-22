@@ -358,6 +358,107 @@ def test_reconciliation_can_confirm_a_returned_publish_receipt_after_failed_read
     assert [call[0] for call in adapter.calls].count("publish") == 1
 
 
+@pytest.mark.parametrize("operation,final_state", [("create", "draft"), ("publish", "published")],
+                         ids=["create", "publish"])
+@pytest.mark.parametrize("legacy", [False, True], ids=["current", "legacy"])
+def test_reconcile_recovers_a_process_interrupted_after_the_write(store, operation, final_state, legacy):
+    row, adapter = prepare(store), FakeAdapter()
+    if operation == "publish":
+        row = execute(store, row, adapter)
+    original_read = adapter.read
+
+    def interrupted(remote_id):
+        raise RuntimeError("Simulated worker shutdown before read-back")
+
+    adapter.read = interrupted
+    with pytest.raises(RuntimeError, match="shutdown"):
+        execute(store, row, adapter, operation)
+    saved = load(store, row.id)
+    assert saved.state == ("creating" if operation == "create" else "publishing")
+    assert saved.remote_id == adapter.current.id and saved.data["write_phase"] == "answered"
+    if legacy:
+        with store.database.session() as db:
+            stored = db.get(CmsPublication, row.id)
+            stored.data = {key: value for key, value in stored.data.items() if key != "write_phase"}
+            db.commit()
+    adapter.read = original_read
+    for _ in range(2):
+        restored = workflow.reconcile(store.database, project_id=store.project_id, publication_id=row.id, adapter=adapter)
+        assert restored.state == final_state
+    assert sum(call[0] == operation for call in adapter.calls) == 1
+    assert count(store, AgentPageEvent) == (1 if operation == "publish" else 0)
+
+
+@pytest.mark.parametrize("times_out", [False, True], ids=["returns", "timeout"])
+def test_reading_the_old_draft_cannot_rearm_an_inflight_or_ambiguous_publish(store, times_out):
+    row, adapter = prepare(store), FakeAdapter()
+    draft = execute(store, row, adapter)
+    original_publish = adapter.publish
+
+    def in_flight(remote_id, *, expected_revision):
+        with pytest.raises(workflow.PublicationError) as error:
+            workflow.reconcile(store.database, project_id=store.project_id, publication_id=row.id, adapter=adapter)
+        assert error.value.code == "write_pending" and load(store, row.id).state == "publishing"
+        competing = FakeAdapter()
+        with pytest.raises(workflow.PublicationError):
+            execute(store, draft, competing, operation="publish")
+        assert competing.calls == []
+        if times_out:
+            raise TimeoutError("The CMS may still be processing this write")
+        return original_publish(remote_id, expected_revision=expected_revision)
+
+    adapter.publish = in_flight
+    if times_out:
+        with pytest.raises(workflow.PublicationError) as error:
+            execute(store, draft, adapter, operation="publish")
+        assert error.value.code == "uncertain"
+        with pytest.raises(workflow.PublicationError) as pending:
+            workflow.reconcile(store.database, project_id=store.project_id, publication_id=row.id, adapter=adapter)
+        assert pending.value.code == "write_pending" and load(store, row.id).state == "uncertain"
+    else:
+        assert execute(store, draft, adapter, operation="publish").state == "published"
+
+
+@pytest.mark.parametrize("read_fails", [False, True], ids=["late-success", "late-error"])
+def test_a_late_read_back_cannot_overwrite_recovery_or_duplicate_the_event(store, read_fails):
+    row, adapter = prepare(store), FakeAdapter()
+    draft = execute(store, row, adapter)
+    original_read = adapter.read
+    reader = SimpleNamespace(read=original_read)
+
+    def late_read(remote_id):
+        restored = workflow.reconcile(store.database, project_id=store.project_id, publication_id=row.id, adapter=reader)
+        assert restored.state == "published"
+        if read_fails:
+            raise CmsError("Late read failed")
+        return original_read(remote_id)
+
+    adapter.read = late_read
+    with pytest.raises(workflow.PublicationError) as error:
+        execute(store, draft, adapter, operation="publish")
+    assert error.value.code == "state"
+    assert load(store, row.id).state == "published" and count(store, AgentPageEvent) == 1
+    assert sum(call[0] == "publish" for call in adapter.calls) == 1
+
+
+def test_an_interrupted_create_without_id_cannot_be_reconciled_or_replayed(store):
+    row, adapter = prepare(store), FakeAdapter()
+
+    def interrupted():
+        raise RuntimeError("Simulated worker shutdown before receiving the ID")
+
+    adapter.on_create = interrupted
+    with pytest.raises(RuntimeError, match="shutdown"):
+        execute(store, row, adapter)
+    with pytest.raises(workflow.PublicationError) as error:
+        workflow.reconcile(store.database, project_id=store.project_id, publication_id=row.id, adapter=adapter)
+    assert error.value.code == "unresolved"
+    assert prepare(store).state == "creating"
+    with pytest.raises(workflow.PublicationError):
+        execute(store, row, adapter)
+    assert [call[0] for call in adapter.calls] == ["create"]
+
+
 def test_a_changed_remote_draft_cannot_silently_replace_the_approved_preview(store):
     row, adapter = prepare(store), FakeAdapter()
     execute(store, row, adapter)

@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend import cms_consent, cms_media_workflow, export_compte
+from backend.cms_publication import PublicationError
 from backend.models import (AccountMember, CmsMediaTransfer, CmsPublication, CmsPublicationConsent,
                             IssueTask, Project, User)
 import test_cms_publication_workflow as publication
@@ -200,13 +201,15 @@ def test_failed_evidence_commit_never_sends_a_remote_write(store, monkeypatch, o
             raise SQLAlchemyError("Fictitious evidence storage failure")
         return original(session)
     monkeypatch.setattr(Session, "commit", reject_proof)
-    with pytest.raises(SQLAlchemyError):
-        if operation == "publication":
-            adapter = publication.FakeAdapter()
-            adapter.on_create = lambda: calls.append("create")
+    if operation == "publication":
+        adapter = publication.FakeAdapter()
+        adapter.on_create = lambda: calls.append("create")
+        with pytest.raises(SQLAlchemyError):
             publication.execute(store, row, adapter)
-        else:
+    else:
+        with pytest.raises(PublicationError) as error:
             media(store, upload=lambda **kwargs: calls.append("upload"))
+        assert error.value.code == "media_storage"
     assert not calls and not receipts(store)
     assert publication.load(store, row.id).state == "prepared"
     with store.database.session() as db:

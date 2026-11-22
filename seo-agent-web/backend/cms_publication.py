@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from . import cms_consent
 from .cms_commun import CmsError
 from .cms_content_adapters import AdapterError, ArticleDraft
-from .models import AccountMember, AgentPageEvent, CmsPublication, IssueTask, Project, User
+from .models import AccountMember, AgentPageEvent, CmsPublication, CmsPublicationConsent, IssueTask, Project, User
 
 
 class PublicationError(Exception):
@@ -132,13 +132,36 @@ def _claim(database, row, expected, running, operation, actor_id):
                      "destination": cms_consent.destination(row.data.get("config") or {}),
                      "slug": row.data["article"]["slug"], "remote_id": row.remote_id,
                      "remote_url": cms_consent.public_url(row.remote_url)})
-        result = db.execute(update(CmsPublication).where(CmsPublication.id == row.id,
-                            CmsPublication.project_id == row.project_id, CmsPublication.state == expected)
-                            .values(state=running, error_code=None, data={**row.data, "last_operation": operation, "last_consent_id": receipt.id}))
-        if result.rowcount != 1:
+        if row.state != expected:
             raise PublicationError("state", "Cette opération a déjà commencé. Actualisez son suivi avant toute nouvelle demande.")
+        data = {**row.data, "last_operation": operation, "last_consent_id": receipt.id, "write_phase": "writing"}
+        data.pop("publish_receipt_revision", None)
+        data.pop("publish_accepted_at", None)
+        _advance(db, row, state=running, error_code=None, data=data)
         db.commit()
         return receipt.id
+
+
+def _advance(db, row, **values):
+    """Apply a change only to the state and write attempt the caller observed."""
+    result = db.execute(update(CmsPublication).where(
+        CmsPublication.id == row.id, CmsPublication.project_id == row.project_id,
+        CmsPublication.state == row.state,
+        CmsPublication.data["last_consent_id"].as_string().is_not_distinct_from(row.data.get("last_consent_id")),
+        CmsPublication.data["write_phase"].as_string().is_not_distinct_from(row.data.get("write_phase")),
+        CmsPublication.remote_id.is_not_distinct_from(row.remote_id),
+        CmsPublication.remote_revision.is_not_distinct_from(row.remote_revision),
+        CmsPublication.remote_url.is_not_distinct_from(row.remote_url),
+    ).values(**values))
+    if result.rowcount != 1:
+        raise PublicationError("state", "Le suivi a changé pendant l’opération. Actualisez-le.")
+
+
+def _running_attempt(db, row, running, receipt_id):
+    saved = db.get(CmsPublication, row.id)
+    if saved is None or saved.state != running or saved.data.get("last_consent_id") != receipt_id:
+        raise PublicationError("state", "Le suivi a changé pendant l’opération. Actualisez-le.")
+    return saved
 
 
 def execute(database, *, project_id, publication_id, operation, adapter, connection_fingerprint,
@@ -165,8 +188,9 @@ def execute(database, *, project_id, publication_id, operation, adapter, connect
             expected_id, expected_revision = remote.id, remote.revision
             # Store the returned identity before the read-back; a failed read must not lose it.
             with database.session() as db:
-                saved = db.get(CmsPublication, row.id)
-                saved.remote_id, saved.remote_revision, saved.remote_url = remote.id, remote.revision, remote.url
+                saved = _running_attempt(db, row, running, receipt_id)
+                _advance(db, saved, remote_id=remote.id, remote_revision=remote.revision, remote_url=remote.url,
+                         data={**saved.data, "write_phase": "answered"})
                 cms_consent.record_result(db, receipt_id, remote_id=remote.id, remote_url=remote.url)
                 db.commit()
             remote = adapter.read(remote.id)
@@ -179,11 +203,11 @@ def execute(database, *, project_id, publication_id, operation, adapter, connect
             if remote.id != row.remote_id or not remote.revision:
                 raise AdapterError("Le CMS n’a pas confirmé l’identité de l’article.", code="identity", uncertain=True)
             with database.session() as db:
-                saved = db.get(CmsPublication, row.id)
-                saved.remote_revision, saved.remote_url = remote.revision, remote.url
-                saved.data = {**saved.data, "publish_receipt_revision": remote.revision,
-                              "publish_accepted_at": datetime.now(timezone.utc).isoformat()}
-                accepted_at = datetime.fromisoformat(saved.data["publish_accepted_at"])
+                saved = _running_attempt(db, row, running, receipt_id)
+                accepted_at = datetime.now(timezone.utc)
+                _advance(db, saved, remote_revision=remote.revision, remote_url=remote.url,
+                         data={**saved.data, "write_phase": "answered", "publish_receipt_revision": remote.revision,
+                               "publish_accepted_at": accepted_at.isoformat()})
                 expected_revision = remote.revision
                 cms_consent.record_result(db, receipt_id, remote_id=remote.id, remote_url=remote.url)
                 db.commit()
@@ -191,9 +215,9 @@ def execute(database, *, project_id, publication_id, operation, adapter, connect
             if remote.status != "published" or remote.id != row.remote_id or remote.revision != expected_revision:
                 raise AdapterError("La publication n’est pas confirmée.", code="publish_unconfirmed", uncertain=True)
         with database.session() as db:
-            saved = db.get(CmsPublication, row.id)
-            saved.state = "draft" if operation == "create" else "published"
-            saved.remote_id, saved.remote_revision, saved.remote_url = remote.id, remote.revision, remote.url
+            saved = _running_attempt(db, row, running, receipt_id)
+            _advance(db, saved, state="draft" if operation == "create" else "published",
+                     remote_id=remote.id, remote_revision=remote.revision, remote_url=remote.url)
             if operation == "publish":
                 db.add(AgentPageEvent(project_id=project_id, event_key="cms:" + row.id + ":published",
                                      page_url=remote.url or "", kind="publication_accepted", created_at=accepted_at,
@@ -202,13 +226,13 @@ def execute(database, *, project_id, publication_id, operation, adapter, connect
             db.commit()
     except (AdapterError, CmsError, OSError, TimeoutError) as error:
         with database.session() as db:
-            saved = db.get(CmsPublication, row.id)
+            saved = _running_attempt(db, row, running, receipt_id)
             # Once a write was sent, uncertainty is conservative even when a read-back fails.
             uncertain = bool(getattr(error, "uncertain", False) or remote is not None
                              or getattr(error, "code", "") in {"unreadable", "identity", "partial", "server"}
                              or isinstance(error, (OSError, TimeoutError)))
-            saved.state = "uncertain" if uncertain else "failed"
-            saved.error_code = str(getattr(error, "code", "") or "remote_error")[:80]
+            _advance(db, saved, state="uncertain" if uncertain else "failed",
+                     error_code=str(getattr(error, "code", "") or "remote_error")[:80])
             db.commit()
         raise PublicationError("uncertain" if uncertain else "remote_error",
                                "Le résultat doit être vérifié dans le CMS avant toute nouvelle tentative."
@@ -216,10 +240,29 @@ def execute(database, *, project_id, publication_id, operation, adapter, connect
     return load(database, project_id=project_id, publication_id=publication_id)
 
 
+def _write_answered(database, row):
+    phase = row.data.get("write_phase")
+    if phase is not None:
+        return phase == "answered"
+    # Before phase tracking, a create only got an ID after its write returned.
+    if row.state == "creating":
+        return bool(row.remote_id and row.remote_revision)
+    # A publish already had an ID. Its own receipt must show that it got a response.
+    if row.data.get("publish_receipt_revision") != row.remote_revision or not row.data.get("publish_accepted_at"):
+        return False
+    receipt_id = row.data.get("last_consent_id")
+    if not receipt_id:
+        return False
+    with database.session() as db:
+        receipt = db.get(CmsPublicationConsent, receipt_id)
+        return bool(receipt and receipt.publication_id == row.id and receipt.operation == "publish"
+                    and (receipt.targets.get("result") or {}).get("remote_id") == row.remote_id)
+
+
 def reconcile(database, *, project_id, publication_id, adapter):
     """A read-only remote check can recover a known ID, never create another article."""
     row = load(database, project_id=project_id, publication_id=publication_id)
-    if row.state not in {"uncertain", "failed", "draft", "published", "published_unverified"} or not row.remote_id:
+    if row.state not in {"creating", "publishing", "uncertain", "failed", "draft", "published", "published_unverified"} or not row.remote_id:
         raise PublicationError("unresolved", "L’identifiant du résultat n’est pas encore confirmé. Vérifiez directement dans votre CMS.")
     try:
         remote = adapter.read(row.remote_id)
@@ -227,20 +270,26 @@ def reconcile(database, *, project_id, publication_id, adapter):
         raise PublicationError("read_unavailable", "Le CMS ne permet pas encore de confirmer ce résultat.") from None
     if remote.id != row.remote_id or remote.status not in {"draft", "published"}:
         raise PublicationError("unresolved", "Le CMS ne confirme pas encore un brouillon ou une publication.")
+    if row.state in {"creating", "publishing"} and not _write_answered(database, row):
+        message = ("Le CMS indique un brouillon. L’écriture en cours reste à confirmer."
+                   if remote.status == "draft" else
+                   "Le CMS indique une publication. L’écriture en cours reste à confirmer.")
+        raise PublicationError("write_pending", message)
+    if remote.status == "draft" and (
+            row.state in {"publishing", "published", "published_unverified"}
+            or (row.state == "uncertain" and row.data.get("last_operation") != "create")):
+        raise PublicationError("write_pending", "Le CMS indique un brouillon. La publication précédente reste à vérifier dans votre CMS.")
     if remote.status == "draft" and remote.revision != row.remote_revision:
         raise PublicationError("remote_changed", "Le brouillon a changé dans le CMS. Relisez-le et poursuivez directement dans votre CMS.")
     confirmed = bool(remote.status == "published" and (
         row.state == "published" and remote.revision == row.remote_revision
         or row.data.get("publish_receipt_revision") == remote.revision))
     with database.session() as db:
-        saved = db.get(CmsPublication, row.id)
-        if saved.state != row.state:
-            raise PublicationError("state", "Le suivi a changé pendant la vérification. Actualisez-le.")
-        saved.state = "draft" if remote.status == "draft" else "published" if confirmed else "published_unverified"
-        saved.remote_url = remote.url
-        cms_consent.record_result(db, saved.data.get("last_consent_id"), remote_id=remote.id, remote_url=remote.url)
+        state = "draft" if remote.status == "draft" else "published" if confirmed else "published_unverified"
+        _advance(db, row, state=state, remote_url=remote.url,
+                 remote_revision=remote.revision if confirmed else row.remote_revision, error_code=None)
+        cms_consent.record_result(db, row.data.get("last_consent_id"), remote_id=remote.id, remote_url=remote.url)
         if confirmed:
-            saved.remote_revision = remote.revision
             key = "cms:" + row.id + ":published"
             if db.scalar(select(AgentPageEvent.id).where(AgentPageEvent.project_id == project_id,
                                                         AgentPageEvent.event_key == key)) is None:

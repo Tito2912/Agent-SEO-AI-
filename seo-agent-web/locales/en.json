@@ -3661,5 +3661,17 @@
   "J’autorise les modifications sélectionnées après relecture de ce lot.": "I authorize the selected changes after reviewing this batch.",
   "Confirmez que vous autorisez cette modification sur votre site.": "Confirm that you authorize this change to your site.",
   "Les liens vers les intertitres ne sont pas encore pris en charge dans Wix Blog.": "Links to headings are not yet supported in Wix Blog.",
-  "Le contenu comporte un élément ou un attribut non pris en charge.": "The content includes an unsupported element or attribute."
+  "Le contenu comporte un élément ou un attribut non pris en charge.": "The content includes an unsupported element or attribute.",
+  "J’autorise un nouvel essai pour les images de l’article choisi dont le transfert a été refusé.": "I authorize another upload attempt for the images in the selected article whose upload was refused.",
+  "Actualisez le formulaire et confirmez la reprise du transfert refusé.": "Refresh the form and approve another attempt at the refused upload.",
+  "Vérifiez le transfert déjà commencé dans votre CMS.": "Check the upload that has already started in your CMS.",
+  "L’accord de transfert n’a pas pu être enregistré.": "Approval for the upload could not be saved.",
+  "Le suivi du transfert a changé. Actualisez-le.": "The upload status has changed. Refresh it.",
+  "Le transfert n’a pas pu être confirmé. Vérifiez les médias de votre CMS.": "The upload could not be confirmed. Check your CMS media library.",
+  "Le CMS n’a pas accepté cette image. Vérifiez son format et les droits de connexion avant de confirmer un nouvel essai.": "The CMS refused this image. Check its format and your connection permissions before approving another attempt.",
+  "Le suivi a changé pendant l’opération. Actualisez-le.": "The status changed during the operation. Refresh it.",
+  "Le CMS indique un brouillon. L’écriture en cours reste à confirmer.": "The CMS reports a draft. The current operation is still awaiting confirmation.",
+  "Le CMS indique une publication. L’écriture en cours reste à confirmer.": "The CMS reports the article as published. The current operation is still awaiting confirmation.",
+  "Le CMS indique un brouillon. La publication précédente reste à vérifier dans votre CMS.": "The CMS reports a draft. Check the previous publishing attempt in your CMS.",
+  "La connexion a changé. Vérifiez le résultat directement dans votre CMS.": "The connection changed. Check the result directly in your CMS."
 }

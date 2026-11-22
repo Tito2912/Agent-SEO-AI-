@@ -1117,6 +1117,7 @@ class CmsMediaTransfer(Base):
     remote_id: Mapped[str | None] = mapped_column(String(2048))
     approved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
     consent_digest: Mapped[str | None] = mapped_column(String(64))
+    attempt_id: Mapped[str | None] = mapped_column(String(36))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

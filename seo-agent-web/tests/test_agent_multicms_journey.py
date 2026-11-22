@@ -3,10 +3,12 @@ import json
 import re
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
+from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from PIL import Image
 from sqlalchemy import select
 
 from backend import app as m, cms_publication_routes as routes, agent_routes
@@ -148,6 +150,73 @@ def stored_article(journey):
         db.add(row)
         db.commit()
         return str(row.id)
+
+
+def test_preparing_a_real_article_requires_separate_consent_to_retry_its_media(journey, stored_article, monkeypatch):
+    image = BytesIO()
+    Image.new("RGB", (8, 8)).save(image, format="WEBP")
+    image_bytes = image.getvalue()
+    with m.DB.session() as db:
+        task = db.get(IssueTask, stored_article)
+        note = json.loads(task.note)
+        note["versions"][0]["markdown"] += "\n\n![Article image](images/velo.webp)"
+        task.note = json.dumps(note, ensure_ascii=False)
+        db.commit()
+    monkeypatch.setattr(m, "_dimensions", lambda _: {"velo.webp": (8, 8)})
+    monkeypatch.setattr(m, "_image_d_article", lambda *args: image_bytes)
+    uploads = []
+
+    def upload_image(**kwargs):
+        uploads.append(kwargs)
+        if len(uploads) == 1:
+            raise CmsError("Refused", code="rights")
+        return {"id": "42", "url": "https://atelier.example/images/velo.webp"}
+
+    transport = SimpleNamespace(upload_image=upload_image)
+    monkeypatch.setattr(routes, "bound_transport", lambda *args: (transport, {"verified": True}))
+    monkeypatch.setattr(routes, "connection", lambda *args: ({"base_url": first.URL}, {"label": "Atelier"}))
+    suffix = "content/publication/prepare"
+    selection = {"platform": "wordpress", "version": stored_article + "|fr"}
+    failed = post(journey, suffix, **selection, approved_media="true")
+    page = journey["client"].get(failed.headers["location"])
+    assert 'name="retry_media"' in page.text
+    token = re.search(r'name="media_retry_snapshot" value="([^"]+)"', page.text).group(1)
+    repeated = post(journey, suffix, **selection, approved_media="true", media_retry_snapshot=token)
+    assert "err=" in repeated.headers["location"] and len(uploads) == 1
+    succeeded = post(journey, suffix, **selection, retry_media="true", media_retry_snapshot=token)
+    assert succeeded.status_code == 303 and "err=" not in succeeded.headers["location"]
+    assert len(uploads) == 2 and uploads[0]["data"] == uploads[1]["data"] == image_bytes
+    assert "https://atelier.example/images/velo.webp" in journey["client"].get(succeeded.headers["location"] + "/preview").text
+
+
+def test_refresh_recovers_the_interrupted_draft_on_the_bound_connection(journey, stored_article, monkeypatch):
+    credentials = {"base_url": first.URL}
+    monkeypatch.setattr(routes, "connection", lambda *args: (credentials, {}))
+    monkeypatch.setattr(routes, "bound_transport", lambda *args: (object(), {"verified": True}))
+    reads = []
+
+    def read(remote_id):
+        reads.append(remote_id)
+        return SimpleNamespace(id=remote_id, status="draft", revision="draft-1", url=None)
+
+    monkeypatch.setattr(routes, "get_adapter", lambda *args, **kwargs: SimpleNamespace(read=read))
+    with m.DB.session() as db:
+        row = CmsPublication(project_id=journey["project_id"], task_id=stored_article,
+            platform="wordpress", language="fr", intent_key="interrupted-test", state="creating",
+            remote_id="42", remote_revision="draft-1", data={"article": {"title": "Article"},
+                "config": {}, "connection": routes.connection_fingerprint(m, credentials), "write_phase": "answered"})
+        db.add(row)
+        db.commit()
+        suffix = f"content/publication/{row.id}"
+    review = journey["client"].get(f'/projects/{journey["slug"]}/{suffix}')
+    assert "Relire le résultat dans mon CMS" in review.text
+    credentials["username"] = "replacement"
+    refused = post(journey, suffix + "/refresh")
+    assert "err=" in refused.headers["location"] and not reads
+    del credentials["username"]
+    recovered = post(journey, suffix + "/refresh")
+    assert "err=" not in recovered.headers["location"] and reads == ["42"]
+    assert "Le brouillon est enregistré dans votre CMS" in journey["client"].get(recovered.headers["location"]).text
 
 
 @pytest.mark.parametrize("has_receipt", [True, False], ids=["dated-receipt", "missing-receipt"])

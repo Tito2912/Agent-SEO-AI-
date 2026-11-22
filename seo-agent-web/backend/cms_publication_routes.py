@@ -16,7 +16,7 @@ from .cms_commun import CmsError, fingerprint
 from .cms_content_adapters import AdapterError, ArticleDraft, get_adapter
 from .cms_content_transport import ContentTransport
 from .i18n import JSONResponse
-from .models import IssueTask
+from .models import CmsMediaTransfer, IssueTask
 
 router = APIRouter()
 LABELS = {"wordpress": "WordPress", "ghost": "Ghost", "webflow": "Webflow",
@@ -147,6 +147,11 @@ def publication_home(request: Request, slug: str, platform: str = "wordpress", m
     with m.DB.session() as db:
         articles = list(db.scalars(select(IssueTask).where(IssueTask.project_id == project.id,
                          IssueTask.issue_key == m._CONTENT_ARTICLE_KEY).order_by(IssueTask.updated_at.desc()).limit(50)))
+        retry_attempts = [cms_media_workflow.retry_token(transfer) for transfer in db.scalars(
+            select(CmsMediaTransfer).where(CmsMediaTransfer.project_id == project.id,
+                CmsMediaTransfer.platform == platform, CmsMediaTransfer.task_id.in_([row.id for row in articles]),
+                CmsMediaTransfer.state == "failed", CmsMediaTransfer.remote_id.is_(None),
+                CmsMediaTransfer.remote_url.is_(None)))]
     versions = []
     for article in articles:
         try:
@@ -163,6 +168,7 @@ def publication_home(request: Request, slug: str, platform: str = "wordpress", m
     response = m.templates.TemplateResponse("cms_publication.html", {
         "request": request, "project": project, "slug": slug, "platform": platform, "platforms": LABELS,
         "meta": meta, "versions": versions, "msg": msg, "err": err, "policy": policy(m, platform),
+        "media_retry_snapshot": ",".join(retry_attempts),
     })
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -243,11 +249,14 @@ async def publication_prepare(request: Request, slug: str):
             config = {**config, "id_lang": str(form.get("id_lang") or ""), "id_shop": str(form.get("id_shop") or "")}
         author = str(form.get("author") or "").strip()[:255]
         approved_media = str(form.get("approved_media") or "") == "true"
+        retry_attempts = frozenset()
+        if form.get("retry_media") == "true":
+            retry_attempts = frozenset(str(form.get("media_retry_snapshot") or "").split(","))
         fp = connection_fingerprint(m, credentials)
         def resolve_image(name, content):
             return cms_media_workflow.image_url(m.DB, project_id=str(project.id), task_id=task_id, platform=platform,
                        connection_fingerprint=fp, name=name, data=content, transport=transport, approved=approved_media,
-                       actor_id=str(request.state.user.id))
+                       actor_id=str(request.state.user.id), retry_attempts=retry_attempts)
         adapter = get_adapter(platform, transport=transport, config=config)
         draft = source_draft(m, request, slug, task_id, language, author, resolve_image=resolve_image,
                              validate=adapter.validate_draft, platform=platform)
@@ -344,6 +353,8 @@ def publication_refresh(request: Request, slug: str, publication_id: str):
         row = workflow.load(m.DB, project_id=str(project.id), publication_id=publication_id)
         require_enabled(m, row.platform)
         credentials, _ = connection(m, project, row.platform)
+        if row.data["connection"] != connection_fingerprint(m, credentials):
+            raise workflow.PublicationError("connection_changed", "La connexion a changé. Vérifiez le résultat directement dans votre CMS.")
         transport, _ = bound_transport(project, row.platform, credentials)
         adapter = get_adapter(row.platform, transport=transport, config=row.data["config"])
         workflow.reconcile(m.DB, project_id=str(project.id), publication_id=publication_id, adapter=adapter)

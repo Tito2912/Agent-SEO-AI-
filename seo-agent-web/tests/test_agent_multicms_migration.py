@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 import pytest
-from sqlalchemy import inspect
+from sqlalchemy import inspect, select
 
 from backend.db import Database
 from backend.models import AgentActionChoice, AgentPageEvent, CmsMediaTransfer, CmsPublication, CmsPublicationConsent, IssueTask, Project, User
@@ -16,10 +16,13 @@ def test_upgrade_rollback_and_reupgrade_keep_existing_project_and_article(tmp_pa
     monkeypatch.setenv("DATABASE_URL", "sqlite:///" + str(tmp_path / "multicms.sqlite"))
     database = Database(data_dir=tmp_path / "data")
     web = Path(__file__).resolve().parents[1]
-    def migrate(direction, revision):
+    def migrate(direction, revision, *, success=True):
         result = subprocess.run([sys.executable, "-m", "alembic", "-c", str(web / "alembic.ini"), direction, revision],
                 cwd=web, env=os.environ.copy(), capture_output=True, text=True, encoding="utf-8", timeout=45)
-        assert result.returncode == 0, result.stderr
+        if success:
+            assert result.returncode == 0, result.stderr
+        else:
+            assert result.returncode != 0 and "Descente refusee" in result.stderr
     if precreated:
         database.create_tables()
     migrate("upgrade", "20261115_0032")
@@ -43,8 +46,15 @@ def test_upgrade_rollback_and_reupgrade_keep_existing_project_and_article(tmp_pa
         db.add(AgentActionChoice(project_id=pid, action_key="a" * 32, state="dismissed", created_by=uid))
         db.add(CmsPublication(project_id=pid, task_id=tid, intent_key="b" * 64, platform="ghost", language="fr", data={}))
         db.add(CmsMediaTransfer(project_id=pid, task_id=tid, media_key="c" * 64, platform="ghost",
-                               source_name="velo.webp", state="ready", remote_id="https://atelier.example/" + "a" * 300))
+                               source_name="velo.webp", state="ready", remote_id="https://atelier.example/" + "a" * 300,
+                               attempt_id="current-attempt"))
         db.add(AgentPageEvent(project_id=pid, event_key="comparison", page_url="https://atelier.example/article", kind="search_comparison", data={}))
+        db.commit()
+    migrate("downgrade", "20261119_0035", success=False)
+    with database.session() as db:
+        transfer = db.scalar(select(CmsMediaTransfer))
+        assert transfer.attempt_id == "current-attempt"
+        transfer.attempt_id = None
         db.commit()
     migrate("downgrade", "20261115_0032")
     assert not inspect(database.engine).has_table("cms_publications")
