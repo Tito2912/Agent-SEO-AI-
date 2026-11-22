@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import create_engine, delete, event, func, select
 from sqlalchemy.orm import sessionmaker
 
-from backend import cms_publication as workflow
+from backend import cms_consent, cms_publication as workflow
 from backend.cms_commun import CmsError
 from backend.cms_content_adapters import AdapterError, ArticleDraft, RemoteArticle
 from backend.models import AgentPageEvent, Base, CmsPublication, CmsPublicationConsent, IssueTask, Project, User
@@ -352,9 +352,9 @@ def test_reconciliation_can_confirm_a_returned_publish_receipt_after_failed_read
     restored = workflow.reconcile(store.database, project_id=store.project_id, publication_id=row.id, adapter=adapter)
     assert restored.state == "published" and count(store, AgentPageEvent) == 1
     with store.database.session() as db:
-        from datetime import datetime, timezone
+        from datetime import datetime
         recorded = db.scalar(select(AgentPageEvent)).created_at
-        assert recorded.replace(tzinfo=timezone.utc) == datetime.fromisoformat(saved_receipt)
+        assert cms_consent.utc(recorded) == datetime.fromisoformat(saved_receipt)
     assert [call[0] for call in adapter.calls].count("publish") == 1
 
 
