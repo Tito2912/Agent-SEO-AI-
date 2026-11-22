@@ -11,8 +11,11 @@ TROIS REGLES :
     webhook Stripe ne doit ni attendre Telegram, ni tomber avec lui. L'envoi part dans un fil ;
   * le texte est ECHAPPE : une adresse ou un nom de forfait n'est jamais du balisage.
 
-Ces messages portent l'adresse email des clients : ils vont dans la conversation privee du
-proprietaire, qui en est le destinataire legitime.
+Ces messages ne portent PLUS l'adresse email des clients en clair (decision du 22/11/2026, apres
+l'analyse des transferts : Telegram est un service tiers sans contrat de traitement connu). L'adresse
+est masquee par `masquer_adresse` ; le proprietaire retrouve le compte par le lien d'administration
+que porte le message. Un message qui a besoin de l'adresse entiere est un message qu'on ne doit pas
+envoyer ici.
 """
 from __future__ import annotations
 
@@ -65,6 +68,21 @@ def redact_diagnostics(value: Any, _hint: Any = None) -> Any:
         return item
 
     return clean(value)
+
+
+def masquer_adresse(adresse: Any) -> str:
+    """« c***@exemple.fr » : la premiere lettre et le domaine, jamais l'adresse entiere.
+
+    Le domaine reste : il dit d'ou vient l'inscription (une societe, un fournisseur de courrier) sans
+    designer une personne. Une valeur qui n'est pas une adresse ne rend que sa premiere lettre.
+    """
+    texte = str(adresse if adresse is not None else "").strip()
+    if not texte:
+        return "?"
+    local, arobase, domaine = texte.rpartition("@")
+    if not arobase or not local or not domaine:
+        return texte[:1] + "***"
+    return "%s***@%s" % (local[:1], domaine)
 
 
 def echapper(texte: Any) -> str:

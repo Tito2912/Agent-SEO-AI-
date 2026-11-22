@@ -1361,6 +1361,41 @@ def _pagespeed_extract_summary(payload: dict[str, Any], *, strategy: str) -> dic
     return out
 
 
+# Google PageSpeed (conditions des API Google : responsable du traitement, pas sous-traitant) recoit
+# l'adresse de la page et la charge lui-meme. Une adresse PUBLIQUE peut quand meme porter un identifiant
+# de connexion, un jeton ou une adresse e-mail (analyse du 22/11/2026). On retire ce qui n'a rien a faire
+# chez un tiers : identifiants devant le nom d'hote, ancre, et les parametres dont le NOM est un secret
+# ou dont la VALEUR est une adresse e-mail. Le reste de l'adresse est rendu tel quel, octet pour octet :
+# la page mesuree doit rester la meme. Les noms sont lus mot par mot (`api_key` -> api, key) pour ne pas
+# toucher `keyword` ni `monkey`.
+_PAGESPEED_NOMS_SECRETS = frozenset({
+    "token", "secret", "password", "passwd", "pwd", "auth", "authorization", "session", "sessionid",
+    "sid", "apikey", "key", "email", "mail", "signature", "sig", "otp", "jwt", "bearer", "accesstoken",
+})
+
+
+def _pagespeed_parametre_a_retirer(segment: str) -> bool:
+    nom, _sep, valeur = segment.partition("=")
+    nom = nom.lower()
+    mots = [m for m in re.split(r"[^a-z0-9]+", nom) if m]
+    if nom in _PAGESPEED_NOMS_SECRETS or any(m in _PAGESPEED_NOMS_SECRETS for m in mots):
+        return True
+    return "@" in valeur or "%40" in valeur.lower()
+
+
+def _pagespeed_url_expurgee(url: str) -> str:
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return url
+    netloc = parts.netloc.rpartition("@")[2]
+    segments = [s for s in parts.query.split("&") if s]
+    gardes = [s for s in segments if not _pagespeed_parametre_a_retirer(s)]
+    if netloc == parts.netloc and not parts.fragment and len(gardes) == len(segments):
+        return url  # rien a retirer : l'adresse part telle qu'elle est
+    return urlunsplit((parts.scheme, netloc, parts.path, "&".join(gardes), ""))
+
+
 def _pagespeed_fetch(
     target_url: str,
     *,
@@ -1372,7 +1407,7 @@ def _pagespeed_fetch(
 ) -> tuple[dict[str, Any] | None, str | None]:
     session = _get_pagespeed_session(user_agent)
     params: dict[str, Any] = {
-        "url": target_url,
+        "url": _pagespeed_url_expurgee(target_url),
         "strategy": strategy,
         "category": "performance",
         "key": api_key,

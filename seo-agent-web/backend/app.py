@@ -15476,7 +15476,7 @@ def _notifier_compte_cree(*, email: str, user_id: str, pays: str, via: str, camp
         source = (" · campagne %s / %s / %s" % (campagne.source, campagne.medium, campagne.name)
                   if campagne is not None else "")
         telegram.notifier("🆕 <b>Nouveau compte</b>\n%s\npays : %s · inscription par %s%s\n%s" % (
-            telegram.echapper(email), telegram.echapper(pays or "non renseigné"),
+            telegram.echapper(telegram.masquer_adresse(email)), telegram.echapper(pays or "non renseigné"),
             telegram.echapper(via), telegram.echapper(source),
             _lien_admin("/settings/activation/accounts/%s" % user_id)))
     except Exception as e:
@@ -15566,7 +15566,8 @@ def _notifier_abonnement(avant: "dict[str, Any] | None", apres: "dict[str, Any] 
         fin = resiliation.get("fin") if isinstance(resiliation, dict) else None
         for fait in faits:
             telegram.notifier("%s\n%s\nforfait : %s%s\n%s" % (
-                _TITRES_ABONNEMENT[fait], telegram.echapper(email), telegram.echapper(forfait),
+                _TITRES_ABONNEMENT[fait], telegram.echapper(telegram.masquer_adresse(email)),
+                telegram.echapper(forfait),
                 ("\nfin de l'abonnement : %s" % fin.strftime("%d/%m/%Y")) if fait == "resiliation" and fin else "",
                 _lien_admin("/settings/activation/accounts/%s" % apres["user_id"])))
     except Exception as e:
@@ -16116,7 +16117,8 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
         },
     )
     telegram.notifier("🗑 <b>Compte supprimé par son titulaire</b>\n%s\n%d site%s" % (
-        telegram.echapper(email or "?"), len(project_slugs), "s" if len(project_slugs) > 1 else ""))
+        telegram.echapper(telegram.masquer_adresse(email)), len(project_slugs),
+        "s" if len(project_slugs) > 1 else ""))
     return resp
 
 
@@ -36837,6 +36839,17 @@ def _requetes_pour_concurrents(pages: "list[dict[str, Any]]", *, langue: str, si
         re.split(r"\s*[:(—–|]\s*|\s+-\s+", t)[0].strip() for t in titres) if r][:4]
 
 
+# Une recherche part chez SerpApi (Google, Etats-Unis), un prestataire dont le contrat de traitement
+# n'est pas reçu (analyse du 22/11/2026). Les requetes de l'IA ne portent ni nom ni marque ; celles que
+# le client TAPE sont les seules a pouvoir contenir une donnee personnelle. On refuse la plus evidente,
+# une adresse e-mail ; l'ecran avertit du reste.
+_ADRESSE_DANS_UN_TEXTE_RE = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
+_MESSAGE_ADRESSE_DANS_UNE_RECHERCHE = (
+    "Ne saisissez pas d'adresse e-mail dans une recherche : elle est transmise à notre prestataire de "
+    "recherche Google."
+)
+
+
 def _chercher_google(requete: str, langue: str) -> list[dict[str, Any]]:
     """Les resultats organiques d'une recherche : [{url, position}]. Leve si SerpAPI echoue."""
     cle = str(os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or "").strip()
@@ -38604,6 +38617,8 @@ async def api_backlinks_search(request: Request, slug: str) -> JSONResponse:
         source = "google"
     if not raw_query:
         return JSONResponse({"ok": False, "error": "Requête vide"}, status_code=400)
+    if _ADRESSE_DANS_UN_TEXTE_RE.search(raw_query):
+        return JSONResponse({"ok": False, "error": _MESSAGE_ADRESSE_DANS_UNE_RECHERCHE}, status_code=400)
 
     serpapi_key = str(os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or "").strip()
     if not serpapi_key:
@@ -38870,6 +38885,8 @@ async def backlinks_auto_settings_save(request: Request, slug: str) -> JSONRespo
     enabled = bool(body.get("enabled", False))
     keywords_raw = str(body.get("keywords") or "").strip()
     keywords = [k.strip() for k in keywords_raw.splitlines() if k.strip()][:20]
+    if any(_ADRESSE_DANS_UN_TEXTE_RE.search(k) for k in keywords):
+        return JSONResponse({"ok": False, "error": _MESSAGE_ADRESSE_DANS_UNE_RECHERCHE}, status_code=400)
     sources_raw = body.get("sources") or ["reddit", "google"]
     sources = [s for s in (sources_raw if isinstance(sources_raw, list) else []) if s in {"reddit", "google"}] or ["reddit", "google"]
     frequency = "weekly" if body.get("frequency") == "weekly" else "daily"

@@ -115,7 +115,8 @@ def test_un_compte_CREE_est_annonce_avec_sa_fiche(recus, monkeypatch) -> None:
     with TestClient(m.app) as client:
         assert _inscrire(client, email, formulaire_ouvert=jeton_humain()).status_code == 303
     (texte,) = recus
-    assert "Nouveau compte" in texte and email in texte and "pays : FR" in texte
+    assert "Nouveau compte" in texte and "pays : FR" in texte
+    assert "n***@exemple.fr" in texte and email not in texte, "l'adresse part MASQUEE, jamais entiere"
     assert "/settings/activation/accounts/" in texte
 
 
@@ -127,7 +128,20 @@ def test_un_ROBOT_refuse_n_est_pas_annonce(recus) -> None:
 
 def test_une_adresse_est_echappee_dans_le_message(recus) -> None:
     m._notifier_compte_cree(email="<b>x</b>@exemple.fr", user_id="u1", pays="", via="email")
-    assert "&lt;b&gt;x&lt;/b&gt;@exemple.fr" in recus[0] and "pays : non renseigné" in recus[0]
+    assert "&lt;***@exemple.fr" in recus[0] and "pays : non renseigné" in recus[0]
+    assert "<b>x" not in recus[0] and "&lt;b&gt;x" not in recus[0], "ni balisage, ni adresse entiere"
+
+
+@pytest.mark.parametrize("adresse, attendu", [
+    ("conso-abc@exemple.fr", "c***@exemple.fr"),
+    ("a@b.fr", "a***@b.fr"),
+    ("Prenom.Nom@societe.example.com", "P***@societe.example.com"),
+    ("a@b@exemple.fr", "a***@exemple.fr"),
+    ("", "?"), (None, "?"), ("   ", "?"),
+    ("pas-une-adresse", "p***"), ("@exemple.fr", "@***"), ("nom@", "n***"),
+])
+def test_une_adresse_est_masquee(adresse, attendu) -> None:
+    assert telegram.masquer_adresse(adresse) == attendu
 
 
 def test_une_suppression_de_compte_est_annoncee(recus) -> None:
@@ -136,6 +150,7 @@ def test_une_suppression_de_compte_est_annoncee(recus) -> None:
     jeton = client.cookies.get(m._CSRF_COOKIE_NAME)
     client.post("/settings/account/delete", data={"confirm": "DELETE", "_csrf": jeton}, follow_redirects=False)
     assert any("Compte supprimé par son titulaire" in t for t in recus), recus
+    assert not any(re.search(r"[\w.+-]+@[\w-]+\.\w+", t) for t in recus), "aucune adresse entiere : %s" % recus
 
 
 # ── Les abonnements, par le webhook ──────────────────────────────────────────────────────────
@@ -158,7 +173,8 @@ def test_un_NOUVEL_abonnement_est_annonce_UNE_fois(recus, monkeypatch) -> None:
     _webhook(monkeypatch, evenement)
     _webhook(monkeypatch, evenement)
     assert _titres(recus) == ["Nouvel abonnement"], "Stripe rejoue : une seule annonce"
-    assert "conso-" in recus[0] and "Pro" in recus[0]
+    assert "c***@" in recus[0] and "conso-" not in recus[0] and "Pro" in recus[0]
+    assert "/settings/activation/accounts/%s" % uid in recus[0], "le compte se retrouve par le lien"
 
 
 def test_un_CHANGEMENT_de_forfait_dit_d_ou_vers_ou(recus, monkeypatch) -> None:

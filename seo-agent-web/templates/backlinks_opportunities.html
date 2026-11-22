@@ -290,6 +290,7 @@
     </div>
     <button class="btn primary" id="btn-search" type="button">{{ tr("Rechercher") }}</button>
   </div>
+  <p class="muted small" style="margin:0 0 10px;">{{ tr("Ne saisissez ni nom, ni adresse e-mail, ni autre donnée personnelle : la recherche est transmise à notre prestataire de recherche Google (SerpApi, États-Unis).") }}</p>
 
   <div id="search-status" class="muted small" style="min-height:18px;"></div>
   <div id="search-results" style="margin-top:12px;"></div>
@@ -403,6 +404,7 @@
         <label for="as-keywords">{{ tr("Mots-clés (1 par ligne, max 20)") }}</label>
         <textarea id="as-keywords" rows="4" placeholder="{{ tr("meilleur outil SEO\nalternative à Ahrefs\ncomment améliorer son référencement") }}">{{ auto_cfg.keywords | join('\n') }}</textarea>
         <span class="hint">{{ tr("L'agent cherchera ces mots-clés sur Reddit et Google.") }}</span>
+        <span class="hint">{{ tr("Ne saisissez ni nom, ni adresse e-mail, ni autre donnée personnelle : la recherche est transmise à notre prestataire de recherche Google (SerpApi, États-Unis).") }}</span>
       </div>
 
       <div class="auto-field">

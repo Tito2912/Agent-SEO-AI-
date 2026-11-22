@@ -2731,6 +2731,7 @@
   "Mots-clés (1 par ligne, max 20)": "Keywords (1 per line, max 20)",
   "meilleur outil SEO\nalternative à Ahrefs\ncomment améliorer son référencement": "best SEO tool\nAhrefs alternative\nhow to improve your rankings",
   "L'agent cherchera ces mots-clés sur Reddit et Google.": "The agent will search for these keywords on Reddit and Google.",
+  "Ne saisissez ni nom, ni adresse e-mail, ni autre donnée personnelle : la recherche est transmise à notre prestataire de recherche Google (SerpApi, États-Unis).": "Do not enter a name, an email address or any other personal data: the search is sent to our Google search provider (SerpApi, United States).",
   "Quotidienne": "Daily",
   "Hebdomadaire": "Weekly",
   "Pistes maximum par recherche": "Maximum leads per search",
