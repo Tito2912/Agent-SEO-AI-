@@ -886,6 +886,12 @@ def cms_batch_apply(request: Request, slug: str, plateforme: str, issue_key: str
         failures.append("Une opération est en cours ou le suivi n’est pas disponible. Vérifiez l’état avant de poursuivre.")
     except CmsError as error:
         failures.append(str(error))
+    except HTTPException:
+        raise
+    except Exception:
+        # Stop the batch on storage/unexpected failure; earlier pages keep their
+        # persisted state and any started write remains fenced for inspection.
+        failures.append("Le résultat n’a pas pu être enregistré. Vérifiez l’état de la page avant de poursuivre.")
     m._audit_log(request, action=f"cms.{cx.nom}.batch_apply", status="ok" if not failures else "partial",
                  target_type="project", target_id=slug, meta={"issue_key": issue_key, "written": written,
                                                               "failed": len(failures)})

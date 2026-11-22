@@ -51,7 +51,8 @@ def cms(journey, monkeypatch):
 
 
 def post(data, suffix, **payload):
-    if "/changes/" in suffix and suffix.endswith(("/apply", "/restore")):
+    if (("/changes/" in suffix and suffix.endswith(("/apply", "/restore")))
+            or ("/issues/" in suffix and suffix.endswith("/apply"))):
         payload.setdefault("approved", "true")
     client = data["client"]
     client.get(data["base"])

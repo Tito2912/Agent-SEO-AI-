@@ -187,8 +187,9 @@ les deux points de récupération encore ouverts. Le correctif de main ea5d794
 et les textes publics approuvés de Claude 66c20a6 sont intégrés. Aucune nouvelle
 revue Claude Code n’est attribuée à ce complément.
 
-Deux groupes disjoints : **306 tests** de parcours/transport/médias/accords/rendu
-et **248 tests** d’adaptateurs/modes/textes publics réussis. Les 35 tests du
+Trois groupes disjoints : **308 tests** de parcours/transport/médias/accords/rendu,
+**248 tests** d’adaptateurs/modes/textes publics et **143 tests** des anciens
+parcours CMS réussis (699 au total). Les 35 tests du
 correctif Markdown de main font partie du premier groupe. Les anciennes passes
 132/707 sont des sous-ensembles ou des sources antérieures, pas un total à ajouter.
 Ruff F/E9 global, compilation et Bandit moyen/élevé réussis.
@@ -211,3 +212,12 @@ de la PR 95 ; consulter ses checks pour leur résultat effectif. Les verts C084
 ne prouvent pas ce complément. La PR reste en brouillon, sans merge/déploiement.
 Les dates des textes publics intégrés seront recalées à leur déploiement réel.
 Les recettes HTTPS externes, Wix/Webflow et PrestaShop 9 restent à faire.
+
+Le dernier complément arrête un lot si le stockage d’un accord échoue, renvoie
+un suivi explicite et conserve l’état des pages déjà écrites. Deux pannes
+injectées (première/deuxième page) font partie des 308 tests. Le helper du
+connecteur fictif fournit bien l’accord pour éprouver le refus du mauvais CMS.
+La recette native et les captures portent sur le candidat local 8137954 ; leurs
+empreintes sont conservées séparément de celles du dernier traitement d’erreur
+de lot. Les formulaires, adaptateurs et le scénario natif n’ont pas changé
+dans ce complément. Le pilote CI doit rejouer le head final.

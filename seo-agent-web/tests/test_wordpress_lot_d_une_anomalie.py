@@ -208,3 +208,32 @@ def test_batch_selection_does_not_replace_the_explicit_consent(lot):
     changes = _changes(lot)
     response = _envoyer(lot, lot["lot"] + "/apply", pick=[row.id for row in changes.values()], approved="false")
     assert "err=" in response.headers["location"] and lot["ecrits"] == []
+
+
+@pytest.mark.parametrize("fail_at", [1, 2], ids=["first", "second"])
+def test_receipt_storage_failure_stops_the_batch_and_preserves_each_page_state(lot, fail_at):
+    from sqlalchemy import event
+    from sqlalchemy.exc import OperationalError
+    from backend.models import CmsPublicationConsent
+    for url in (URL, OTHER):
+        _proposer(lot, url)
+    attempts = []
+    def fail(*args):
+        attempts.append(True)
+        if len(attempts) == fail_at:
+            raise OperationalError("receipt unavailable", {}, RuntimeError("injected fixture failure"))
+    event.listen(CmsPublicationConsent, "before_insert", fail)
+    try:
+        response = _valider(lot, [URL, OTHER])
+    finally:
+        event.remove(CmsPublicationConsent, "before_insert", fail)
+    assert response.status_code == 303 and "err=" in response.headers["location"]
+    assert lot["ecrits"] == ([URL] if fail_at == 2 else [])
+    changes = _changes(lot)
+    assert changes[OTHER].state == "preview"
+    assert changes[URL].state == ("applied" if fail_at == 2 else "preview")
+    with m.DB.session() as db:
+        proofs = list(db.scalars(select(CmsPublicationConsent).where(
+            CmsPublicationConsent.project_id == lot["project_id"],
+            CmsPublicationConsent.operation == "cms_metadata_apply")))
+        assert len(proofs) == fail_at - 1
