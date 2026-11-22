@@ -4,14 +4,17 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import replace
 from types import SimpleNamespace
+from xml.etree.ElementTree import SubElement, tostring
 
 import pytest
+from defusedxml import ElementTree
 from sqlalchemy import create_engine, delete, event, func, select
 from sqlalchemy.orm import sessionmaker
 
 from backend import cms_consent, cms_publication as workflow
 from backend.cms_commun import CmsError
-from backend.cms_content_adapters import AdapterError, ArticleDraft, RemoteArticle
+from backend.cms_content_adapters import AdapterError, ArticleDraft, RemoteArticle, TransportResponse
+from backend.cms_content_adapters.prestashop import PrestaShopAdapter
 from backend.models import AgentPageEvent, Base, CmsPublication, CmsPublicationConsent, IssueTask, Project, User
 
 URL = "https://atelier.example/articles/entretenir-un-velo"
@@ -249,6 +252,61 @@ def test_failed_readback_keeps_returned_identity_and_blocks_duplicate_creation(s
     with pytest.raises(workflow.PublicationError):
         execute(store, saved, adapter)
     assert [call[0] for call in adapter.calls] == ["create", "read"]
+
+
+@pytest.mark.parametrize("remote_state", ["matching", "edited", "translated", "published"])
+def test_prestashop_recovers_a_known_create_by_read_only(store, remote_state):
+    config = {"id_shop": "1", "id_lang": "1"}
+    row = prepare(store, platform="prestashop", config=config)
+    calls = []
+    document = None
+
+    def transport(method, path, payload=None, headers=None):
+        nonlocal document
+        calls.append(method)
+        if method == "POST":
+            document = ElementTree.fromstring(payload)
+            SubElement(document.find("content"), "id").text = "12"
+            return TransportResponse(201, {}, tostring(document))
+        assert method == "GET" and "/content_management_system/12?" in path
+        if len(calls) == 2:
+            return TransportResponse(503, {}, b"")
+        return TransportResponse(200, {}, tostring(document))
+
+    adapter = PrestaShopAdapter(transport=transport, config=config)
+    with pytest.raises(workflow.PublicationError, match="Le résultat doit être vérifié") as failure:
+        execute(store, row, adapter)
+    assert failure.value.code == "uncertain"
+    saved = load(store, row.id)
+    assert saved.remote_id == "12" and saved.remote_revision is None
+    assert saved.state == "uncertain"
+    with store.database.session() as db:
+        receipt = db.get(CmsPublicationConsent, saved.data["last_consent_id"])
+        assert receipt.targets["result"]["remote_id"] == "12"
+    with pytest.raises(workflow.PublicationError) as repeated:
+        execute(store, saved, adapter)
+    assert repeated.value.code == "state"
+
+    content = document.find("content")
+    if remote_state == "edited":
+        content.find("content/language").text = "<p>Brouillon modifié</p>"
+    if remote_state == "translated":
+        SubElement(content.find("content"), "language", id="2").text = "<p>Unapproved translation</p>"
+    if remote_state == "published":
+        content.find("active").text = "1"
+    args = {"project_id": store.project_id, "publication_id": row.id, "adapter": adapter}
+    if remote_state in {"edited", "translated"}:
+        with pytest.raises(workflow.PublicationError) as changed:
+            workflow.reconcile(store.database, **args)
+        assert changed.value.code == "remote_changed"
+        assert load(store, row.id).state == "uncertain"
+    else:
+        restored = workflow.reconcile(store.database, **args)
+        assert restored.state == ("draft" if remote_state == "matching" else "published_unverified")
+        assert bool(restored.remote_revision) == (remote_state == "matching")
+    assert calls == ["POST", "GET", "GET"]
+    assert count(store, CmsPublicationConsent) == 1
+    assert count(store, AgentPageEvent) == 0
 
 
 @pytest.mark.parametrize("operation", ["create", "publish"], ids=["draft-readback", "publish-readback"])

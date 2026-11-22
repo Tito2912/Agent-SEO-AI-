@@ -55,8 +55,8 @@ UPDATED: dict[str, date] = {
     # 14/11/2026 : article 1, capital social de 1 € (celui des statuts) au lieu de 10 000 €.
     # 20/11/2026 : agent multi-CMS (PR #95) : publication d'articles dans le CMS, accord exprès
     # avant toute modification du site, case unique des modes automatiques, preuves d'accord
-    # gardées cinq ans. Date à recaler sur le jour où la PR #95 est mise en ligne.
-    "terms": date(2026, 11, 20),
+    # gardées cinq ans. Mise en ligne le 22/11/2026.
+    "terms": date(2026, 11, 22),
     # 02/11/2026 : Telegram (notifications du proprietaire) et Google Analytics (mesure d'audience
     # du site public, apres consentement), chacun nomme quand il est configure.
     # 05/11/2026 : Cloudflare Turnstile (captcha du formulaire d'inscription), nomme quand l'une de
@@ -68,8 +68,8 @@ UPDATED: dict[str, date] = {
     # 14/11/2026 : declaration « Limited Use » des donnees Google (Gmail du SAV), exigee par Google
     # pour valider l'acces Gmail, avec sa phrase anglaise mot pour mot sur les deux pages.
     # 20/11/2026 : preuves d'accord gardees cinq ans ; Wix et Webflow recoivent les articles valides
-    # (PR #95). Date a recaler sur le jour ou la PR #95 est mise en ligne.
-    "privacy": date(2026, 11, 20),
+    # (PR #95). Mise en ligne le 22/11/2026.
+    "privacy": date(2026, 11, 22),
     # 14/11/2026 : capital social de 1 € (celui des statuts) au lieu de 10 000 €.
     "legal_notice": date(2026, 11, 14),
 }

@@ -152,6 +152,26 @@ class PrestaShopAdapter:
         content = self._read_content(cms_id, write=False)
         return self._to_remote(content)
 
+    def read_created_draft(self, remote_id: str, draft: ArticleDraft) -> RemoteArticle:
+        """Confirm the approved draft before adopting its first readable revision."""
+        content = self._read_content(self._check_id(remote_id), write=False)
+        remote = self._to_remote(content)
+        if remote.id != remote_id or remote.status == "published":
+            return remote
+        expected_fields = {
+            "meta_title": draft.title,
+            "meta_description": draft.excerpt or "",
+            "link_rewrite": draft.slug,
+            "content": draft.html,
+        }
+        if self._active_text(content) != "0" or content.findtext("id_cms_category") != self.id_cms_category:
+            raise AdapterError("Le brouillon PrestaShop a changé.", code="remote_changed")
+        for name, expected in expected_fields.items():
+            values = self._lang_text_map(content.find(name))
+            if values.get(self.id_lang) != expected or any(value not in ("", expected) for value in values.values()):
+                raise AdapterError("Le brouillon PrestaShop a changé.", code="remote_changed")
+        return remote
+
     def publish(self, remote_id: str, expected_revision: Optional[str] = None) -> RemoteArticle:
         cms_id = self._check_id(remote_id)
         current = self._read_content(cms_id, write=False)

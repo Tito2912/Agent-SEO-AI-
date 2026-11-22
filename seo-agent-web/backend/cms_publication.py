@@ -231,8 +231,16 @@ def execute(database, *, project_id, publication_id, operation, adapter, connect
             uncertain = bool(getattr(error, "uncertain", False) or remote is not None
                              or getattr(error, "code", "") in {"unreadable", "identity", "partial", "server"}
                              or isinstance(error, (OSError, TimeoutError)))
-            _advance(db, saved, state="uncertain" if uncertain else "failed",
-                     error_code=str(getattr(error, "code", "") or "remote_error")[:80])
+            updates = {"state": "uncertain" if uncertain else "failed",
+                       "error_code": str(getattr(error, "code", "") or "remote_error")[:80]}
+            if (row.platform == "prestashop" and operation == "create" and not saved.remote_id
+                    and isinstance(error, AdapterError) and error.uncertain):
+                known_id = error.details.get("remote_id")
+                if (isinstance(known_id, str) and known_id.isascii() and known_id.isdecimal()
+                        and len(known_id) <= 10 and int(known_id) > 0):
+                    updates["remote_id"] = known_id
+                    cms_consent.record_result(db, receipt_id, remote_id=known_id, remote_url=None)
+            _advance(db, saved, **updates)
             db.commit()
         raise PublicationError("uncertain" if uncertain else "remote_error",
                                "Le résultat doit être vérifié dans le CMS avant toute nouvelle tentative."
@@ -264,9 +272,18 @@ def reconcile(database, *, project_id, publication_id, adapter):
     row = load(database, project_id=project_id, publication_id=publication_id)
     if row.state not in {"creating", "publishing", "uncertain", "failed", "draft", "published", "published_unverified"} or not row.remote_id:
         raise PublicationError("unresolved", "L’identifiant du résultat n’est pas encore confirmé. Vérifiez directement dans votre CMS.")
+    needs_first_revision = (row.platform == "prestashop" and row.state == "uncertain"
+                            and row.data.get("last_operation") == "create" and not row.remote_revision)
     try:
-        remote = adapter.read(row.remote_id)
-    except (AdapterError, CmsError, OSError):
+        if needs_first_revision:
+            payload = dict(row.data["article"])
+            payload.pop("images", None)
+            remote = adapter.read_created_draft(row.remote_id, ArticleDraft(**payload))
+        else:
+            remote = adapter.read(row.remote_id)
+    except (AdapterError, CmsError, OSError) as error:
+        if needs_first_revision and getattr(error, "code", None) == "remote_changed":
+            raise PublicationError("remote_changed", "Le brouillon a changé dans le CMS. Relisez-le et poursuivez directement dans votre CMS.") from None
         raise PublicationError("read_unavailable", "Le CMS ne permet pas encore de confirmer ce résultat.") from None
     if remote.id != row.remote_id or remote.status not in {"draft", "published"}:
         raise PublicationError("unresolved", "Le CMS ne confirme pas encore un brouillon ou une publication.")
@@ -279,15 +296,17 @@ def reconcile(database, *, project_id, publication_id, adapter):
             row.state in {"publishing", "published", "published_unverified"}
             or (row.state == "uncertain" and row.data.get("last_operation") != "create")):
         raise PublicationError("write_pending", "Le CMS indique un brouillon. La publication précédente reste à vérifier dans votre CMS.")
-    if remote.status == "draft" and remote.revision != row.remote_revision:
+    revision_matches = bool(remote.revision) if needs_first_revision else remote.revision == row.remote_revision
+    if remote.status == "draft" and not revision_matches:
         raise PublicationError("remote_changed", "Le brouillon a changé dans le CMS. Relisez-le et poursuivez directement dans votre CMS.")
     confirmed = bool(remote.status == "published" and (
         row.state == "published" and remote.revision == row.remote_revision
         or row.data.get("publish_receipt_revision") == remote.revision))
     with database.session() as db:
         state = "draft" if remote.status == "draft" else "published" if confirmed else "published_unverified"
+        adopt_revision = confirmed or (needs_first_revision and state == "draft")
         _advance(db, row, state=state, remote_url=remote.url,
-                 remote_revision=remote.revision if confirmed else row.remote_revision, error_code=None)
+                 remote_revision=remote.revision if adopt_revision else row.remote_revision, error_code=None)
         cms_consent.record_result(db, row.data.get("last_consent_id"), remote_id=remote.id, remote_url=remote.url)
         if confirmed:
             key = "cms:" + row.id + ":published"
