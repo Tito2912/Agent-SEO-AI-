@@ -221,3 +221,11 @@ La recette native et les captures portent sur le candidat local 8137954 ; leurs
 empreintes sont conservées séparément de celles du dernier traitement d’erreur
 de lot. Les formulaires, adaptateurs et le scénario natif n’ont pas changé
 dans ce complément. Le pilote CI doit rejouer le head final.
+
+CI812 sur4ccf01fe : 10596 tests réussis, 50 ignorés, un échec d’inventaire
+des tiers (688,37s). L’adresse synthétique de prévalidation des images était
+comptée comme prestataire. Elle n’est jamais appelée et est remplacée avant
+écriture ; l’exclusion exacte avec sa raison est ajoutée au garde, sans changer
+le code produit ni les textes publics. Les 16 tests d’inventaire passent ensuite
+localement : quatre groupes disjoints totalisent 715 réussites. Nouveau head
+et nouvelle CI requis ; le pilote31 reste la preuve historique du head4ccf01fe.

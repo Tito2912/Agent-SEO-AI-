@@ -87,6 +87,9 @@ ECARTES = {
     "ghost.org", "help.systeme.io",
     # Le produit lui-même, et les exemples de docstrings et de tests.
     "noyaru.com", "example.com", "app.example.com", "exemple.fr", "site.fr", "oryvalo.com",
+    # Prévalidation pure du HTML avant upload (cms_publication_routes.source_draft) :
+    # URL synthétique remplacée par celle du média avant aperçu/écriture, jamais appelée.
+    "media-placeholder.noyaru.invalid",
 }
 
 

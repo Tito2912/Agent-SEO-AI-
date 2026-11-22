@@ -37,7 +37,8 @@
     "tests/test_cms_media_workflow.py": "d002fc8bbe0520ee065f39e73fb4162802dbc96b9e881a8e7e69ddf662a4de8d",
     "tests/test_cms_real_article_format.py": "7857aec5bfd58319c077b1ce759689c0d7ee6fa614cb612a3f8c819c7e6ec82f",
     "tests/test_un_article_ne_porte_aucun_code_actif.py": "ca1b019c53f6ab797b88dcf2f97970d398829188f06100ed4ee1d9eed58c5b57",
-    "tests/test_wordpress_lot_d_une_anomalie.py": "c94cf92f5b86512206a340928e4ab1166a3653eb88ec8ab437f2cc951f1eaa9b"
+    "tests/test_wordpress_lot_d_une_anomalie.py": "c94cf92f5b86512206a340928e4ab1166a3653eb88ec8ab437f2cc951f1eaa9b",
+    "tests/test_la_confidentialite_nomme_chaque_tiers.py": "afd36d993d81ccdb4f1cbabecfbbc20f863f76cc1cf8cbc249300ccf4a4a39a1"
   },
   "wordpress": {
     "wordpress": "6.9.12",
@@ -85,10 +86,14 @@
       "passed": 248,
       "log_sha256": "74dc1f13295befe5743132b100b80866ca8b9228bfbd1c5717b14a6a91d3a9e2"
     },
-    "note": "Three disjoint groups (308+248+143). Final batch-storage catch has targeted regression; native and browser evidence retains its exact source snapshot separately. Final CI must be checked on published head.",
+    "note": "Four disjoint groups (308+248+143+16=715). Native and browser snapshots retained separately. Final CI must be checked on the latest published head.",
     "legacy_cms_paths": {
       "passed": 143,
       "log_sha256": "1a76aced7275a19c4809b399b35ed46e11386cec85712f5023a4ee755225b943"
+    },
+    "privacy_inventory": {
+      "passed": 16,
+      "log_sha256": "9734be1777c58bf7a4067db1759249b26d91d51eec5bb55af28bd2460a6867de"
     }
   },
   "browser": {
@@ -314,5 +319,14 @@
     "tests/test_cms_real_article_format.py": "7857aec5bfd58319c077b1ce759689c0d7ee6fa614cb612a3f8c819c7e6ec82f",
     "tests/test_un_article_ne_porte_aucun_code_actif.py": "ca1b019c53f6ab797b88dcf2f97970d398829188f06100ed4ee1d9eed58c5b57",
     "tests/test_wordpress_lot_d_une_anomalie.py": "407ea7dcba0a22c0eeb480971ddb64bcf1795914ee254ea1fef56d1b353c758e"
+  },
+  "ci812_previous_candidate": {
+    "head": "4ccf01fe173504d364d123d21eec628abddffac5",
+    "failed": 1,
+    "passed": 10596,
+    "skipped": 50,
+    "warnings": 516,
+    "seconds": 688.37,
+    "failure": "Inventory mistook the pure HTML placeholder URL for a called service; exact synthetic host excluded with reason. No production call or provider added."
   }
 }
