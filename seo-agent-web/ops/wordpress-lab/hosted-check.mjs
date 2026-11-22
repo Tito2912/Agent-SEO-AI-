@@ -27,6 +27,8 @@ let exitCode;
 exited?.then(code => { exitCode = code ?? -1; });
 let base = container?.base || `http://127.0.0.1:${port}`;
 const checks = [];
+const webp = Buffer.from('UklGRlQAAABXRUJQVlA4IEgAAABwBQCdASqAAGAAPm02mUmkIyKhIKgAgA2JaQoWoAFo6i8Rf/LGxF5YBrqb3EXlgGupvcLgAP76of9B8XL//EXT3gDAAAAAAAA=', 'base64');
+const basic = account => 'Basic ' + Buffer.from(account.username + ':' + account.password).toString('base64');
 let sawInitialization = false;
 async function waitReady() {
   let ready = false;
@@ -63,7 +65,7 @@ try {
   assert.ok(manifest.boot_id && manifest.accounts.editor.password);
   checks.push('Manifest protected; canonical HTTPS URL and disposable credentials');
   const api = async (account, path, method = 'GET', payload) => {
-    const headers = { authorization: 'Basic ' + Buffer.from(account.username + ':' + account.password).toString('base64') };
+    const headers = { authorization: basic(account) };
     if (payload) headers['content-type'] = 'application/json';
     return fetch(base + '/wp-json/' + path, { method, headers, signal: AbortSignal.timeout(12000),
       body: payload ? JSON.stringify(payload) : undefined, redirect: 'manual' });
@@ -125,6 +127,48 @@ try {
   assert.doesNotMatch(restoredHtml, /<meta name="description"/);
   assert.deepEqual(headings(restoredHtml), headings(before));
   checks.push('Raw original metadata restored, including a missing description');
+  const posts = 'wp/v2/posts';
+  const slug = 'noyaru-demo-article';
+  const articleUrl = base + '/' + slug + '/';
+  const upload = account => fetch(base + '/wp-json/wp/v2/media', {
+    method: 'POST', headers: { authorization: basic(account), 'content-type': 'image/webp',
+      'content-disposition': 'attachment; filename="noyaru-demo.webp"' },
+    body: webp, redirect: 'manual', signal: AbortSignal.timeout(12000),
+  });
+  const deniedUpload = await upload(manifest.accounts.subscriber);
+  assert.ok([401, 403].includes(deniedUpload.status));
+  const imageResponse = await upload(editor);
+  assert.equal(imageResponse.status, 201);
+  const media = await imageResponse.json();
+  const source = new URL(media.source_url);
+  assert.equal(source.origin, manifest.site_url);
+  assert.match(source.pathname, /^\/wp-content\/uploads\//);
+  const publicImage = await fetch(base + source.pathname, { redirect: 'manual' });
+  assert.equal(publicImage.status, 200);
+  assert.equal(publicImage.headers.get('content-type'), 'image/webp');
+  assert.deepEqual(Buffer.from(await publicImage.arrayBuffer()), webp);
+  checks.push('Native WebP transfer and byte-identical public fetch through the gateway');
+  const draftPayload = { status: 'draft', slug, title: 'Noyaru démo article',
+    content: '<p>Page de recette fictive.</p><img src="' + source.href + '" alt="Image fictive">' };
+  const deniedDraft = await api(manifest.accounts.subscriber, posts, 'POST', draftPayload);
+  assert.ok([401, 403].includes(deniedDraft.status));
+  const created = await api(editor, posts, 'POST', draftPayload);
+  assert.equal(created.status, 201);
+  const draft = await created.json();
+  const draftRoute = posts + '/' + draft.id;
+  const draftRead = await api(editor, draftRoute + '?context=edit');
+  assert.equal(draftRead.status, 200);
+  assert.equal((await draftRead.json()).status, 'draft');
+  assert.equal((await fetch(articleUrl, { redirect: 'manual' })).status, 404);
+  const published = await api(editor, draftRoute, 'POST', { status: 'publish' });
+  assert.equal(published.status, 200);
+  assert.equal((await published.json()).link, manifest.site_url + '/' + slug + '/');
+  const publicArticle = await fetch(articleUrl, { redirect: 'manual' });
+  assert.equal(publicArticle.status, 200);
+  const publicHtml = await publicArticle.text();
+  assert.ok(publicHtml.includes('Page de recette fictive.'));
+  assert.ok(publicHtml.includes(source.href));
+  checks.push('Native article draft stays private until separate publication; public HTML includes the media');
   assert.equal((await fetch(base + '/wp-login.php')).status, 404);
   assert.equal((await fetch(base + '/noyaru-demo.json')).status, 404);
   if (container) {

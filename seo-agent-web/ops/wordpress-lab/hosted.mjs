@@ -33,7 +33,7 @@ try {
     internalCookieStore: false, 'site-url': config.origin, verbosity: 'quiet',
     blueprint: {
       constants: { WP_ENVIRONMENT_TYPE: 'production', WP_DEBUG: false,
-        DISABLE_WP_CRON: true, DISALLOW_FILE_MODS: true },
+        DISABLE_WP_CRON: true, DISALLOW_FILE_MODS: true, DISALLOW_UNFILTERED_HTML: true },
       siteOptions: { blogname: 'Noyaru — démonstration temporaire', blog_public: '1' },
       features: { networking: false },
       steps: [

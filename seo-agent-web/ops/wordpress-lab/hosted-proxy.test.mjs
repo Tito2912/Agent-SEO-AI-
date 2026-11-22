@@ -61,7 +61,7 @@ test('gateway protects secrets, restricts routes and expires without a health re
   await once(upstream, 'listening');
   let time = 1000;
   const server = gateway({ origin, key, upstream: `http://127.0.0.1:${upstream.address().port}`,
-    manifest: { accounts: { editor: { password: 'fixture-secret' } } }, expiresAt: 2000, now: () => time });
+    manifest: { accounts: { editor: { username: 'editor', password: 'fixture-secret' } } }, expiresAt: 2000, now: () => time });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(async () => {
@@ -105,6 +105,37 @@ test('gateway protects secrets, restricts routes and expires without a health re
   assert.equal(calls[1].headers.authorization, 'Basic fixture');
   assert.equal((await fetchPath(write, { method: 'POST', body: 'x'.repeat(17000) })).status, 413);
   assert.equal(calls.length, 2);
+  const posts = '/wp-json/wp/v2/posts';
+  const media = '/wp-json/wp/v2/media';
+  const editor = 'Basic ' + Buffer.from('editor:fixture-secret').toString('base64');
+  const json = { authorization: editor, 'content-type': 'application/json' };
+  const webp = { authorization: editor, 'content-type': 'image/webp',
+    'content-disposition': 'attachment; filename="test.webp"' };
+  const post = (path, payload) => fetchPath(path, { method: 'POST', headers: json, body: JSON.stringify(payload) });
+  const upload = (headers, body = Buffer.from('RIFF\u0004\u0000\u0000\u0000WEBP')) =>
+    fetchPath(media, { method: 'POST', headers, body });
+  assert.equal((await fetchPath(posts)).status, 401);
+  assert.equal((await fetchPath(posts, { headers: { authorization: 'Basic other' } })).status, 401);
+  assert.equal((await fetchPath(posts + '/2?_method=DELETE', { headers: json })).status, 404);
+  assert.equal((await fetchPath(posts + '/2', { method: 'DELETE', headers: json })).status, 404);
+  assert.equal((await fetchPath(posts + '?per_page=100', { headers: json })).status, 404);
+  assert.equal((await fetchPath('/wp-content/uploads/2026/11/mutable.svg')).status, 404);
+  assert.equal((await post(posts, { slug: 'noyaru-demo-test', status: 'publish' })).status, 400);
+  assert.equal((await post(posts, { slug: 'unrelated-post', status: 'draft' })).status, 400);
+  assert.equal((await post(posts + '/2', { status: 'publish', content: 'replace it' })).status, 400);
+  assert.equal((await upload({ ...webp, 'content-disposition': 'attachment; filename="a..b.webp"' })).status, 415);
+  assert.equal((await upload(webp, Buffer.from('not webp'))).status, 415);
+  assert.equal((await upload(webp, Buffer.alloc(2 * 1024 * 1024 + 1))).status, 413);
+  assert.equal(calls.length, 2);
+  assert.equal((await fetchPath(posts + '?context=edit&per_page=1', { headers: json })).status, 200);
+  assert.equal((await post(posts, { slug: 'noyaru-demo-test', status: 'draft', content: '<p>Demo</p>' })).status, 200);
+  assert.equal((await post(posts + '/2', { status: 'publish' })).status, 200);
+  assert.equal((await upload(webp)).status, 200);
+  assert.equal(calls.at(-1).headers['content-disposition'], webp['content-disposition']);
+  assert.equal((await fetchPath('/wp-content/uploads/2026/11/test.webp', { headers: json })).status, 200);
+  assert.equal((await fetchPath('/noyaru-demo-test/', { headers: json })).status, 200);
+  assert.equal(calls.at(-1).headers.authorization, undefined);
+  const beforeExpiry = calls.length;
   time = 2000;
   assert.equal((await fetchPath('/')).status, 410);
   assert.equal((await fetchPath(write, { method: 'POST', body: '{}' })).status, 410);
@@ -112,5 +143,5 @@ test('gateway protects secrets, restricts routes and expires without a health re
   res = await fetchPath('/_noyaru-demo/health');
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { ready: true, expired: true });
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, beforeExpiry);
 });
