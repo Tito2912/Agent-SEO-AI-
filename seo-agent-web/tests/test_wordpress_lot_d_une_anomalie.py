@@ -63,6 +63,8 @@ def lot(journey, monkeypatch):
 
 
 def _envoyer(data, chemin, *, json=False, **champs):
+    if chemin.endswith("/apply"):
+        champs.setdefault("approved", "true")
     client = data["client"]
     client.get(data["cms"])
     return client.post(chemin, data={"_csrf": client.cookies.get(m._CSRF_COOKIE_NAME), **champs},
@@ -198,3 +200,40 @@ def test_un_seul_crawl_controle_tout_le_lot_et_rend_son_verdict_page_par_page(lo
     m._verify_corrections_after_crawl(lot["slug"], rapport, lot["runs_dir"], user_id=lot["owner"], crawl_ts=ts)
     ecran = BeautifulSoup(lot["client"].get(lot["lot"]).text, "html.parser")
     assert [s["data-batch-state"] for s in ecran.select("[data-batch-state]")] == ["verified", "verified"]
+
+
+def test_batch_selection_does_not_replace_the_explicit_consent(lot):
+    for url in PAGES:
+        _proposer(lot, url)
+    changes = _changes(lot)
+    response = _envoyer(lot, lot["lot"] + "/apply", pick=[row.id for row in changes.values()], approved="false")
+    assert "err=" in response.headers["location"] and lot["ecrits"] == []
+
+
+@pytest.mark.parametrize("fail_at", [1, 2], ids=["first", "second"])
+def test_receipt_storage_failure_stops_the_batch_and_preserves_each_page_state(lot, fail_at):
+    from sqlalchemy import event
+    from sqlalchemy.exc import OperationalError
+    from backend.models import CmsPublicationConsent
+    for url in (URL, OTHER):
+        _proposer(lot, url)
+    attempts = []
+    def fail(*args):
+        attempts.append(True)
+        if len(attempts) == fail_at:
+            raise OperationalError("receipt unavailable", {}, RuntimeError("injected fixture failure"))
+    event.listen(CmsPublicationConsent, "before_insert", fail)
+    try:
+        response = _valider(lot, [URL, OTHER])
+    finally:
+        event.remove(CmsPublicationConsent, "before_insert", fail)
+    assert response.status_code == 303 and "err=" in response.headers["location"]
+    assert lot["ecrits"] == ([URL] if fail_at == 2 else [])
+    changes = _changes(lot)
+    assert changes[OTHER].state == "preview"
+    assert changes[URL].state == ("applied" if fail_at == 2 else "preview")
+    with m.DB.session() as db:
+        proofs = list(db.scalars(select(CmsPublicationConsent).where(
+            CmsPublicationConsent.project_id == lot["project_id"],
+            CmsPublicationConsent.operation == "cms_metadata_apply")))
+        assert len(proofs) == fail_at - 1

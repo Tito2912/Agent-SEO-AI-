@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-19",
+  "scope": "Disposable local SQLite and PostgreSQL databases, fictitious accounts only; no deployment or public CMS connection",
+  "sources": {
+    "backend/models.py": "e92827e30b0084364f2f3305f1a47b7f295e6cef5effb89189593b8a2dff56e4",
+    "backend/cms_consent.py": "243ec193bf5b3188d0426db4b1bc5579e78ae7cd6717b65ebd3d9e830d96cb13",
+    "backend/cms_publication.py": "f87553c0eb5ddec5f3aee2ab363a5a43bf84bb76976be111b1d53f5899a93886",
+    "backend/cms_media_workflow.py": "cad2c6159cc92a48178c8fbf10cdd93a41bb4b5a6a217794ad2fe88be12b96a0",
+    "backend/export_compte.py": "ae1e096a4868ceb271035a1bae7ab6796449f30f4ee5aa56427556267d4cbc4b",
+    "backend/app.py": "58658c28809e9768135603ed878dcffaefb3063a74ae13da9e9baded42e61de5",
+    "alembic/versions/20261119_0034_cms_consent_retention.py": "5c99ddf45246fc7f359e0e577e954171f753e3df9d9a600f6a2f3ea636054d0c",
+    "tests/test_cms_consent_retention.py": "d1b776b9e4a89fae3642e2920616edc460d29defe0f516a943234520d296cdb5",
+    "tests/test_cms_consent_retention_migration.py": "f88e1c473155e5667b3bc95aa188b6f8a1c652e2374ef46564ad6395eb41b022"
+  },
+  "tests": {
+    "focused": {
+      "passed": 201,
+      "skipped": 2,
+      "seconds": 77.51,
+      "skip_reason": "PostgreSQL requires the explicitly marked local laboratory"
+    },
+    "postgresql": {
+      "passed": 2,
+      "deselected": 2,
+      "seconds": 10.07,
+      "version": "16.15"
+    }
+  },
+  "checks": [
+    "Receipt committed before any remote write; failed evidence commit sends nothing",
+    "Minimal author/site snapshots survive project, article/task and account deletion, including actual HTTP deletion routes",
+    "Owner export includes detached receipts; team actors and reassigned email addresses do not inherit another account evidence",
+    "Five calendar years from each approval; February 29 anniversary handled; deletion never extends expiry",
+    "Retention starts with DPA hidden, purges receipts, logs a failure without private payload and retries next cycle",
+    "Migration from old schema and models-first preserves dates/digests, marks reconstructed current copies and retains media intent evidence",
+    "Downgrade refuses to remove retained evidence; empty-registry downgrade/reupgrade passes"
+  ],
+  "outcome": "passed",
+  "limits": [
+    "Local laboratory only, no production migration or full deployment recipe",
+    "Automatic mode mandates and public legal copy remain separate work"
+  ]
+}

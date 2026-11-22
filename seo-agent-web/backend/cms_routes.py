@@ -18,11 +18,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 try:
+    from . import cms_consent, cms_publication
     from . import cms_guidance, correction_guard, first_correction, ghost_cms, prestashop_cms, webflow_cms, wix_cms, wordpress_cms as wp
     from .cms_commun import CmsError, fingerprint, same_connection
     from .i18n import JSONResponse
     from .models import AuditLog, CmsChange, IssueTask, JobRecord, Project
 except ImportError:
+    from backend import cms_consent, cms_publication
     import cms_guidance
     import correction_guard
     import first_correction
@@ -70,7 +72,10 @@ def connection_key(project, cx=None):
 
 def connection_keys(project):
     """Toutes les connexions CMS possibles du projet (suppression du projet)."""
-    return [connection_key(project, cx) for cx in CONNECTEURS.values()]
+    return [connection_key(project, cx) for cx in CONNECTEURS.values()] + [
+        "CMS_CONTENT_" + platform.upper() + ":" + str(project.id)
+        for platform in ("wordpress", "ghost", "shopify", "webflow", "wix", "prestashop")
+    ]
 
 
 def etat_du_projet(project):
@@ -589,7 +594,7 @@ def confirmed(change, state):
         db.commit()
 
 
-def write_change(change, action, client, live, c, key, *, approved_at=None, cx=None):
+def write_change(change, action, client, live, c, key, *, approved_at=None, cx=None, actor_id=None):
     """Apply or restore one change on the page just read (`live`), fenced as always.
 
     `approved_at`: when the customer approved a batch screen, which may be later than the
@@ -609,8 +614,18 @@ def write_change(change, action, client, live, c, key, *, approved_at=None, cx=N
         raise CmsError("La page a changé depuis l’aperçu. L’opération est arrêtée pour conserver les modifications actuelles.")
     field = change.data["field"]
     destination = change.data["after" if action == "apply" else "before"]
-    save_state(change.id, "applying" if action == "apply" else "restoring", pending=action,
-               connection=fingerprint(c, key))
+    with app_module().DB.session() as db:
+        project, actor = cms_publication.require_actor(db, change.project_id, actor_id)
+        row = db.get(CmsChange, change.id)
+        if row.state != change.state:
+            raise CmsError("Cette opération a déjà commencé. Actualisez son suivi.")
+        cms_consent.capture(db, project=project, actor=actor, operation="cms_metadata_" + action,
+            content_digest=cms_publication.digest({"field": field, "destination": destination}),
+            targets={"platform": cx.nom, "change_id": str(change.id), "task_id": str(change.task_id),
+                     "url": cms_consent.public_url(change.data["url"]), "field": field})
+        row.state = "applying" if action == "apply" else "restoring"
+        row.data = {**row.data, "pending": action, "connection": fingerprint(c, key)}
+        db.commit()
     correction_guard.ensure_active()
     try:
         result = client.update(live, {field: destination[field]})
@@ -626,13 +641,16 @@ def write_change(change, action, client, live, c, key, *, approved_at=None, cx=N
 
 
 @router.post("/projects/{slug}/cms/{plateforme}/changes/{change_id}/{action}")
-def cms_change_action(request: Request, slug: str, plateforme: str, change_id: str, action: str):
+def cms_change_action(request: Request, slug: str, plateforme: str, change_id: str, action: str,
+                      approved: bool = Form(default=False)):
     m = app_module()
     cx = connecteur(plateforme)
     project = m._db_project_or_404(request, slug)
     if action not in {"apply", "restore", "check", "verify"}:
         raise HTTPException(400, "unknown_cms_action")
     path = f"cms/{cx.nom}/changes/{change_id}"
+    if action in {"apply", "restore"} and not approved:
+        return redirect(slug, path=path, err="Confirmez que vous autorisez cette modification sur votre site.")
     try:
         with correction_guard.correction_lock(m.DB, str(project.owner_user_id)):
             change = _change_du_connecteur(project, change_id, cx)
@@ -656,7 +674,7 @@ def cms_change_action(request: Request, slug: str, plateforme: str, change_id: s
                     raise CmsError("Les valeurs attendues ne sont pas confirmées. Vérifiez la page dans %s ; aucune nouvelle écriture n’est relancée automatiquement." % cx.libelle)
                 confirmed(change, "applied" if pending == "apply" else "restored")
                 return redirect(slug, path=path)
-            if not write_change(change, action, client, live, c, key, cx=cx):
+            if not write_change(change, action, client, live, c, key, cx=cx, actor_id=str(request.state.user.id)):
                 return redirect(slug, path=path)
         m._audit_log(request, action=f"cms.{cx.nom}.{action}", status="ok", target_type="project", target_id=slug,
                      meta={"change_id": change_id})
@@ -822,11 +840,13 @@ def cms_batch_propose(request: Request, slug: str, plateforme: str, issue_key: s
 @router.post("/projects/{slug}/cms/{plateforme}/issues/{issue_key}/apply")
 def cms_batch_apply(request: Request, slug: str, plateforme: str, issue_key: str, pick: list[str] = Form(default=[]),
                     ids: list[str] = Form(default=[]), values: list[str] = Form(default=[]),
-                    shown_at: str = Form(default="")):
+                    shown_at: str = Form(default=""), approved: bool = Form(default=False)):
     """One approval for the selected previews; each page is still written and read back alone."""
     m = app_module()
     cx = connecteur(plateforme)
     project = m._db_project_or_404(request, slug)
+    if not approved:
+        return redirect(slug, path=f"cms/{cx.nom}/issues/{issue_key}", err="Confirmez que vous autorisez cette modification sur votre site.")
     if not pick:
         return redirect(slug, path=f"cms/{cx.nom}/issues/{issue_key}", err="Cochez au moins une page à enregistrer.")
     edited = dict(zip(ids, values))
@@ -859,13 +879,19 @@ def cms_batch_apply(request: Request, slug: str, plateforme: str, issue_key: str
                     live = client.read(change.data["url"])
                     if live["post_id"] != change.data["post_id"]:
                         raise CmsError("Cette adresse ne correspond plus à la page prévue dans l’aperçu.")
-                    written += bool(write_change(change, "apply", client, live, c, key, approved_at=approved_at, cx=cx))
+                    written += bool(write_change(change, "apply", client, live, c, key, approved_at=approved_at, cx=cx, actor_id=str(request.state.user.id)))
                 except CmsError as error:
                     failures.append(f"{change.data['url']} : {error}")
     except (correction_guard.CorrectionBusy, correction_guard.CorrectionStoreUnavailable):
         failures.append("Une opération est en cours ou le suivi n’est pas disponible. Vérifiez l’état avant de poursuivre.")
     except CmsError as error:
         failures.append(str(error))
+    except HTTPException:
+        raise
+    except Exception:
+        # Stop the batch on storage/unexpected failure; earlier pages keep their
+        # persisted state and any started write remains fenced for inspection.
+        failures.append("Le résultat n’a pas pu être enregistré. Vérifiez l’état de la page avant de poursuivre.")
     m._audit_log(request, action=f"cms.{cx.nom}.batch_apply", status="ok" if not failures else "partial",
                  target_type="project", target_id=slug, meta={"issue_key": issue_key, "written": written,
                                                               "failed": len(failures)})

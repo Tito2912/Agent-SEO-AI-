@@ -69,6 +69,7 @@
           <label>{{ field_label }}{% if f == 'seo_title' %}<input name="values" value="{{ ch.data.after[f] }}" maxlength="400" />{% else %}<textarea name="values" rows="3" maxlength="2000">{{ ch.data.after[f] }}</textarea>{% endif %}</label>
         </div>
       {% endfor %}
+      <label class="checkbox"><input type="checkbox" name="approved" value="true" required><span>{{ tr("J’autorise les modifications sélectionnées après relecture de ce lot.") }}</span></label>
       <button class="btn primary" type="submit" data-busy-label="{{ tr('Enregistrement dans {cms}…', cms=cx.libelle) }}">{{ tr("Enregistrer la sélection dans {cms}", cms=cx.libelle) }}</button>
       <p class="muted small">{{ tr("Ces aperçus restent valables 20 minutes après l’affichage de cette page.") }}</p>
     </form>

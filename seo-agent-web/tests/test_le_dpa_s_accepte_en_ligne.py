@@ -228,8 +228,8 @@ def test_la_purge_ne_leve_JAMAIS(monkeypatch) -> None:
     m._purger_preuves_dpa()
 
 
-@pytest.mark.parametrize("version, demarre", [(None, False), ("1.0", True)])
-def test_le_fil_de_retention_tourne_des_que_le_DPA_est_publie(monkeypatch, version, demarre) -> None:
+@pytest.mark.parametrize("version", [None, "1.0"], ids=["dpa-hidden", "dpa-published"])
+def test_le_fil_de_retention_tourne_aussi_pour_les_preuves_CMS(monkeypatch, version) -> None:
     for variable in ("SEO_AGENT_JOBS_RETENTION_DAYS", "SEO_AGENT_RUNS_RETENTION_DAYS"):
         monkeypatch.delenv(variable, raising=False)
     monkeypatch.setattr(legal, "DPA_VERSION", version)
@@ -237,7 +237,9 @@ def test_le_fil_de_retention_tourne_des_que_le_DPA_est_publie(monkeypatch, versi
     lances: list = []
     monkeypatch.setattr(m.threading, "Thread", lambda **kw: type("Fil", (), {"start": lambda self: lances.append(kw)})())
     m._start_retention()
-    assert bool(lances) is demarre
+    assert len(lances) == 1
+    m._start_retention()
+    assert len(lances) == 1
 
 
 def test_l_export_du_client_contient_ses_acceptations(titulaire, publie) -> None:

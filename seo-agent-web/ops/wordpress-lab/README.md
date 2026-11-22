@@ -44,3 +44,24 @@ Références : [API Yoast](https://developer.yoast.com/features/yoast-seo-abilit
 ## Recette depuis Noyaru en ligne
 
 Un [paquet de démonstration hébergée et son scénario](HOSTED.md) préparent l'essai HTTPS public, avec un Blueprint Render distinct et facultatif. Les contrôles de sa passerelle utilisent `npm run test:gateway` et `npm run test:hosted`. Leur succès local ne déclare pas la liaison entre Noyaru en ligne et l'hébergeur validée.
+
+## Articles REST natifs
+
+Le même laboratoire exerce aussi le nouveau parcours de publication de contenu :
+article Noyaru enregistré → aperçu sans écriture → case et brouillon WordPress réel
+→ seconde case et publication → contenu vérifié dans le HTML public local. Un
+double envoi ne recrée ni ne republie ; une modification externe du brouillon
+bloque la publication. Les preuves d’accord persistées sont contrôlées. Le transport
+garde ses routes, en-têtes, bornes et gestion des statuts ; seul son dernier échange
+DNS/TLS est dirigé vers la boucle locale dans le processus de recette. Ce contrôle
+ne valide pas un hébergeur HTTPS externe.
+
+Le complément C085 teste un article rendu par le vrai moteur Markdown Noyaru,
+avec intertitre, tableau aligné et deux occurrences d’une image WebP privée.
+Tous les formats et octets sont validés avant le premier transfert. L’accord
+média est distinct de ceux du brouillon et de la publication ; réutiliser cette
+image n’ajoute aucun transfert. Le HTML public est contrôlé : un seul titre
+principal et image accessible sans authentification, octets SHA-256 et dimensions
+identiques au fichier source. Un second projet fictif indépendant garde la
+limite réelle de fréquence du premier projet intacte. Les anciennes écritures
+de métadonnées refusent également une demande sans case explicite.

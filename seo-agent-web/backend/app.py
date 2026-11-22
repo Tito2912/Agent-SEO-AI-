@@ -41,7 +41,7 @@ from functools import lru_cache, wraps
 from pathlib import Path
 from collections.abc import Callable, Iterable
 from typing import Any, NamedTuple
-from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urljoin, urlsplit, urlunsplit
 
 import requests
 import yaml
@@ -126,6 +126,9 @@ try:
     from . import sentry_filtre
     from . import export_compte
     from . import dpa
+    from . import cms_consent
+    from . import automation_mandates
+    from . import cms_publication
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -157,6 +160,8 @@ except ImportError:
     import sentry_filtre  # type: ignore
     import export_compte  # type: ignore
     import dpa  # type: ignore
+    import cms_consent  # type: ignore
+    from backend import automation_mandates, cms_publication
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -1099,7 +1104,7 @@ def _content_security_policy(request: Request) -> str:
 
     # Only the editor embeds an article preview. The iframe has an opaque sandbox origin
     # and a restrictive srcdoc policy; every other screen continues to forbid frames.
-    article_preview = bool(re.fullmatch(r"/projects/[^/]+/content", str(getattr(request.url, "path", ""))))
+    article_preview = bool(re.fullmatch(r"/projects/[^/]+/content(?:/publication/[a-f0-9-]+)?", str(getattr(request.url, "path", ""))))
     # GOOGLE ANALYTICS, SEULEMENT LA OU LA PAGE L'A DEMANDE (02/11/2026). Une page publique qui
     # affiche le bandeau de consentement le note pendant son rendu (`_mesure_audience`) ; les
     # ecrans de l'application ne le font jamais, et gardent une politique sans hote tiers —
@@ -2470,7 +2475,7 @@ def _decider_de_la_pr(verifs: dict[str, Any], *, age_s: float) -> tuple[str, str
     return "inconnu", "Aucune vérification disponible sur ce dépôt"
 
 
-def _bloc_verification(pr_data: Any, *, fusion_auto: bool,
+def _bloc_verification(pr_data: Any, *, fusion_auto: bool, project=None,
                        controle_sitemap: dict[str, Any] | None = None) -> dict[str, Any]:
     """Ce qu'on garde d'une pull request pour pouvoir la reprendre plus tard.
 
@@ -2494,6 +2499,8 @@ def _bloc_verification(pr_data: Any, *, fusion_auto: bool,
         bloc["controle_sitemap"] = controle_sitemap
     if publication_id := correction_execution.publication_id():
         bloc.update(etat='autocorrection', fusion_auto=False, publication_id=publication_id)
+    elif binding := automation_mandates.seal(project, pr_data, bloc):
+        bloc["automation"] = binding
     return bloc
 
 
@@ -8829,22 +8836,32 @@ def _purger_preuves_dpa() -> None:
         logger.error("[RETENTION] preuves DPA : %s: %s", type(e).__name__, e)
 
 
+def _purger_preuves_cms() -> None:
+    """Approval evidence has its own retention period, even while the DPA is hidden."""
+    try:
+        with DB.session() as db:
+            effacees = cms_consent.purger(db, datetime.now(timezone.utc))
+        if effacees:
+            logger.info("[RETENTION] preuves CMS effacees : %s", effacees)
+    except Exception as e:
+        # Log the failure and retry on the next cycle; no PII or exception payload.
+        logger.error("[RETENTION] preuves CMS : %s", type(e).__name__)
+
+
 def _retention_loop() -> None:
     # Run quickly on boot, then every few hours.
     while not _WORKER_STOP.is_set():
         _cleanup_old_jobs()
         _cleanup_old_runs()
         _purger_preuves_dpa()
+        _purger_preuves_cms()
         _WORKER_STOP.wait(float(os.getenv("SEO_AGENT_RETENTION_EVERY_SECONDS", "21600")))  # 6h
 
 
 def _start_retention() -> None:
     global _RETENTION_STARTED
-    # Le fil tourne aussi des que le DPA est publie : ses preuves s'effacent apres cinq ans.
-    if _retention_cutoff_s(days_env="SEO_AGENT_JOBS_RETENTION_DAYS") is None and _retention_cutoff_s(
-        days_env="SEO_AGENT_RUNS_RETENTION_DAYS"
-    ) is None and not dpa.version():
-        return
+    # CMS approval evidence must be purged even when the DPA and optional job/run
+    # retention are disabled. Start once; the loop also handles an initially empty table.
     with _RETENTION_STARTED_GUARD:
         if _RETENTION_STARTED:
             return
@@ -20591,6 +20608,8 @@ def _save_github_settings(request: Request, proj: Project, *, repo="", branch="m
             else:
                 settings.update(github_repo=repo, github_branch=branch, github_mode=mode)
             project.settings = settings
+            automation_mandates.change(db, project=project, actor_id=request.state.user.id,
+                mode="github_merge", consent=consent, active=not disconnect and mode == "auto")
             changed = (previous["mode"] == "auto" if disconnect else
                        mode != previous["mode"] or target_changed and "auto" in {mode, previous["mode"]})
             if changed:
@@ -20600,10 +20619,12 @@ def _save_github_settings(request: Request, proj: Project, *, repo="", branch="m
                     "branch": previous["branch"] if disconnect else branch, "previous_branch": previous["branch"],
                     "consent": bool(consent),
                 }, db=db, project=project)
+    except automation_mandates.ConsentRequired:
+        return JSONResponse({"ok": False, "error": "Confirmez que vous autorisez la fusion automatique des corrections sur ce dépôt."}, status_code=400)
     except SQLAlchemyError as exc:
         logger.error("[automation] GitHub settings not confirmed: %s", type(exc).__name__)
         return JSONResponse({"ok": False, "error": "La réponse n’a pas pu être confirmée. Actualisez l’état avant de recommencer."}, status_code=503)
-    return JSONResponse({"ok": True, **({"connected": False, "repo": "", "mode": "review"} if disconnect else
+    return JSONResponse({"ok": True, "automatic_approved": automation_mandates.approved(project, "github_merge"), **({"connected": False, "repo": "", "mode": "review"} if disconnect else
                                        {"repo": repo, "branch": branch, "mode": mode, "html_url": html_url})})
 
 
@@ -20650,7 +20671,8 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
 def api_github_status(request: Request, slug: str) -> JSONResponse:
     proj = _db_project_or_404(request, slug)
     cfg = _project_github_cfg(proj)
-    return JSONResponse({"ok": True, **cfg, "connected": bool(cfg["repo"])})
+    return JSONResponse({"ok": True, **cfg, "connected": bool(cfg["repo"]),
+                         "automatic_approved": automation_mandates.approved(proj, "github_merge")})
 
 
 @app.post("/api/projects/{slug}/issues/{issue_key}/github-fix")
@@ -21125,7 +21147,7 @@ def api_github_bulk_fix(request: Request, slug: str, body: _ReviewFixBody | None
     # la sortir du brouillon et de la fusionner plusieurs fois.
     _trace_verif: dict[str, Any] | None = {
         "verification": _bloc_verification(
-            pr_data, fusion_auto=_fusion_auto,
+            pr_data, fusion_auto=_fusion_auto, project=proj,
             **({"controle_sitemap": _controle_sitemap} if _controle_sitemap else {})),
         "pr_title": pr_title,
     }
@@ -32451,7 +32473,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     try:
         _controle = _controle_sitemap_de(_prep, all_changed)
         _note = json.dumps({"verification": _bloc_verification(
-                                pr_data, fusion_auto=_fusion_auto,
+                                pr_data, fusion_auto=_fusion_auto, project=proj,
                                 **({"controle_sitemap": _controle} if _controle else {})),
                             "pr_title": pr_title,
                             "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": all_changed, "deep": True, "pages": len(impacted), "verification_urls": impacted, "verification_excluded": _pages_non_traitees(impacted, idx, all_paths, skipped + _ecartes), "verification_expected_count": _verification_scope_count(issue_key, issues), "config": bool(config_changes)}, ensure_ascii=False)
@@ -32593,6 +32615,11 @@ def project_automation(request: Request, slug: str) -> HTMLResponse:
             })
     except Exception:
         pass
+    with DB.session() as db:
+        attention = list(db.scalars(select(automation_mandates.AutomationRun).where(
+            automation_mandates.AutomationRun.project_id == proj_row.id,
+            automation_mandates.AutomationRun.state.in_(["running", "uncertain", "stopped"])
+        ).order_by(automation_mandates.AutomationRun.created_at.desc()).limit(10)))
     resp = templates.TemplateResponse(
         "project_automation.html",
         {
@@ -32600,7 +32627,9 @@ def project_automation(request: Request, slug: str) -> HTMLResponse:
             "project": project_ctx,
             "slug": proj_row.slug,
             "github_cfg": cfg,
+            "github_auto_approved": automation_mandates.approved(proj_row, "github_merge"),
             "tasks_by_status": tasks_by_status,
+            "automation_attention": attention,
             "counts": counts,
             "total": sum(counts.values()),
         },
@@ -34907,6 +34936,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
     fix_branch = "seo-contenu/%s-%s" % (_safe_github_branch_suffix(route.strip("/")),
                                         _dt.utcnow().strftime("%Y%m%d-%H%M%S"))
     try:
+        automation_mandates.transport()
         _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
     except Exception as e:
         return {"ok": False, "status": 400, "error": f"Impossible de créer la branche : {e}"}
@@ -34985,10 +35015,12 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
     )
     suivi("Ouverture de la pull request brouillon")
     try:
+        automation_mandates.transport()
         pr_data = _ouvrir_pull_request(
                       owner=owner, repo=repo_name, token=token,
                       title=pr_title, body=pr_body,
                       head=fix_branch, base=branch, draft=True)
+        automation_mandates.observe_pr(pr_data, branch=fix_branch)
         pr_url = pr_data.get("html_url", "")
         pr_number = pr_data.get("number", 0)
     except Exception as e:
@@ -35023,6 +35055,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                 _db.add(_ex)
             _db.commit()
             task_id = str(_ex.id)
+        automation_mandates.observe_pr(pr_data, branch=fix_branch, task_id=task_id)
     except Exception:
         task_id = ""
 
@@ -35041,6 +35074,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
 
 
 class _ContentDraftBody(BaseModel):
+    consent: bool = False
     sujet: str = ""
     route: str = ""
     # Les langues cochees, celle de `route` comprise ou non ; "" est la langue servie a la
@@ -35096,6 +35130,8 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     user = getattr(request.state, "user", None)
     if not user:
         return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    if not body.consent:
+        return JSONResponse({"ok": False, "error": "Cochez votre accord pour créer cette proposition sur GitHub."}, status_code=400)
     sujet = (body.sujet or "").strip()
     route = (body.route or "").strip()
     if not sujet or not route:
@@ -35134,12 +35170,38 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     if not _github_branch_allowed(branch):
         return JSONResponse({"ok": False, "error": "Branche GitHub invalide."}, status_code=400)
 
+    try:
+        with DB.session() as db:
+            approval_project, actor = cms_publication.require_actor(db, str(proj.id), str(user.id))
+            receipt = cms_consent.capture(db, project=approval_project, actor=actor,
+                operation="github_content_draft",
+                content_digest=hashlib.sha256(json.dumps({"subject": sujet, "route": route,
+                    "languages": list(body.langues), "style": style}, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
+                targets={"platform": "github", "repo": cfg["repo"], "branch": branch,
+                         "url": cms_consent.public_url(urljoin(str(proj.base_url), route)), "languages": list(body.langues)})
+            db.commit()
+            manual_receipt_id = receipt.id
+    except SQLAlchemyError:
+        return JSONResponse({"ok": False, "error": "La réponse n’a pas pu être confirmée. Actualisez l’état avant de recommencer."}, status_code=503)
+    consent_operation = uuid.uuid4().hex
+    consent_scope = {"route": route, "languages": list(body.langues), "repo": cfg["repo"], "branch": branch}
+    _audit_log(request, action="content.github.authorized", target_type="project", target_id=str(proj.id),
+               meta={"consent": True, "operation_id": consent_operation, "scope": consent_scope,
+                     "request_sha256": hashlib.sha256(json.dumps({"subject": sujet, **consent_scope},
+                                              sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()})
     out = _proposer_une_page(
         user, project_id=str(proj.id), site_name=str(proj.site_name or slug),
         slug=slug, sujet=sujet, route=route, base_url=str(proj.base_url or ""),
         owner=owner, repo_name=repo_name, branch=branch, token=token,
         langues=list(body.langues),
         suivi=_ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id)), style=style)
+    with DB.session() as db:
+        cms_consent.record_result(db, manual_receipt_id, remote_id=out.get("task_id"), remote_url=out.get("pr_url"))
+        db.commit()
+    _audit_log(request, action="content.github.completed", status="ok" if out.get("ok") else "error",
+               target_type="project", target_id=str(proj.id), meta={"operation_id": consent_operation,
+               "pr_url": str(out.get("pr_url") or ""), "pages": out.get("pages") or [],
+               "task_id": str(out.get("task_id") or "")})
     return JSONResponse(out, status_code=int(out.pop("status", 200)))
 
 
@@ -36645,10 +36707,11 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "github_cfg": _project_github_cfg(proj_row),
             "pages": pages,
             "auto": _reglages_contenu_auto(proj_row.settings),
+            "auto_approved": automation_mandates.approved(proj_row, "content_schedule"),
             "auto_prochain": _dire_creneau(
                 _prochain_creneau(_reglages_contenu_auto(proj_row.settings)),
                 _reglages_contenu_auto(proj_row.settings), maintenant=time.time())
-            if _reglages_contenu_auto(proj_row.settings)["enabled"] else "",
+            if automation_mandates.approved(proj_row, "content_schedule") else "",
             "frequences_auto": [(k, v[0]) for k, v in _FREQUENCES_AUTO.items()],
             "jours_auto": list(enumerate(_JOURS_AUTO)),
             "fuseaux_auto": list(_FUSEAUX_AUTO),
@@ -37376,33 +37439,51 @@ def _balayer_contenu_auto_sous_verrou(*, limit: int) -> dict[str, int]:
             resultats["sans_sujet"] += 1
             continue
 
+        run_id = None
         try:
-            with DB.session() as db:
-                p = db.get(Project, cand["id"])
-                if p is not None:
-                    reglages = dict(p.settings or {})
-                    reglages["content_auto"] = {**auto, "last_run": maintenant}
-                    p.settings = reglages
-                    db.commit()
+            with _automation_settings_transaction(cand["id"]) as (db, p):
+                fresh = _reglages_contenu_auto(p.settings)
+                grant = automation_mandates.current_grant(db, p, "content_schedule")
+                if (not grant or fresh != auto or p.owner_user_id != cand["owner"]
+                        or p.base_url != cand["base_url"]):
+                    resultats["refusees"] += 1
+                    continue
+                ambiguous = db.scalar(select(automation_mandates.AutomationRun.id).where(
+                    automation_mandates.AutomationRun.project_id == p.id,
+                    automation_mandates.AutomationRun.mode == "content_schedule",
+                    automation_mandates.AutomationRun.state.in_(["running", "uncertain"]),
+                    automation_mandates.AutomationRun.data["route"].as_string() == route))
+                if ambiguous:
+                    resultats["refusees"] += 1
+                    continue
+                run = automation_mandates.reserve(db, project=p, grant=grant,
+                    request_key=hashlib.sha256(json.dumps([grant.id, creneau.isoformat()]).encode()).hexdigest(),
+                    data={"route": route})
+                if run is None:
+                    resultats["refusees"] += 1
+                    continue
+                run_id, mandate_key = run.id, grant.id
+                settings = dict(p.settings or {})
+                settings["content_auto"] = {**fresh, "last_run": maintenant}
+                p.settings = settings
+            with automation_mandates.fenced(project_id=cand["id"], mode="content_schedule",
+                    mandate_key=mandate_key, run_id=run_id):
+                sortie = _proposer_une_page(
+                    auteur, project_id=cand["id"], site_name=cand["site_name"] or cand["slug"],
+                    slug=cand["slug"], sujet=choisi, route=route,
+                    base_url=cand["base_url"],
+                    owner=parts[0], repo_name=parts[1], branch=cfg["branch"], token=token,
+                    motif="content_auto", refuser_si_orpheline=True,
+                    langues=auto["langues"],
+                    style={"taille": auto["taille"], "ton": auto["ton"]},
+                    fusion_auto=auto["publication"] == "auto",
+                    publication=auto["publication"])
+            automation_mandates.finish(run_id, ok=bool(sortie.get("ok")), reason="" if sortie.get("ok") else "not_confirmed")
         except Exception as e:
-            logger.error("[contenu-auto] %s : date non posée (%s) — on n'essaie pas",
-                         cand["slug"], e)
-            continue
-
-        try:
-            sortie = _proposer_une_page(
-                auteur, project_id=cand["id"], site_name=cand["site_name"] or cand["slug"],
-                slug=cand["slug"], sujet=choisi, route=route,
-                base_url=cand["base_url"],
-                owner=parts[0], repo_name=parts[1], branch=cfg["branch"], token=token,
-                motif="content_auto", refuser_si_orpheline=True,
-                langues=auto["langues"],
-                style={"taille": auto["taille"], "ton": auto["ton"]},
-                fusion_auto=auto["publication"] == "auto",
-                publication=auto["publication"])
-        except Exception as e:
+            if run_id:
+                automation_mandates.finish(run_id, reason=getattr(e, "reason", "interrupted"))
             resultats["refusees"] += 1
-            logger.error("[contenu-auto] %s : %s: %s", cand["slug"], type(e).__name__, e)
+            logger.error("[contenu-auto] execution non confirmee : %s", type(e).__name__)
             continue
         if sortie.get("ok"):
             resultats["proposees"] += 1
@@ -37525,24 +37606,26 @@ class _ContentAutoBody(BaseModel):
     consent: bool = False
 
 
-def _content_auto_state(auto: dict[str, Any]) -> JSONResponse:
+def _content_auto_state(auto: dict[str, Any], project=None) -> JSONResponse:
     """Expose the same saved state after a write and during read-only recovery."""
     public = {key: auto[key] for key in (
         "enabled", "section", "taille", "ton", "langues", "frequence", "jour", "heure",
         "fuseau", "publication",
     )}
+    approved = bool(project and automation_mandates.approved(project, "content_schedule"))
     return JSONResponse({"ok": True, "enabled": auto["enabled"], "section": auto["section"],
+                         "automatic_approved": approved,
                          "settings": public,
                          "prochain": _dire_creneau(_prochain_creneau(auto), auto,
                                                    maintenant=time.time())
-                         if auto["enabled"] else ""}, headers={"Cache-Control": "no-store"})
+                         if auto["enabled"] and approved else ""}, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/projects/{slug}/content/auto")
 def api_content_auto_state(request: Request, slug: str) -> JSONResponse:
     """Read without rescheduling, spending quota or repeating a consent receipt."""
     proj = _db_project_or_404(request, slug)
-    return _content_auto_state(_reglages_contenu_auto(proj.settings))
+    return _content_auto_state(_reglages_contenu_auto(proj.settings), project=proj)
 
 
 @app.post("/api/projects/{slug}/content/auto")
@@ -37608,6 +37691,8 @@ def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBod
                 "fuseau": body.fuseau, "publication": body.publication,
             }
             p.settings = reglages
+            automation_mandates.change(db, project=p, actor_id=user.id, mode="content_schedule",
+                consent=body.consent, active=bool(body.enabled))
             auto = _reglages_contenu_auto(reglages)
             if devient_auto != etait_auto or devient_auto and target_changed:
                 _journaliser_mode_auto(request, "automation.content_publication", slug, {
@@ -37615,13 +37700,15 @@ def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBod
                     "section": section if section != "/" else "", "previous_section": avant["section"],
                     "consent": bool(body.consent),
                 }, db=db, project=p)
+    except automation_mandates.ConsentRequired:
+        return JSONResponse({"ok": False, "error": "Confirmez que vous autorisez ce mode de rédaction planifiée."}, status_code=400)
     except SQLAlchemyError as exc:
         logger.error("[automation] Content settings not confirmed: %s", type(exc).__name__)
         return JSONResponse({"ok": False, "error": "La réponse n’a pas pu être confirmée. Actualisez l’état avant de recommencer."}, status_code=503)
     logger.info("[contenu-auto] %s : %s section=%s %s %s %02dh %s", slug,
                 "allumé" if body.enabled else "éteint", section, body.frequence,
                 _JOURS_AUTO[auto["jour"]], auto["heure"], body.publication)
-    return _content_auto_state(auto)
+    return _content_auto_state(auto, project=p)
 
 
 def _page_a_valider(request: Request, slug: str, task_id: str) -> "tuple[Any, Any, dict[str, Any]]":
@@ -37668,7 +37755,7 @@ def page_contenu_valider(request: Request, slug: str, task_id: str,
 
 
 @app.post("/projects/{slug}/content/valider/{task_id}")
-def page_contenu_valider_post(request: Request, slug: str, task_id: str) -> RedirectResponse:
+def page_contenu_valider_post(request: Request, slug: str, task_id: str, approved: bool = Form(False)) -> RedirectResponse:
     """Valider = « le contenu me va ». La fusion, elle, passe par le CHEMIN UNIQUE.
 
     Premiere version : la route fusionnait tout de suite. Le garde-fou
@@ -37683,12 +37770,29 @@ def page_contenu_valider_post(request: Request, slug: str, task_id: str) -> Redi
     if not getattr(request.state, "user", None):
         return RedirectResponse(url="/auth/login", status_code=303)
     _proj, tache, note = _page_a_valider(request, slug, task_id)
+    if not approved:
+        return RedirectResponse(url=_path_with_flash(ici, err="Confirmez que vous autorisez la fusion de ce contenu."), status_code=303)
     if str(tache.status or "") == "done":
         return RedirectResponse(url=_path_with_flash(ici, msg="Cette page est déjà fusionnée."), status_code=303)
     verif = note.get("verification") if isinstance(note.get("verification"), dict) else {}
     if not verif:
         return RedirectResponse(url=_path_with_flash(ici, err="Cette page n'a pas de pull request à suivre."),
                                 status_code=303)
+    try:
+        with DB.session() as db:
+            project, actor = cms_publication.require_actor(db, str(_proj.id), str(request.state.user.id))
+            scope = automation_mandates.configuration(project, "github_merge")
+            receipt = cms_consent.capture(db, project=project, actor=actor, operation="github_publication",
+                content_digest=hashlib.sha256(json.dumps([verif.get("sha"), note.get("pr_number"), scope], sort_keys=True).encode()).hexdigest(),
+                targets={"platform": "github", "task_id": str(tache.id), "scope": scope,
+                         "sha": verif.get("sha"), "node_id": verif.get("node_id"), "pr_number": note.get("pr_number"),
+                         "url": cms_consent.public_url(urljoin(str(project.base_url), str(tache.url))),
+                         "control_digest": cms_publication.digest(verif.get("controle_sitemap"))})
+            verif["manual_receipt_id"] = receipt.id
+            verif["manual_scope_key"] = hashlib.sha256(json.dumps(scope, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+            db.commit()
+    except SQLAlchemyError:
+        return RedirectResponse(url=_path_with_flash(ici, err="Votre accord n’a pas pu être enregistré. Actualisez l’état avant de réessayer."), status_code=303)
     # PAS de refus sur un ancien verdict rouge : le verdict est RELU ci-dessous. Une CI
     # relancee et passee au vert entre-temps doit pouvoir fusionner (mutation du 28/09/2026 :
     # le refus anticipe etait redondant quand la CI est toujours rouge, et faux sinon).
@@ -39963,6 +40067,79 @@ def team_accept(request: Request, token: str = "") -> RedirectResponse:
 
 
 def _reprendre_une_verification(tache: Any) -> str:
+    try:
+        note = json.loads(tache.note) if tache.note else {}
+    except Exception:
+        return "illisible"
+    verif = note.get("verification") or {}
+    if isinstance(verif, dict) and verif.get("valide_par_client") and verif.get("fusion_auto"):
+        with DB.session() as db:
+            project = db.get(Project, str(tache.project_id))
+            receipt = db.get(cms_consent.CmsPublicationConsent, verif.get("manual_receipt_id")) if verif.get("manual_receipt_id") else None
+            scope = automation_mandates.configuration(project, "github_merge") if project else None
+            key = hashlib.sha256(json.dumps(scope, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest() if scope else ""
+            target = receipt.targets if receipt else {}
+            if (not project or not receipt or receipt.operation != "github_publication"
+                    or receipt.owner_user_id != str(project.owner_user_id) or receipt.project_id != str(project.id)
+                    or key != verif.get("manual_scope_key") or target.get("scope") != scope
+                    or target.get("task_id") != str(tache.id) or target.get("sha") != verif.get("sha")
+                    or target.get("node_id") != verif.get("node_id") or target.get("pr_number") != note.get("pr_number")
+                    or target.get("control_digest") != cms_publication.digest(verif.get("controle_sitemap"))):
+                verif["etat"] = "autorisation_retiree"
+                verif["raison"] = "Relisez cette proposition et confirmez sa fusion sur la cible actuelle."
+                note["verification"] = verif
+                _ecrire_verification(tache.id, note, statut="blocked")
+                return "autorisation_retiree"
+    scheduled_origin = False
+    if (isinstance(verif, dict) and verif.get("etat") == "en_attente"
+            and not verif.get("valide_par_client") and not verif.get("automation")):
+        # The editable note cannot erase the stored origin of a scheduled draft.
+        with DB.session() as db:
+            scheduled_origin = db.scalar(select(automation_mandates.AutomationRun.id).where(
+                automation_mandates.AutomationRun.project_id == str(tache.project_id),
+                automation_mandates.AutomationRun.mode == "content_schedule",
+                automation_mandates.AutomationRun.data["task_id"].as_string() == str(tache.id))) is not None
+    if (not isinstance(verif, dict) or verif.get("etat") != "en_attente"
+            or (not verif.get("fusion_auto") and not verif.get("automation") and not scheduled_origin) or verif.get("publication_id")
+            or verif.get("valide_par_client")):
+        return _reprendre_une_verification_autorisee(tache)
+    binding = verif.get("automation") or {}
+    fence = None
+    try:
+        with DB.session() as db:
+            grant = automation_mandates.verify(db, project_id=tache.project_id, verification=verif, number=note.get("pr_number"))
+        with automation_mandates.fenced(project_id=tache.project_id,
+                mode=binding.get("mode", "github_merge"), mandate_key=binding.get("mandate_key"),
+                request_key=hashlib.sha256(json.dumps([str(tache.project_id), grant.id, str(note.get("pr_number")), verif.get("sha")]).encode()).hexdigest(),
+                data={"task_id": str(tache.id),
+                      "route": cms_consent.public_url(urljoin(grant.config.get("site_url") or "", str(tache.url))),
+                      "pr_url": "https://github.com/%s/pull/%s" % (grant.config["repo"], note.get("pr_number"))}) as fence:
+            result = _reprendre_une_verification_autorisee(tache)
+        if fence.run_id:
+            automation_mandates.finish(fence.run_id,
+                ok=result == "fusionnee" or (not verif.get("fusion_auto") and result in {"verifiee", "non_verifiable"}),
+                reason=fence.reason or result)
+        if not fence.reason:
+            return result
+        reason = fence.reason
+    except correction_execution.ExecutionStopped as exc:
+        reason = exc.reason
+        if fence and fence.run_id:
+            automation_mandates.finish(fence.run_id, reason=reason)
+    except Exception:
+        if fence and fence.run_id:
+            automation_mandates.finish(fence.run_id, reason="interrupted")
+        raise
+    verif["etat"] = "autorisation_retiree" if reason in {"automation_revoked", "automation_target_changed"} else "resultat_a_verifier"
+    verif["raison"] = ("L’autorisation du mode a été retirée ou modifiée. Relisez cette proposition avant de poursuivre."
+                       if reason in {"automation_revoked", "automation_target_changed"} else
+                       "Une tentative a déjà commencé. Vérifiez son résultat sur GitHub avant de poursuivre.")
+    note["verification"] = verif
+    _ecrire_verification(tache.id, note, statut="blocked")
+    return verif["etat"]
+
+
+def _reprendre_une_verification_autorisee(tache: Any) -> str:
     """Reprend UNE pull request en attente. Rend la decision appliquee.
 
     Tout est relu a chaque passage — le depot, le jeton, l'etat des verifications. Rien n'est
@@ -40045,6 +40222,10 @@ def _reprendre_une_verification(tache: Any) -> str:
     # promouvoir / inconnu : dans les deux cas la PR sort du brouillon, mais on ne raconte pas
     # la meme chose. « Aucune verification disponible » n'est PAS « verifie ».
     try:
+        automation_mandates.transport()
+        if verif.get("fusion_auto") or automation_mandates.current():
+            automation_mandates.verify_remote_pr(owner=proprio, repo=nom, number=numero, token=jeton,
+                branch=_project_github_cfg(projet)["branch"], verification=verif)
         _pr_marquer_prete(node_id=str(verif.get("node_id") or ""), token=jeton)
     except Exception as e:
         logger.info("[PR] sortie de brouillon impossible (#%s): %s", numero, e)
@@ -40060,10 +40241,15 @@ def _reprendre_une_verification(tache: Any) -> str:
     if verif.get("fusion_auto") and (decision == "promouvoir"
                                      or (decision == "inconnu" and verif.get("valide_par_client"))):
         try:
-            _github_api_put(
+            automation_mandates.transport()
+            automation_mandates.verify_remote_pr(owner=proprio, repo=nom, number=numero, token=jeton,
+                branch=_project_github_cfg(projet)["branch"], verification=verif)
+            merged = _github_api_put(
                 _github_api_path("repos", proprio, nom, "pulls", str(numero), "merge"),
-                token=jeton, json_body={"merge_method": "squash",
+                token=jeton, json_body={"sha": sha, "merge_method": "squash",
                                         "commit_title": str(note.get("pr_title") or "")[:200] or None})
+            if not isinstance(merged, dict) or merged.get("merged") is not True:
+                raise RuntimeError("La fusion n’a pas été confirmée par GitHub.")
             fusionnee = True
         except Exception as e:
             logger.info("[PR] fusion automatique impossible (#%s): %s", numero, e)
@@ -40239,6 +40425,15 @@ except ImportError:
                             connection_keys as cms_connection_keys, connection_report as cms_connection_report,
                             etat_du_projet as cms_etat_du_projet, router as cms_router)
 app.include_router(cms_router)
+
+try:
+    from .agent_routes import router as agent_router
+    from .cms_publication_routes import router as cms_publication_router
+except ImportError:
+    from backend.agent_routes import router as agent_router
+    from backend.cms_publication_routes import router as cms_publication_router
+app.include_router(agent_router)
+app.include_router(cms_publication_router)
 
 
 customer_activation.install()

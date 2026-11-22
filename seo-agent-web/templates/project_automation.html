@@ -44,6 +44,17 @@
   <p class="muted">{{ tr("Préparation et suivi des corrections GitHub pour {site}", site=project.site_name) }}</p>
 </div>
 
+{% if automation_attention %}
+<section class="card" style="margin-bottom:20px;">
+  <h2>{{ tr("Automatisations à vérifier") }}</h2>
+  {% for run in automation_attention %}
+  <p><strong>{{ tr("Résultat à confirmer") if run.state in ['running', 'uncertain'] else tr("Automatisation arrêtée") }}</strong>{% if run.data.route %} · <span class="mono">{{ run.data.route }}</span>{% endif %}</p>
+  <p class="muted small">{{ tr("La préparation a commencé mais son résultat n’est pas confirmé. Vérifiez son état avant de la relancer.") if run.state in ['running', 'uncertain'] else tr("L’automatisation s’est arrêtée avant une modification.") }}</p>
+  {% if run.data.pr_url %}<a class="btn small" href="{{ run.data.pr_url }}" target="_blank" rel="noopener noreferrer">{{ tr("Consulter la proposition sur GitHub") }}</a>{% endif %}
+  {% endfor %}
+</section>
+{% endif %}
+
 {# ── Stats ── #}
 {% if total > 0 %}
 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
@@ -79,8 +90,8 @@
         <div style="font-weight:600;font-size:13px;">{{ github_cfg.repo }}</div>
         <div class="muted small">{{ tr("Branche :") }} <span class="mono">{{ github_cfg.branch }}</span></div>
       </div>
-      <span class="badge {{ 'ok' if github_cfg.mode == 'auto' else 'notice' }}" style="font-size:11px;">
-        {{ tr('Full Access · automatisation configurée') if github_cfg.mode == 'auto' else tr('Relecture sur GitHub') }}
+      <span class="badge {{ 'ok' if github_cfg.mode == 'auto' and github_auto_approved else 'notice' }}" style="font-size:11px;">
+        {{ tr('Full Access · automatisation configurée') if github_cfg.mode == 'auto' and github_auto_approved else tr('Accord à confirmer') if github_cfg.mode == 'auto' else tr('Relecture sur GitHub') }}
       </span>
       <span style="flex:1"></span>
       <a class="btn small" href="/projects/{{ slug }}/settings/crawl#github-section">{{ tr("Modifier") }}</a>

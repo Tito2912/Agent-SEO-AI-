@@ -8,6 +8,7 @@
 <div class="content-journey-page">
   <div class="page-header">
     <h1>{{ tr("Contenu") }}</h1>
+    <a class="btn" href="/projects/{{ slug }}/content/publication">{{ tr("Publier dans mon CMS") }}</a>
     <p class="muted">
       {{ project.site_name }} · {{ tr("rédigez un article à relire, puis à publier dans votre site") }}
     </p>
@@ -195,6 +196,7 @@
           <p id="c-destination" class="muted small">{{ tr("Article en Markdown et HTML à publier vous-même.") }}</p>
           <p id="c-cout" class="muted small" role="status" aria-live="polite">{{ tr("{n} version : {n} article décompté du quota.", n=1) }}</p>
         </div>
+        <label id="c-github-consent-line" {% if not a_depot %}hidden{% endif %}><input id="c-github-consent" type="checkbox"> {{ tr("Je demande la création de cette proposition de contenu sur GitHub.") }}</label>
         <div class="modal-actions between">
           <span class="muted small">
             {{ tr_html('Besoin d\'idées ? <a href="{url}">Concurrents</a> liste des sujets repérés chez eux et absents des pages analysées de votre site.', url='/projects/' ~ slug ~ '/competitors') }}
@@ -239,12 +241,12 @@
     {% if a_depot %}
     <section class="card">
     <details class="content-automation" {% if auto.enabled %}open{% endif %}>
-      <summary>{{ tr("Rédaction automatique") }} · <span id="c-auto-summary">{{ tr('activée') if auto.enabled else tr('désactivée') }}</span></summary>
+      <summary>{{ tr("Rédaction automatique") }} · <span id="c-auto-summary">{{ tr('activée') if auto.enabled and auto_approved else tr('À confirmer') if auto.enabled else tr('désactivée') }}</span></summary>
       <div>
       <div class="card-title-row">
         <h2 style="margin:0;">{{ tr("Mode automatique") }}</h2>
         <span class="muted small">{{ tr("État enregistré") }} :
-          <span id="c-auto-badge" class="badge{% if auto.enabled %} ok{% endif %}">{{ tr("allumé") if auto.enabled else tr("éteint") }}</span>
+          <span id="c-auto-badge" class="badge{% if auto.enabled and auto_approved %} ok{% endif %}">{{ tr("allumé") if auto.enabled and auto_approved else tr("Accord à confirmer") if auto.enabled else tr("éteint") }}</span>
         </span>
       </div>
 
@@ -338,9 +340,9 @@
             <span><strong>{{ tr("Automatique · fusion après contrôles") }}</strong>
               <span class="muted small">{{ tr("— la pull request est fusionnée seule dès que les vérifications de votre dépôt passent. Sans vérification, ou si elles échouent, elle attend votre validation et un e-mail vous prévient.") }}</span></span>
           </label>
-          <label class="checkbox automation-consent" id="c-auto-consent-wrap" {% if auto.publication != 'auto' %}hidden{% endif %} style="margin-top:6px;">
-            <input type="checkbox" id="c-auto-consent" {% if auto.enabled and auto.publication == 'auto' %}checked{% endif %} />
-            {{ tr("J’ai compris : les articles seront publiés sans relecture humaine et peuvent contenir des erreurs ; je reste responsable de ce qui est publié sur mon site (CGU, articles 6 et 7).") }}
+          <label class="checkbox automation-consent" id="c-auto-consent-wrap" style="margin-top:6px;">
+            <input type="checkbox" id="c-auto-consent" />
+            {{ tr("J’autorise la rédaction planifiée avec ces réglages jusqu’à sa désactivation. Avec la publication automatique, les articles sont fusionnés sans relecture humaine dès que les contrôles du dépôt passent ; ils peuvent contenir des erreurs, et je reste responsable de ce qui est publié sur mon site (CGU, articles 6 et 7).") }}
           </label>
         </fieldset>
 
@@ -1057,11 +1059,22 @@
         if (q) { sujet.value = q; sujet.dispatchEvent(new Event('input')); sujet.focus(); }
       } catch (e) { /* URL exotique : le formulaire reste vide, ce n'est pas une panne */ }
 
+      function resetCodeConsent() {
+        document.getElementById('c-github-consent').checked = false;
+        document.getElementById('c-github-consent-line').hidden = mode() !== 'github';
+      }
+      document.querySelectorAll('input[name="c-mode"]').forEach(function (input) { input.addEventListener('change', resetCodeConsent); });
+      sujet.addEventListener('input', resetCodeConsent);
+      route.addEventListener('input', resetCodeConsent);
+      resetCodeConsent();
       btn.addEventListener('click', function () {
         if (mode() === 'contenu') { redigerArticle(); return; }
+        var consentement = document.getElementById('c-github-consent');
+        if (!consentement.checked) { say({{ tr("Cochez votre accord pour créer cette proposition sur GitHub.")|tojson }}, 'error'); consentement.focus(); return; }
         var s = (sujet.value || '').trim(), r = (route.value || '').trim();
         if (!s || !r) { say({{ tr("Renseignez un sujet et une adresse.")|tojson }}, 'error'); (!s ? sujet : route).focus(); return; }
         var langues = cochees();
+        consentement.checked = false;
         writing(true);
         btn.textContent = {{ tr("Rédaction…")|tojson }};
         say(langues.length > 1
@@ -1071,7 +1084,7 @@
         suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/draft', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sujet: s, route: r, langues: langues, suivi: jeton,
+          body: JSON.stringify({ sujet: s, route: r, langues: langues, suivi: jeton, consent: true,
                                  taille: choixStyle('c-taille'), ton: choixStyle('c-ton') })
         })
           .then(readResponse)
@@ -1118,6 +1131,8 @@
       var autoRefresh = document.getElementById('c-auto-refresh');
       var autoDirty = document.getElementById('c-auto-dirty');
       var autoBusy = false, autoUncertain = false;
+      var autoApproved = {{ auto_approved|default(false)|tojson }};
+      var autoSaved = {{ auto|tojson }};
       var autoApi = '/api/projects/' + encodeURIComponent(slug) + '/content/auto';
       function autoControls() {
         autoFields.disabled = autoBusy || autoUncertain;
@@ -1156,11 +1171,13 @@
       }
       function autoConfirmed(d, replaceChoices) {
         var s = d.settings;
+        autoApproved = d.automatic_approved === true;
+        autoSaved = JSON.parse(JSON.stringify(s));
         autoUncertain = false;
-        document.getElementById('c-auto-summary').textContent = s.enabled ? {{ tr("activée")|tojson }} : {{ tr("désactivée")|tojson }};
+        document.getElementById('c-auto-summary').textContent = s.enabled ? (autoApproved ? {{ tr("activée")|tojson }} : {{ tr("À confirmer")|tojson }}) : {{ tr("désactivée")|tojson }};
         var badge = document.getElementById('c-auto-badge');
-        badge.className = s.enabled ? 'badge ok' : 'badge';
-        badge.textContent = s.enabled ? {{ tr("allumé")|tojson }} : {{ tr("éteint")|tojson }};
+        badge.className = s.enabled && autoApproved ? 'badge ok' : 'badge';
+        badge.textContent = s.enabled ? (autoApproved ? {{ tr("allumé")|tojson }} : {{ tr("Accord à confirmer")|tojson }}) : {{ tr("éteint")|tojson }};
         var prochain = document.getElementById('c-auto-prochain');
         prochain.hidden = !d.prochain;
         prochain.textContent = d.prochain ? fill({{ tr("Prochaine page : {date}")|tojson }}, {date: d.prochain}) : '';
@@ -1168,7 +1185,7 @@
           autoBox.checked = s.enabled;
           ['section', 'taille', 'ton', 'frequence', 'jour', 'heure', 'fuseau'].forEach(function (key) { document.getElementById('c-auto-' + key).value = s[key]; });
           document.querySelectorAll('input[name="c-auto-publication"]').forEach(function (radio) { radio.checked = radio.value === s.publication; });
-          document.getElementById('c-auto-consent-wrap').hidden = s.publication !== 'auto';
+          document.getElementById('c-auto-consent-wrap').hidden = false;
           autoLanguesChoisies = s.langues.slice();
           document.querySelectorAll('#c-auto-langues input').forEach(function (box) { box.checked = s.langues.indexOf(box.value) >= 0; });
           autoDirty.hidden = true;
@@ -1188,7 +1205,7 @@
         radio.addEventListener('change', function () {
           resetAutoConsent();
           var wrap = document.getElementById('c-auto-consent-wrap');
-          if (wrap) wrap.hidden = radio.value !== 'auto' || !radio.checked;
+          if (wrap) wrap.hidden = false;
         });
       });
       if (autoFields) {
@@ -1215,12 +1232,6 @@
         if (autoBusy || autoUncertain) return;
         var publication = (document.querySelector('input[name="c-auto-publication"]:checked') || {}).value || 'verification';
         var consentBox = document.getElementById('c-auto-consent');
-        if (autoBox.checked && publication === 'auto' && consentBox && !consentBox.checked) {
-          autoStatus.className = 'error small';
-          autoStatus.textContent = {{ tr("Confirmez que vous acceptez la publication automatique.")|tojson }};
-          consentBox.focus();
-          return;
-        }
         var languageBoxes = Array.from(document.querySelectorAll('#c-auto-langues input'));
         // The language list can still be loading: preserve choices not represented in it.
         var languages = languageBoxes.filter(function (box) { return box.checked; }).map(function (box) { return box.value; });
@@ -1236,6 +1247,13 @@
             publication: publication,
             consent: !!(consentBox && consentBox.checked)
           };
+        var keys = ['section', 'taille', 'ton', 'frequence', 'jour', 'heure', 'fuseau', 'publication', 'langues'];
+        var same = autoSaved && autoSaved.enabled && keys.every(function (key) { return JSON.stringify(autoSaved[key]) === JSON.stringify(body[key]); });
+        var restriction = autoApproved && autoSaved && autoSaved.publication === 'auto' && body.publication === 'verification' && keys.filter(function (key) { return key !== 'publication'; }).every(function (key) { return JSON.stringify(autoSaved[key]) === JSON.stringify(body[key]); });
+        if (body.enabled && !(autoApproved && same) && !restriction && !body.consent) {
+          autoMessage({{ tr("Confirmez que vous autorisez ce mode de rédaction planifiée.")|tojson }}, true);
+          consentBox.focus(); return;
+        }
         autoBusy = true; autoControls();
         autoMessage({{ tr("Enregistrement…")|tojson }});
         fetch(autoApi, {
@@ -1252,6 +1270,7 @@
               return;
             }
             autoConfirmed(d, true);
+            resetAutoConsent();
             autoStatus.className = 'ok small';
             autoStatus.textContent = d.settings.enabled
               ? fill({{ tr("Mode automatique allumé sur {section}.")|tojson }}, {section: d.settings.section})

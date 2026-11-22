@@ -12,7 +12,7 @@ L'offre Free comporte des quotas, une mise en veille après inactivité et un st
 
 Le service démarre un vrai WordPress / Yoast avec PHP natif et le plugin SQLite Database Integration. Les archives officielles sont téléchargées et vérifiées par SHA-256 à la construction de l'image. Le démarrage ne télécharge aucun composant. Le frontal Node écoute immédiatement le port Render et répond HTTP 503 jusqu'à la fin de l'installation et au contrôle réel du HTML WordPress. Les logs indiquent les étapes sans identifiants. PHP écoute uniquement sur boucle locale. Le connecteur Noyaru conserve ses contrôles DNS/TLS. Versions : Node 24.22.0, PHP branche 8.3, WordPress 6.9.10, Yoast 28.7, SQLite Integration 2.2.23. Cette base SQLite est réservée à la démonstration, hors de la racine publique.
 
-Le site contient une page fictive. Le mot de passe administrateur est aléatoire et remplacé ; la passerelle bloque l'administration, la connexion interactive, XML-RPC et les autres écritures. Deux mots de passe d'application jetables servent au test éditeur et au refus des droits insuffisants. Les cookies ne sont pas transmis à WordPress. Les courriels et cron sont désactivés ; les appels HTTP externes de WordPress sont bloqués. Le processus PHP ne reçoit pas la clé Bearer de l'opérateur. La page reste indexable pour tester les anomalies correspondantes : **n'ajouter aucune donnée personnelle ni contenu client**.
+Le site contient une page fictive. Le mot de passe administrateur est aléatoire et remplacé ; la passerelle bloque l'administration, la connexion interactive, XML-RPC et les écritures hors scénario. Deux mots de passe d'application jetables servent au test éditeur et au refus des droits insuffisants. Les cookies ne sont pas transmis à WordPress. Les courriels et cron sont désactivés ; les appels HTTP externes de WordPress sont bloqués. Le processus PHP ne reçoit pas la clé Bearer de l'opérateur. La page reste indexable pour tester les anomalies correspondantes : **n'ajouter aucune donnée personnelle ni contenu client**.
 
 Après deux heures, la page, l'API et le manifeste renvoient HTTP 410. La santé reste HTTP 200 pour éviter un redémarrage automatique lié à cette expiration. Cela ne supprime ni ne suspend le service Render. Tout redémarrage ou retour de veille peut recréer le site avec de nouveaux identifiants : reprendre avec un nouveau manifeste, une nouvelle connexion et une nouvelle analyse. Supprimer explicitement le service après la recette.
 
@@ -64,6 +64,27 @@ Utiliser le **compte Noyaru de test existant** et ses quotas disponibles. Ne pas
 Si le `boot_id` change, si le site dort ou si le HTTP 410 apparaît, arrêter et recommencer avec une incarnation neuve. Une restauration sur une autre incarnation n'est pas une preuve valable.
 
 Rapport à conserver : date, commit Noyaru déployé, versions WordPress/Yoast, `boot_id`, étapes réussies/échouées, identifiants d'analyse et de reçus sans secrets, restauration et nettoyage. **État initial de cette livraison : recette HTTPS publique non exécutée.**
+
+## Recette article et média
+
+Déployer le candidat de la passerelle sur le service WordPress de démonstration
+et utiliser une instance Noyaru de test qui inclut le parcours article CMS.
+Les opérations utilisent les comptes d’application jetables et le serveur
+WordPress vérifie leurs droits. La passerelle ouvre les brouillons d’articles
+dont le slug commence par `noyaru-demo-`, leur relecture REST, leur publication
+et le transfert de WebP. Les corps d’articles et les WebP sont limités à 2 Mio.
+Le PHP natif enregistre les images dans l’état temporaire hors de la racine
+WordPress et sert les WebP sous `/wp-content/uploads/`.
+
+1. Préparer un article fictif et un WebP dans le projet de démonstration. Choisir
+   un titre qui produit un slug de la forme `noyaru-demo-article`.
+2. Autoriser le transfert média, puis la création du brouillon. Vérifier ces
+   deux reçus et l’inaccessibilité publique du brouillon.
+3. Autoriser la publication séparément. Vérifier le troisième reçu, le texte
+   et l’image dans le HTML public HTTPS, puis comparer le SHA-256 de l’image
+   publique à celui du WebP envoyé, sans authentification.
+4. Vérifier que le compte abonné se voit refuser les écritures. Appliquer les
+   mêmes contrôles de `boot_id`, d’expiration et de nettoyage qu’au scénario Yoast.
 
 ## Vérifier le paquet localement
 

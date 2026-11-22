@@ -53,7 +53,10 @@ UPDATED: dict[str, date] = {
     # 04/11/2026 : Wix puis Webflow connectés (correction décomptée, accès confié : clé API, jeton
     # de site, enregistrement après validation) ; la confidentialité les nomme parmi les prestataires.
     # 14/11/2026 : article 1, capital social de 1 € (celui des statuts) au lieu de 10 000 €.
-    "terms": date(2026, 11, 14),
+    # 20/11/2026 : agent multi-CMS (PR #95) : publication d'articles dans le CMS, accord exprès
+    # avant toute modification du site, case unique des modes automatiques, preuves d'accord
+    # gardées cinq ans. Mise en ligne le 22/11/2026.
+    "terms": date(2026, 11, 22),
     # 02/11/2026 : Telegram (notifications du proprietaire) et Google Analytics (mesure d'audience
     # du site public, apres consentement), chacun nomme quand il est configure.
     # 05/11/2026 : Cloudflare Turnstile (captcha du formulaire d'inscription), nomme quand l'une de
@@ -64,7 +67,9 @@ UPDATED: dict[str, date] = {
     # stocke en Allemagne, traitement possible aux Etats-Unis (article 6.1 de son contrat).
     # 14/11/2026 : declaration « Limited Use » des donnees Google (Gmail du SAV), exigee par Google
     # pour valider l'acces Gmail, avec sa phrase anglaise mot pour mot sur les deux pages.
-    "privacy": date(2026, 11, 14),
+    # 20/11/2026 : preuves d'accord gardees cinq ans ; Wix et Webflow recoivent les articles valides
+    # (PR #95). Mise en ligne le 22/11/2026.
+    "privacy": date(2026, 11, 22),
     # 14/11/2026 : capital social de 1 € (celui des statuts) au lieu de 10 000 €.
     "legal_notice": date(2026, 11, 14),
 }
@@ -72,7 +77,7 @@ UPDATED: dict[str, date] = {
 # Version de l'avertissement montré avant d'activer une fusion ou une publication automatique
 # (CGU, articles 6 et 7 ; crawl_settings.html, corrections.html, content.html). Elle est gardée
 # dans le journal d'audit avec chaque activation : à changer quand ce texte change.
-AUTO_MODE_WARNING_VERSION = "2026-10-21"
+AUTO_MODE_WARNING_VERSION = "2026-11-22"
 
 # L'accord de traitement des données (DPA) proposé aux clients professionnels (backend/dpa.py) :
 # None tant qu'E-Com Shop n'a pas décidé de le publier (docs/legal/LEGAL-VALIDATION-REQUIRED.md), et alors

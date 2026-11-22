@@ -455,9 +455,9 @@ def test_duplicate_canonical_endpoints_are_free_bounded_and_require_human_review
     monkeypatch.setattr(m, "_project_github_cfg", lambda *a, **k: {"repo": "review/site", "branch": "main", "mode": "auto"})
     verification = []
     original = m._bloc_verification
-    def capture(data, *, fusion_auto):
+    def capture(data, *, fusion_auto, **kwargs):
         verification.append(fusion_auto)
-        return original(data, fusion_auto=fusion_auto)
+        return original(data, fusion_auto=fusion_auto, **kwargs)
     monkeypatch.setattr(m, "_bloc_verification", capture)
     def forbidden(*a, **k):
         pytest.fail("A canonical convention must not call a model")
@@ -572,9 +572,9 @@ def test_sitemap_noindex_endpoints_delist_only_verified_entries_and_require_revi
     state["report"] = {"issues": {key: {"count": len(impacted), "examples": impacted}}, "pages": rows}
     monkeypatch.setattr(m, "_project_github_cfg", lambda *a, **k: {"repo": "review/site", "branch": "main", "mode": "auto"})
     verification, original = [], m._bloc_verification
-    def capture(data, *, fusion_auto):
+    def capture(data, *, fusion_auto, **kwargs):
         verification.append(fusion_auto)
-        return original(data, fusion_auto=fusion_auto)
+        return original(data, fusion_auto=fusion_auto, **kwargs)
     monkeypatch.setattr(m, "_bloc_verification", capture)
     def forbidden(*a, **k):
         pytest.fail("No model or inferred target for a noindex sitemap repair")
@@ -618,9 +618,9 @@ def test_sitemap_error_endpoints_delist_only_still_missing_entries_with_human_re
     monkeypatch.setattr(m, "_sitemap_error_status", lambda url: 200 if case == "stale_http" else 404)
     monkeypatch.setattr(m, "_project_github_cfg", lambda *a, **k: {"repo": "review/site", "branch": "main", "mode": "auto"})
     verification, original = [], m._bloc_verification
-    def capture(data, *, fusion_auto):
+    def capture(data, *, fusion_auto, **kwargs):
         verification.append(fusion_auto)
-        return original(data, fusion_auto=fusion_auto)
+        return original(data, fusion_auto=fusion_auto, **kwargs)
     monkeypatch.setattr(m, "_bloc_verification", capture)
     def forbidden(*a, **k):
         pytest.fail("No model, inferred target or page creation for missing sitemap entries")

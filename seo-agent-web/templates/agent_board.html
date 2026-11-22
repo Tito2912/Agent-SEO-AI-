@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block title %}{{ tr("Plan d’action") }} — {{ project.site_name }}{% endblock %}
+{% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span>{{ tr("Plan d’action") }}</span>{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{{ tr("Vos prochaines actions") }}</h1><p class="muted">{{ tr("Trois priorités au plus, expliquées à partir des données disponibles de votre site.") }}</p></div>
+{% if err %}<p class="alert error" role="alert">{{ tr(err) }}</p>{% elif msg %}<p class="alert ok" role="status">{{ tr(msg) }}</p>{% endif %}
+<section class="card">
+  <h2>{{ tr("Ce qui mérite votre attention") }}</h2>
+  {% for action in actions %}
+  <article class="card">
+    <h3>{{ tr(action.title) }}</h3>
+    {% if action.page_url %}<p class="muted" style="overflow-wrap:anywhere">{{ action.page_url }}</p>{% endif %}
+    <p>{{ tr(action.reason) }}</p>
+    {% if action.uncertainty %}<p class="muted small">{{ tr(action.uncertainty) }}</p>{% endif %}
+    <div class="actions"><a class="btn primary" href="{{ action.next_href }}">{{ tr("Préparer cette action") }}</a>
+      <form method="post" action="/projects/{{ slug }}/agent/decision"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><input type="hidden" name="action_key" value="{{ action.action_key }}"><input type="hidden" name="state" value="dismissed"><button class="btn">{{ tr("Écarter cette proposition") }}</button></form>
+    </div>
+  </article>
+  {% else %}<p class="muted">{{ tr("Les données disponibles ne suffisent pas à proposer une action pertinente. Analysez le site ou précisez vos pages importantes.") }}</p><a class="btn" href="/projects/{{ slug }}">{{ tr("Retrouver mon analyse") }}</a>{% endfor %}
+  <form method="post" action="/projects/{{ slug }}/agent/refresh"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><button class="btn">{{ tr("Actualiser avec Search Console") }}</button></form>
+  {% if search.ok %}<p class="muted small">{{ tr("Données de recherche") }} : {{ search.start_date }} → {{ search.end_date }}. {{ search.data_delay_hint or '' }}</p>{% else %}<p class="muted small">{{ tr("Sans données Search Console récentes, les propositions reposent sur l’analyse et vos priorités.") }} <a href="/projects/{{ slug }}/performance">{{ tr("Vérifier la connexion") }}</a></p>{% endif %}
+</section>
+<details class="card"><summary>{{ tr("Votre activité et vos pages importantes") }}</summary>
+<form method="post" action="/projects/{{ slug }}/agent/context" class="cms-form">
+  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}">
+  <label>{{ tr("Votre activité") }}<input name="activity" maxlength="500" value="{{ profile.activity or '' }}"></label>
+  <label>{{ tr("Services et produits à privilégier, un par ligne") }}<textarea name="services" maxlength="3000">{{ (profile.services or []) | join('\n') }}</textarea></label>
+  <label>{{ tr("Adresses des pages importantes, une par ligne") }}<textarea name="priority_urls" maxlength="12000">{{ (profile.priority_urls or []) | join('\n') }}</textarea></label>
+  <button class="btn" type="submit">{{ tr("Enregistrer mes priorités") }}</button>
+</form></details>
+<section class="card"><h2>{{ tr("Publications et suivi par page") }}</h2>
+  <a class="btn" href="/projects/{{ slug }}/agent/results">{{ tr("Mesurer les résultats par page") }}</a>
+  <a class="btn" href="/projects/{{ slug }}/content/publication">{{ tr("Publier dans mon CMS") }}</a>
+  {% for publication in publications %}<p><a href="/projects/{{ slug }}/content/publication/{{ publication.id }}">{{ publication.data.article.title }}</a> · {{ publication.platform }} · {{ tr({'prepared':'Aperçu à relire','creating':'Enregistrement en cours','draft':'Brouillon enregistré','publishing':'Publication en cours','published':'Publication confirmée par le CMS','uncertain':'Résultat à confirmer','failed':'Opération refusée'}.get(publication.state,'À vérifier')) }}</p>{% endfor %}
+  {% for event in events %}<p>{{ event.created_at }} · {{ event.page_url }} · {{ tr("Publication acceptée par le CMS ; présence publique et résultat SEO à contrôler.") }}</p>{% endfor %}
+  {% if not events and not publications %}<p class="muted">{{ tr("Les publications préparées ici apparaîtront dans cet historique. Aucune évolution de trafic n’est déduite d’une publication.") }}</p>{% endif %}
+</section>
+{% if dismissed %}<details class="card"><summary>{{ tr("Propositions écartées") }} ({{ dismissed | length }})</summary>{% for choice in dismissed %}<form method="post" action="/projects/{{ slug }}/agent/decision"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><input type="hidden" name="action_key" value="{{ choice.action_key }}"><input type="hidden" name="state" value="reset"><button class="btn">{{ tr("Réexaminer cette proposition") }}</button></form>{% endfor %}</details>{% endif %}
+{% endblock %}

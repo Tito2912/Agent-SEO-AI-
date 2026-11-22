@@ -19,6 +19,7 @@ define('WP_DEBUG', false);
 define('WP_DEBUG_DISPLAY', false);
 define('DISABLE_WP_CRON', true);
 define('DISALLOW_FILE_MODS', true);
+define('DISALLOW_UNFILTERED_HTML', true);
 define('AUTOMATIC_UPDATER_DISABLED', true);
 define('WP_HTTP_BLOCK_EXTERNAL', true);
 define('WP_MEMORY_LIMIT', '128M');

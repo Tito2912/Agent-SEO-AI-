@@ -232,3 +232,27 @@ def test_a_project_deleted_during_provider_read_cannot_report_success(depot, mon
     monkeypatch.setattr(m, "_github_api_get", provider)
     assert connect(depot, mode="auto", consent=True).status_code == 404
     assert receipts(depot["slug"]) == []
+
+
+@pytest.mark.parametrize("operation", ["activate", "disable"], ids=["activation", "withdrawal"])
+def test_durable_evidence_failure_rolls_back_mode_and_grant(depot, operation):
+    from backend.models import AutomationMandate, CmsPublicationConsent
+    assert connect(depot, mode="review" if operation == "activate" else "auto", consent=True).status_code == 200
+    before = settings(depot["project_id"])
+    with m.DB.session() as db:
+        previous = db.scalar(select(AutomationMandate).where(AutomationMandate.project_id == depot["project_id"]))
+        old_id = previous.id if previous else None
+        receipt_ids = set(db.scalars(select(CmsPublicationConsent.id)))
+    def unavailable(_mapper, _connection, row):
+        if row.project_id == depot["project_id"]:
+            raise OperationalError("proof unavailable", {}, RuntimeError("injected local storage failure"))
+    event.listen(CmsPublicationConsent, "before_insert", unavailable)
+    try:
+        result = connect(depot, mode="auto" if operation == "activate" else "review", consent=True)
+    finally:
+        event.remove(CmsPublicationConsent, "before_insert", unavailable)
+    assert result.status_code == 503 and settings(depot["project_id"]) == before
+    with m.DB.session() as db:
+        grant = db.scalar(select(AutomationMandate).where(AutomationMandate.project_id == depot["project_id"]))
+        assert (grant.id if grant else None) == old_id
+        assert set(db.scalars(select(CmsPublicationConsent.id))) == receipt_ids

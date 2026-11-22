@@ -1,0 +1,332 @@
+{
+  "date_utc": "2026-11-22T08:40:55.480298+00:00",
+  "baseline_remote": "18cda54a65991e64b89fe836a67a3b33fcc7d8ce",
+  "main_integrated": "ea5d7949c1a0c8463ae096b195293c7dcb7b01db",
+  "approved_legal_integrated": "66c20a60077fb36a8a7dd8a5d254bc229287a4cc",
+  "scope": "fictional local accounts and loopback WordPress only; no deployment or external CMS write",
+  "sources": {
+    "backend/app.py": "34210fb9ec32dd859953aef0e5bd6ebe1afb92d2d9fdb77291948e3843305eb5",
+    "backend/cms_content_adapters/base.py": "3e21e5974509b0864fd0921c0facf665d628a2f23e916e053f8e9fdb3238373c",
+    "backend/cms_content_adapters/ghost.py": "6880fe1fc43bc9ff77d012db61b0f1e3ae4e1036f79596fb4dae81e83c57952c",
+    "backend/cms_content_adapters/html_safe.py": "a7dddda6ee12cb685b5f7dafabdeeb6022fddb3f573a10433d9159420fe56fee",
+    "backend/cms_content_adapters/prestashop.py": "a6a8d8acef0df1b516dfa29dafc33dc382f5634cc88e3b06ab23940ee432ba1f",
+    "backend/cms_content_adapters/shopify.py": "e0dafe9801e01ba20141fc17b72178ac043d0812058f9ecba1900eda32cc2944",
+    "backend/cms_content_adapters/webflow.py": "703edd26bbbf47ec214e73ee07b2179d208f047f54d9022900611b17ff613576",
+    "backend/cms_content_adapters/wix.py": "1eed9ec4883ec3d08e3d9debc50597d6cc4625f4d31bc112ecc94743afae905c",
+    "backend/cms_content_adapters/wordpress.py": "f25c691beffba3925e8cc1360086aa5880380e98586dffc5024cf93b1b5bef07",
+    "backend/cms_content_transport.py": "55d649db28016f8ae433d6d5a40efc592debe0f99a6e603acab17245a4c59294",
+    "backend/cms_media_workflow.py": "e2119f04474b9ed1cf524d95d16d7994a552b3e474c8f78697e8749ed55a86be",
+    "backend/cms_publication.py": "3428802b0135a5246e46f927b64a15fc422e371f4a900bf5d8e5b378da3b784a",
+    "backend/cms_publication_routes.py": "0799dede228714f66421608598a6207dadefa56845eceba16e618f3bc71a0d2e",
+    "backend/cms_routes.py": "3c4e16b0722ced97b7682fc0364bce161c78084527120068cfa7aa4810490c90",
+    "backend/content_library.py": "1bacce2ad8d6a2211c5697ef47f4c3717245f5569593813221908da322274f51",
+    "backend/legal.py": "1644a0d09c8bbbdfaf8d8b9bfb472c3393f1a771804e5d44bad4cd5ebbc3e022",
+    "locales/en.json": "71ea42dea4ca5d6bcb3ec148db783aa8479bb8fdeeda027ad0a1dae33a188008",
+    "ops/wordpress-lab/README.md": "d4ae19367ef82db888863c94b3efdae884b630689411ffefd49108c0e684eeee",
+    "ops/wordpress-lab/check.py": "fb9d9bc577f252a2e981965715747815dcf5b542d163a7c5a5eea3fba0ad6ee3",
+    "templates/cms_batch.html": "342c9e31e18cd24ba9fa0d10b228606646022a4ade8825517891f2e0cebb76cc",
+    "templates/cms_change.html": "35cdad0aa6a38b32ea7dd67852421a0e4ea7f2207c1f49072bb78198fcfb5ff5",
+    "templates/content.html": "c71ccf920293255b036da1a7cdbb332f6791c51ff2f76ad6d354f20105fa6c1d",
+    "templates/privacy_public.html": "cac44d0819ca1b98d05569b0a0a2372aeddee72001b66dc0444c161a7ef2c1c3",
+    "templates/privacy_public_en.html": "6ca90d67f0c80dc3b40a93ca955939412645b33f5c2f0b7d0311a994a416b0bf",
+    "templates/terms_public.html": "eaacbf69af5b3a19bfd2efbe8711be6a920f81ef7f785dacfa4907e414a0faf9",
+    "templates/terms_public_en.html": "c3a3d4efcc51cf126c1ceac0b17914535a01828d7956effc1f9a7fe37e85e086",
+    "tests/test_agent_multicms_journey.py": "8c08b3296a69fb3e325914fbcba354d7e9019abc2664190571cdf7cc3563f819",
+    "tests/test_cms_content_media.py": "a6c66eeb2a4f8a33a7d21e40805ca780c982b49f312974c05a807c13f5fb9139",
+    "tests/test_cms_integrations.py": "216323f0f9974b90c9b6e5731ec386d877d14c77e87be8d6e736bb4bbf42e887",
+    "tests/test_cms_media_workflow.py": "d002fc8bbe0520ee065f39e73fb4162802dbc96b9e881a8e7e69ddf662a4de8d",
+    "tests/test_cms_real_article_format.py": "7857aec5bfd58319c077b1ce759689c0d7ee6fa614cb612a3f8c819c7e6ec82f",
+    "tests/test_un_article_ne_porte_aucun_code_actif.py": "ca1b019c53f6ab797b88dcf2f97970d398829188f06100ed4ee1d9eed58c5b57",
+    "tests/test_wordpress_lot_d_une_anomalie.py": "c94cf92f5b86512206a340928e4ab1166a3653eb88ec8ab437f2cc951f1eaa9b",
+    "tests/test_la_confidentialite_nomme_chaque_tiers.py": "afd36d993d81ccdb4f1cbabecfbbc20f863f76cc1cf8cbc249300ccf4a4a39a1"
+  },
+  "wordpress": {
+    "wordpress": "6.9.12",
+    "yoast": "28.7",
+    "checks": [
+      "Identité, droits et schémas Yoast natifs",
+      "Compte sans droits refusé",
+      "meta_description : aperçu sans écriture",
+      "meta_description : une seule écriture, résultat visible dans le HTML WordPress",
+      "meta_description : résolution confirmée à partir du HTML réel",
+      "meta_description : rétablissement confirmé dans le CMS et la page",
+      "seo_title : aperçu sans écriture",
+      "seo_title : une seule écriture, résultat visible dans le HTML WordPress",
+      "seo_title : résolution confirmée à partir du HTML réel",
+      "seo_title : rétablissement confirmé dans le CMS et la page",
+      "Modification externe : aperçu périmé bloqué sans écriture supplémentaire",
+      "Déconnexion : anciens aperçus bloqués",
+      "Article REST natif : aperçu sans écriture, deux accords, brouillon réel puis HTML public, aucun doublon",
+      "Article REST natif : modification externe refusée avant publication",
+      "Article Markdown réel : intertitre, tableau aligné et image transférée une fois, trois accords distincts, titre/H1 sans doublon",
+      "Image publique WebP : octets SHA-256 et dimensions identiques, accessible sans authentification"
+    ],
+    "native_api_requests": 32,
+    "native_api_writes": 6,
+    "native_content_requests": 41,
+    "native_content_writes": 7,
+    "scope": "WordPress local réel ; transport loopback de test, aucun site client ni HTTPS public",
+    "outcome": "passed",
+    "media": {
+      "sha256": "c00293c5914eee6bab0ef78d3af8764ea829c53bbc02f99851bcf9a6dd0bf286",
+      "bytes": 92,
+      "dimensions": [
+        128,
+        96
+      ]
+    }
+  },
+  "wordpress_log_sha256": "e315202ea2ee9b2067a3623124398246222cd9137c542c34a64ca711314c9d4b",
+  "tests": {
+    "journey_transport_media_consents_rendering": {
+      "passed": 308,
+      "log_sha256": "313f5caefebc12d03ff6d586e9a27082cf30347cd2dec553490f8871601f71b1"
+    },
+    "adapters_modes_legal": {
+      "passed": 248,
+      "log_sha256": "74dc1f13295befe5743132b100b80866ca8b9228bfbd1c5717b14a6a91d3a9e2"
+    },
+    "note": "Four disjoint groups (308+248+143+16=715). Native and browser snapshots retained separately. Final CI must be checked on the latest published head.",
+    "legacy_cms_paths": {
+      "passed": 143,
+      "log_sha256": "1a76aced7275a19c4809b399b35ed46e11386cec85712f5023a4ee755225b943"
+    },
+    "privacy_inventory": {
+      "passed": 16,
+      "log_sha256": "9734be1777c58bf7a4067db1759249b26d91d51eec5bb55af28bd2460a6867de"
+    }
+  },
+  "browser": {
+    "data": "fictional only",
+    "external_requests": [],
+    "checks": [
+      {
+        "language": "fr",
+        "viewport": [
+          1440,
+          1100
+        ],
+        "page": "single",
+        "http": 200,
+        "unchecked": true,
+        "text": "J’autorise cette modification sur mon site après relecture de l’aperçu.",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "fr-1440-single.png"
+      },
+      {
+        "language": "fr",
+        "viewport": [
+          1440,
+          1100
+        ],
+        "page": "batch",
+        "http": 200,
+        "unchecked": true,
+        "text": "J’autorise les modifications sélectionnées après relecture de ce lot.",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "fr-1440-batch.png"
+      },
+      {
+        "language": "fr",
+        "viewport": [
+          1440,
+          1100
+        ],
+        "page": "schedule",
+        "http": 200,
+        "unchecked": true,
+        "text": "J’autorise la rédaction planifiée avec ces réglages jusqu’à sa désactivation. Avec la publication automatique, les articles sont fusionnés sans relecture humaine dès que les contrôles du dépôt passent ; ils peuvent contenir des erreurs, et je reste responsable de ce qui est publié sur mon site (CGU, articles 6 et 7).",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "fr-1440-schedule.png"
+      },
+      {
+        "language": "fr",
+        "viewport": [
+          390,
+          844
+        ],
+        "page": "single",
+        "http": 200,
+        "unchecked": true,
+        "text": "J’autorise cette modification sur mon site après relecture de l’aperçu.",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "fr-390-single.png"
+      },
+      {
+        "language": "fr",
+        "viewport": [
+          390,
+          844
+        ],
+        "page": "batch",
+        "http": 200,
+        "unchecked": true,
+        "text": "J’autorise les modifications sélectionnées après relecture de ce lot.",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "fr-390-batch.png"
+      },
+      {
+        "language": "fr",
+        "viewport": [
+          390,
+          844
+        ],
+        "page": "schedule",
+        "http": 200,
+        "unchecked": true,
+        "text": "J’autorise la rédaction planifiée avec ces réglages jusqu’à sa désactivation. Avec la publication automatique, les articles sont fusionnés sans relecture humaine dès que les contrôles du dépôt passent ; ils peuvent contenir des erreurs, et je reste responsable de ce qui est publié sur mon site (CGU, articles 6 et 7).",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "fr-390-schedule.png"
+      },
+      {
+        "language": "en",
+        "viewport": [
+          1440,
+          1100
+        ],
+        "page": "single",
+        "http": 200,
+        "unchecked": true,
+        "text": "I authorize this change to my site after reviewing the preview.",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "en-1440-single.png"
+      },
+      {
+        "language": "en",
+        "viewport": [
+          1440,
+          1100
+        ],
+        "page": "batch",
+        "http": 200,
+        "unchecked": true,
+        "text": "I authorize the selected changes after reviewing this batch.",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "en-1440-batch.png"
+      },
+      {
+        "language": "en",
+        "viewport": [
+          1440,
+          1100
+        ],
+        "page": "schedule",
+        "http": 200,
+        "unchecked": true,
+        "text": "I authorize scheduled writing with these settings until it is disabled. With automatic publishing, articles are merged without human review once the repository checks pass; they may contain errors, and I remain responsible for what is published on my site (Terms, articles 6 and 7).",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "en-1440-schedule.png"
+      },
+      {
+        "language": "en",
+        "viewport": [
+          390,
+          844
+        ],
+        "page": "single",
+        "http": 200,
+        "unchecked": true,
+        "text": "I authorize this change to my site after reviewing the preview.",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "en-390-single.png"
+      },
+      {
+        "language": "en",
+        "viewport": [
+          390,
+          844
+        ],
+        "page": "batch",
+        "http": 200,
+        "unchecked": true,
+        "text": "I authorize the selected changes after reviewing this batch.",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "en-390-batch.png"
+      },
+      {
+        "language": "en",
+        "viewport": [
+          390,
+          844
+        ],
+        "page": "schedule",
+        "http": 200,
+        "unchecked": true,
+        "text": "I authorize scheduled writing with these settings until it is disabled. With automatic publishing, articles are merged without human review once the repository checks pass; they may contain errors, and I remain responsible for what is published on my site (Terms, articles 6 and 7).",
+        "horizontal_overflow": false,
+        "page_errors": [],
+        "capture": "en-390-schedule.png"
+      }
+    ]
+  },
+  "browser_sources_sha256": "c002fee709f8f9ab1f1b77e5e35f04e53f1cb999a2d0098f9cb31fecd7bb6f41",
+  "checks": {
+    "ruff_F_E9": "passed",
+    "compile": "passed",
+    "bandit_medium_high": "passed"
+  },
+  "limits": [
+    "External HTTPS hosting untested",
+    "Wix/Webflow and PrestaShop 9 native recipes pending",
+    "Certain failed media transfers have no consented retry yet",
+    "Creating/publishing recovery needs a controlled fence; no blind resend",
+    "Public legal dates must be set to actual deployment date; no deployment performed",
+    "No fresh Claude CLI review claimed; historical review dated 20 November addressed with open points documented"
+  ],
+  "native_candidate_local": "8137954121b318dd806515e7cabd9a3fd43f7198",
+  "native_sources": {
+    "backend/app.py": "34210fb9ec32dd859953aef0e5bd6ebe1afb92d2d9fdb77291948e3843305eb5",
+    "backend/cms_content_adapters/base.py": "3e21e5974509b0864fd0921c0facf665d628a2f23e916e053f8e9fdb3238373c",
+    "backend/cms_content_adapters/ghost.py": "6880fe1fc43bc9ff77d012db61b0f1e3ae4e1036f79596fb4dae81e83c57952c",
+    "backend/cms_content_adapters/html_safe.py": "a7dddda6ee12cb685b5f7dafabdeeb6022fddb3f573a10433d9159420fe56fee",
+    "backend/cms_content_adapters/prestashop.py": "a6a8d8acef0df1b516dfa29dafc33dc382f5634cc88e3b06ab23940ee432ba1f",
+    "backend/cms_content_adapters/shopify.py": "e0dafe9801e01ba20141fc17b72178ac043d0812058f9ecba1900eda32cc2944",
+    "backend/cms_content_adapters/webflow.py": "703edd26bbbf47ec214e73ee07b2179d208f047f54d9022900611b17ff613576",
+    "backend/cms_content_adapters/wix.py": "1eed9ec4883ec3d08e3d9debc50597d6cc4625f4d31bc112ecc94743afae905c",
+    "backend/cms_content_adapters/wordpress.py": "f25c691beffba3925e8cc1360086aa5880380e98586dffc5024cf93b1b5bef07",
+    "backend/cms_content_transport.py": "55d649db28016f8ae433d6d5a40efc592debe0f99a6e603acab17245a4c59294",
+    "backend/cms_media_workflow.py": "e2119f04474b9ed1cf524d95d16d7994a552b3e474c8f78697e8749ed55a86be",
+    "backend/cms_publication.py": "3428802b0135a5246e46f927b64a15fc422e371f4a900bf5d8e5b378da3b784a",
+    "backend/cms_publication_routes.py": "0799dede228714f66421608598a6207dadefa56845eceba16e618f3bc71a0d2e",
+    "backend/cms_routes.py": "2e97971d316540dd3c3bedc8a1fd6c92e27aa080359ea5c58030f01f109298d4",
+    "backend/content_library.py": "1bacce2ad8d6a2211c5697ef47f4c3717245f5569593813221908da322274f51",
+    "backend/legal.py": "1644a0d09c8bbbdfaf8d8b9bfb472c3393f1a771804e5d44bad4cd5ebbc3e022",
+    "locales/en.json": "71ea42dea4ca5d6bcb3ec148db783aa8479bb8fdeeda027ad0a1dae33a188008",
+    "ops/wordpress-lab/README.md": "d4ae19367ef82db888863c94b3efdae884b630689411ffefd49108c0e684eeee",
+    "ops/wordpress-lab/check.py": "fb9d9bc577f252a2e981965715747815dcf5b542d163a7c5a5eea3fba0ad6ee3",
+    "templates/cms_batch.html": "342c9e31e18cd24ba9fa0d10b228606646022a4ade8825517891f2e0cebb76cc",
+    "templates/cms_change.html": "35cdad0aa6a38b32ea7dd67852421a0e4ea7f2207c1f49072bb78198fcfb5ff5",
+    "templates/content.html": "c71ccf920293255b036da1a7cdbb332f6791c51ff2f76ad6d354f20105fa6c1d",
+    "templates/privacy_public.html": "cac44d0819ca1b98d05569b0a0a2372aeddee72001b66dc0444c161a7ef2c1c3",
+    "templates/privacy_public_en.html": "6ca90d67f0c80dc3b40a93ca955939412645b33f5c2f0b7d0311a994a416b0bf",
+    "templates/terms_public.html": "eaacbf69af5b3a19bfd2efbe8711be6a920f81ef7f785dacfa4907e414a0faf9",
+    "templates/terms_public_en.html": "c3a3d4efcc51cf126c1ceac0b17914535a01828d7956effc1f9a7fe37e85e086",
+    "tests/test_agent_multicms_journey.py": "8c08b3296a69fb3e325914fbcba354d7e9019abc2664190571cdf7cc3563f819",
+    "tests/test_cms_content_media.py": "a6c66eeb2a4f8a33a7d21e40805ca780c982b49f312974c05a807c13f5fb9139",
+    "tests/test_cms_integrations.py": "b2c7783c76cbb4c86b560ccd6f7a6b35c1dfc43b800a280d0c0b56fe19a5eb15",
+    "tests/test_cms_media_workflow.py": "d002fc8bbe0520ee065f39e73fb4162802dbc96b9e881a8e7e69ddf662a4de8d",
+    "tests/test_cms_real_article_format.py": "7857aec5bfd58319c077b1ce759689c0d7ee6fa614cb612a3f8c819c7e6ec82f",
+    "tests/test_un_article_ne_porte_aucun_code_actif.py": "ca1b019c53f6ab797b88dcf2f97970d398829188f06100ed4ee1d9eed58c5b57",
+    "tests/test_wordpress_lot_d_une_anomalie.py": "407ea7dcba0a22c0eeb480971ddb64bcf1795914ee254ea1fef56d1b353c758e"
+  },
+  "ci812_previous_candidate": {
+    "head": "4ccf01fe173504d364d123d21eec628abddffac5",
+    "failed": 1,
+    "passed": 10596,
+    "skipped": 50,
+    "warnings": 516,
+    "seconds": 688.37,
+    "failure": "Inventory mistook the pure HTML placeholder URL for a called service; exact synthetic host excluded with reason. No production call or provider added."
+  }
+}

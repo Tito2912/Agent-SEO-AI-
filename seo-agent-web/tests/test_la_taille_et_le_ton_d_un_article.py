@@ -101,6 +101,8 @@ def appels(monkeypatch):
 
 
 def _post(client, slug, chemin, **body):
+    if chemin == "draft":
+        body.setdefault("consent", True)
     client.get(f"/projects/{slug}")
     token = client.cookies.get(m._CSRF_COOKIE_NAME, "")
     return client.post(f"/api/projects/{slug}/content/{chemin}", json=body,
@@ -132,7 +134,7 @@ def test_contenu_seul_sans_choix_rien_ne_change(customer, plan, appels, monkeypa
 @pytest.mark.parametrize("chemin, corps", [
     ("article", {"sujet": "Le levier", "section": "/fr/guides"}),
     ("draft", {"sujet": _brouillon.SUJET, "route": _brouillon.ROUTE}),
-])
+], ids=["content-only", "github-draft"])
 def test_un_choix_inconnu_ne_coute_RIEN(customer, plan, appels, chemin, corps) -> None:
     client, slug, _pid, _uid = customer
     r = _post(client, slug, chemin, taille="geant", **corps)

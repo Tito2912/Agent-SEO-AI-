@@ -2,7 +2,9 @@ FROM node:24.22.0-bookworm-slim AS node
 FROM php:8.3-cli-bookworm
 
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
-RUN apt-get update && apt-get install -y --no-install-recommends unzip libstdc++6 \
+RUN apt-get update && apt-get install -y --no-install-recommends unzip libstdc++6 libjpeg62-turbo-dev libpng-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install -j"$(nproc)" gd \
     && rm -rf /var/lib/apt/lists/*
 
 # Download public, pinned assets at build time, never during service startup.
@@ -23,7 +25,7 @@ COPY hosted-proxy.mjs hosted-seed.php /opt/noyaru/
 COPY native/config.php native/install.php native/router.php native/no-mail.php native/run.mjs /opt/noyaru/native/
 RUN cp /opt/noyaru/native/config.php /wordpress/wp-config.php \
     && cp /opt/noyaru/native/no-mail.php /wordpress/wp-content/mu-plugins/noyaru-demo.php \
-    && php -r 'exit(extension_loaded("pdo_sqlite") && extension_loaded("sqlite3") ? 0 : 1);' \
+    && php -r 'exit(extension_loaded("pdo_sqlite") && extension_loaded("sqlite3") && gd_info()["WebP Support"] ? 0 : 1);' \
     && php -l /opt/noyaru/native/config.php && php -l /opt/noyaru/native/install.php \
     && php -l /opt/noyaru/native/router.php && php -l /opt/noyaru/hosted-seed.php \
     && node --check /opt/noyaru/native/run.mjs \
