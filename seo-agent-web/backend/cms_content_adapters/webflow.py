@@ -66,7 +66,13 @@ class WebflowAdapter:
         self.locales = tuple(self.config.get("locales") or ())  # peut rester vide (langue principale)
 
     # ---- Operations publiques --------------------------------------------
+    def validate_draft(self, draft: ArticleDraft) -> None:
+        """Validate the draft without network access or a media transfer."""
+        require_draft_fields(draft)
+        validate_html(draft.html)
+
     def create_draft(self, draft: ArticleDraft) -> RemoteArticle:
+        self.validate_draft(draft)
         require_draft_fields(draft)
         validate_html(draft.html)
         payload: dict = {"items": [{"fieldData": self._field_data(draft)}]}

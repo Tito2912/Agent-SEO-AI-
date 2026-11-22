@@ -63,6 +63,8 @@ def lot(journey, monkeypatch):
 
 
 def _envoyer(data, chemin, *, json=False, **champs):
+    if chemin.endswith("/apply"):
+        champs.setdefault("approved", "true")
     client = data["client"]
     client.get(data["cms"])
     return client.post(chemin, data={"_csrf": client.cookies.get(m._CSRF_COOKIE_NAME), **champs},
@@ -198,3 +200,11 @@ def test_un_seul_crawl_controle_tout_le_lot_et_rend_son_verdict_page_par_page(lo
     m._verify_corrections_after_crawl(lot["slug"], rapport, lot["runs_dir"], user_id=lot["owner"], crawl_ts=ts)
     ecran = BeautifulSoup(lot["client"].get(lot["lot"]).text, "html.parser")
     assert [s["data-batch-state"] for s in ecran.select("[data-batch-state]")] == ["verified", "verified"]
+
+
+def test_batch_selection_does_not_replace_the_explicit_consent(lot):
+    for url in PAGES:
+        _proposer(lot, url)
+    changes = _changes(lot)
+    response = _envoyer(lot, lot["lot"] + "/apply", pick=[row.id for row in changes.values()], approved="false")
+    assert "err=" in response.headers["location"] and lot["ecrits"] == []

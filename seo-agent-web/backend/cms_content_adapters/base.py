@@ -1,6 +1,6 @@
 """Contrat partage des adaptateurs editoriaux : types, erreurs, fabrique, aides.
 
-Un adaptateur expose quatre operations : `create_draft`, `read`, `publish`, `update_draft`.
+Un adaptateur expose une validation pure `validate_draft`, puis quatre operations : `create_draft`, `read`, `publish`, `update_draft`.
 La publication est TOUJOURS declenchee par un appel explicite ; une creation ne publie jamais.
 Un `expected_revision` est obligatoire pour `update_draft` et `publish` : l'adaptateur relit
 la version distante juste avant d'ecrire et refuse quand elle ne correspond plus.

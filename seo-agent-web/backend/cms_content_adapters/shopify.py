@@ -83,7 +83,14 @@ class ShopifyAdapter:
                 code="mapping")
 
     # ---- Operations publiques --------------------------------------------
+    def validate_draft(self, draft: ArticleDraft) -> None:
+        """Validate the draft without network access or a media transfer."""
+        require_draft_fields(draft)
+        validate_html(draft.html)
+        require_author(draft, "Shopify")
+
     def create_draft(self, draft: ArticleDraft) -> RemoteArticle:
+        self.validate_draft(draft)
         require_draft_fields(draft)
         require_author(draft, "Shopify")
         validate_html(draft.html)

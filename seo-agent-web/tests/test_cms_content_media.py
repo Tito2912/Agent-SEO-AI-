@@ -184,3 +184,13 @@ def test_public_cdn_returned_by_ghost_is_accepted_without_forwarding_credentials
     assert result["url"] == "https://cdn.example/photo.webp"
     assert all(call["host"] == "atelier.ghost.io" for call in wire["calls"])
     assert ("cdn.example", "média CMS") in wire["dns"]
+
+
+def test_wordpress_upload_keeps_its_real_id_if_public_url_is_rejected(wire):
+    client = _http.wp()
+    _http.verify_wp(client, wire)
+    wire["responses"].append(_http.Response({"id": 42, "source_url": "http://atelier.example/private.webp"}, status=201))
+    with pytest.raises(CmsError) as error:
+        client.upload_image(data=image_bytes("WEBP"), filename="photo.webp", content_type="image/webp")
+    assert error.value.uncertain and error.value.remote_id == "42"
+    assert len(wire["calls"]) == 2

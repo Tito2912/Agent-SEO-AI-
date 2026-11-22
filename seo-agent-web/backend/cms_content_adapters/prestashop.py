@@ -123,7 +123,13 @@ class PrestaShopAdapter:
             raise AdapterError("id_cms_category PrestaShop invalide.", code="mapping")
 
     # ---- Operations publiques --------------------------------------------
+    def validate_draft(self, draft: ArticleDraft) -> None:
+        """Validate the draft without network access or a media transfer."""
+        require_draft_fields(draft)
+        validate_html(draft.html)
+
     def create_draft(self, draft: ArticleDraft) -> RemoteArticle:
+        self.validate_draft(draft)
         require_draft_fields(draft)
         validate_html(draft.html)
         xml_body = self._xml_create(draft)

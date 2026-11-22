@@ -52,7 +52,14 @@ class WordPressAdapter:
         self.config = dict(config or {})
 
     # ---- Operations publiques --------------------------------------------
+    def validate_draft(self, draft: ArticleDraft) -> None:
+        """Validate the draft without network access or a media transfer."""
+        require_draft_fields(draft)
+        validate_html(draft.html)
+        self._payload(draft, status="draft")
+
     def create_draft(self, draft: ArticleDraft) -> RemoteArticle:
+        self.validate_draft(draft)
         require_draft_fields(draft)
         validate_html(draft.html)
         payload = self._payload(draft, status="draft")

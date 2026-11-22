@@ -1,5 +1,15 @@
 # Contrat des adaptateurs editoriaux multi-CMS
 
+Complément C085 (22 novembre 2026) : `adapter.validate_draft(draft)` vérifie sans
+appel réseau les champs, le HTML et les contraintes propres au CMS avant tout
+transfert d’image. Le parcours applique ensuite les normalisations décrites dans
+`WORDPRESS-MEDIA.md`. Les tableaux et leur alignement, les identifiants de titres
+et les classes de langage des blocs de code font partie du contrat HTML commun ;
+Wix refuse toujours les tableaux et les liens vers les intertitres. Shopify reste
+un module technique non exposé aux clients. Les transferts WordPress/Ghost se
+font dans le workflow média distinct, pas dans les méthodes de cet adaptateur.
+Les paragraphes C078 ci-dessous décrivent l’interface initiale.
+
 Lot C078 (17 novembre 2026). Journal commun lu : entree C078 du 17/11 18:52 Paris,
 reservations confirmees (nouveaux fichiers sous `backend/cms_content_adapters/`,
 tests `tests/test_cms_content_adapters*`, ce document). Aucun module existant n'est

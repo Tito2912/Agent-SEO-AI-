@@ -3655,5 +3655,11 @@
   "La préparation a commencé mais son résultat n’est pas confirmé. Vérifiez son état avant de la relancer.": "Preparation started but its result is not confirmed. Check its status before starting it again.",
   "L’automatisation s’est arrêtée avant une modification.": "Automation stopped before a change.",
   "Consulter la proposition sur GitHub": "View the proposal on GitHub",
-  "Votre accord n’a pas pu être enregistré. Actualisez l’état avant de réessayer.": "Your approval could not be saved. Refresh the state before trying again."
+  "Votre accord n’a pas pu être enregistré. Actualisez l’état avant de réessayer.": "Your approval could not be saved. Refresh the state before trying again.",
+  "J’autorise la rédaction planifiée avec ces réglages jusqu’à sa désactivation. Avec la publication automatique, les articles sont fusionnés sans relecture humaine dès que les contrôles du dépôt passent ; ils peuvent contenir des erreurs, et je reste responsable de ce qui est publié sur mon site (CGU, articles 6 et 7).": "I authorize scheduled writing with these settings until it is disabled. With automatic publishing, articles are merged without human review once the repository checks pass; they may contain errors, and I remain responsible for what is published on my site (Terms, articles 6 and 7).",
+  "J’autorise cette modification sur mon site après relecture de l’aperçu.": "I authorize this change to my site after reviewing the preview.",
+  "J’autorise les modifications sélectionnées après relecture de ce lot.": "I authorize the selected changes after reviewing this batch.",
+  "Confirmez que vous autorisez cette modification sur votre site.": "Confirm that you authorize this change to your site.",
+  "Les liens vers les intertitres ne sont pas encore pris en charge dans Wix Blog.": "Links to headings are not yet supported in Wix Blog.",
+  "Le contenu comporte un élément ou un attribut non pris en charge.": "The content includes an unsupported element or attribute."
 }

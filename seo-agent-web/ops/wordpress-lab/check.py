@@ -6,6 +6,8 @@ Production DNS/TLS validation is unchanged and remains covered by the normal sui
 from __future__ import annotations
 
 import json
+import hashlib
+import io
 from http.client import HTTPConnection
 import os
 import secrets
@@ -17,6 +19,7 @@ from urllib.parse import urlsplit
 
 import requests
 from bs4 import BeautifulSoup
+from PIL import Image
 
 ROOT = Path(os.environ['NOYARU_LAB_ROOT']).resolve()
 config = json.loads((ROOT / 'credentials.json').read_text(encoding='utf-8'))
@@ -33,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 from backend import app as m, auth, first_correction, wordpress_cms as wp  # noqa: E402
-from backend.models import CmsChange, CmsPublication, CmsPublicationConsent, IssueTask, Project, User  # noqa: E402
+from backend.models import CmsChange, CmsPublication, CmsPublicationConsent, CmsMediaTransfer, IssueTask, Project, User  # noqa: E402
 from backend import cms_content_transport as content_transport  # noqa: E402
 
 http = requests.Session()
@@ -112,6 +115,8 @@ client.cookies.set(auth.SESSION_COOKIE_NAME, auth.make_session_token(user_id=uid
 
 def post(path, **data):
     client.get(base + '/cms')
+    if path.endswith(('/apply', '/restore')):
+        data.setdefault('approved', 'true')
     response = client.post(path, data={'_csrf': client.cookies.get(m._CSRF_COOKIE_NAME), **data}, follow_redirects=False)
     assert response.status_code == 303
     return response
@@ -154,6 +159,8 @@ for key, field, value in [
     change_id = receipt.rsplit('/', 1)[1]
     assert client.get(receipt).status_code == 200 and writes() == before_writes
     checks.append(field + ' : aperçu sans écriture')
+    assert 'err=' in post(receipt + '/apply', approved='false').headers['location']
+    assert writes() == before_writes
     success(post(receipt + '/apply'))
     assert writes() == before_writes + 1 and native.read(url)[field] == value
     page = public_page()
@@ -215,7 +222,7 @@ class LoopbackContentConnection(HTTPConnection):
 
 
 def content_address(host, service):
-    assert host == 'wordpress.noyaru.test' and service == 'wordpress'
+    assert host == 'wordpress.noyaru.test' and service in {'wordpress', 'média CMS'}
     return '127.0.0.1'
 
 
@@ -292,13 +299,86 @@ for concurrent in (False, True):
         assert 'err=' in post(receipt + '/execute', operation='publish', approved='true').headers['location']
         assert content_writes() == before + 2
         checks.append('Article REST natif : aperçu sans écriture, deux accords, brouillon réel puis HTML public, aucun doublon')
+# The real editor format (heading IDs, enriched image attributes, aligned table)
+# must pass the complete form workflow, not just a hand-written HTML sentence.
+# Independent project: the repeated negative scenarios above legitimately consume
+# the first project's 12/hour operation allowance. Do not bypass the real limiter.
+slug = 'wordpress-media-lab'
+base = f'/projects/{slug}'
+with m.DB.session() as db:
+    project = Project(owner_user_id=uid, slug=slug, site_name='Noyaru Média Démo', base_url=origin, settings={})
+    db.add(project); db.commit(); project_id = str(project.id)
+success(post(base + '/content/publication/connect', platform='wordpress', base_url=origin, **editor))
+asset = io.BytesIO()
+Image.new('RGB', (128, 96), '#729d82').save(asset, 'WEBP')
+image_bytes = asset.getvalue()
+lot = secrets.token_hex(16)
+image_folder = m._runs_dir_for_user(uid) / slug / '_contenu' / lot
+image_folder.mkdir(parents=True, exist_ok=True)
+(image_folder / 'chaine.webp').write_bytes(image_bytes)
+rich_version = {'code': 'fr', 'langue': 'Français', 'titre': 'Entretenir une chaîne | Atelier Démo',
+    'h1': 'Entretenir une chaîne', 'slug': 'article-avec-image', 'description': 'Recette native avec média.',
+    'markdown': '## Les bons gestes\n\nUn contrôle régulier protège la chaîne.\n\n![Une chaîne propre](images/chaine.webp)\n\n![Détail de la même chaîne](images/chaine.webp)\n\n| Pièce | Action |\n|:---|---:|\n| Chaîne | Nettoyer |\n'}
+with m.DB.session() as db:
+    rich = IssueTask(project_id=project_id, user_id=uid, created_by=uid, issue_key=m._CONTENT_ARTICLE_KEY,
+        url='/article-avec-image', status='done', severity='notice', note=json.dumps({'versions': [rich_version],
+            'images': {'lot': lot, 'fichiers': [{'nom': 'chaine.webp', 'largeur': 128, 'hauteur': 96}]}}, ensure_ascii=False))
+    db.add(rich); db.commit(); rich_id = rich.id
+start = content_writes()
+assert 'err=' in post(base + '/content/publication/prepare', platform='wordpress', version=rich_id + '|fr').headers['location']
+assert content_writes() == start
+preview = success(post(base + '/content/publication/prepare', platform='wordpress', version=rich_id + '|fr', approved_media='true'))
+receipt = preview.headers['location']; publication_id = receipt.rsplit('/', 1)[1]
+assert content_writes() == start + 1  # Media only; article remains in Noyaru.
+with m.DB.session() as db:
+    transfer = db.scalar(select(CmsMediaTransfer).where(CmsMediaTransfer.task_id == rich_id))
+    assert transfer.state == 'ready' and transfer.remote_id and transfer.remote_url
+    media_url, media_id = transfer.remote_url, transfer.remote_id
+    proof = db.scalar(select(CmsPublicationConsent).where(CmsPublicationConsent.project_id == project_id,
+        CmsPublicationConsent.operation == 'media_upload'))
+    assert proof.actor_id == uid and proof.content_digest == hashlib.sha256(image_bytes).hexdigest()
+    assert proof.targets['result']['remote_id'] == media_id
+again = success(post(base + '/content/publication/prepare', platform='wordpress', version=rich_id + '|fr'))
+assert again.headers['location'] == receipt and content_writes() == start + 1
+success(post(receipt + '/execute', operation='create', approved='true'))
+with m.DB.session() as db:
+    publication = db.get(CmsPublication, publication_id)
+    assert publication.state == 'draft'; rich_remote_id = publication.remote_id
+remote = content('GET', '/wp-json/wp/v2/posts/' + rich_remote_id + '?context=edit').json()
+body = BeautifulSoup(remote['content']['raw'], 'html.parser')
+assert remote['title']['raw'] == 'Entretenir une chaîne' and not body.find('h1')
+assert body.find('h2').get('id') and body.find('table') and body.find('td', align='right').text == 'Nettoyer'
+assert body.find('img')['src'] == media_url and body.find('img')['alt'] == 'Une chaîne propre'
+assert 'media-placeholder' not in remote['content']['raw'] and '/api/projects/' not in remote['content']['raw']
+assert 'err=' in post(receipt + '/execute', operation='publish').headers['location']
+assert content_writes() == start + 2
+success(post(receipt + '/execute', operation='publish', approved='true'))
+assert content_writes() == start + 3
+remote = content('GET', '/wp-json/wp/v2/posts/' + rich_remote_id + '?context=edit').json()
+public = urlsplit(remote['link'])
+served = http.get(config['server_url'] + public.path + ('?' + public.query if public.query else ''),
+    headers={'Host': 'wordpress.noyaru.test'}, allow_redirects=False, timeout=40)
+assert served.status_code == 200 and 'Un contrôle régulier' in served.text
+assert len([h for h in BeautifulSoup(served.content, 'html.parser').find_all('h1') if h.get_text().strip() == 'Entretenir une chaîne']) == 1
+image = urlsplit(media_url)
+served_image = http.get(config['server_url'] + image.path, headers={'Host': 'wordpress.noyaru.test'},
+    allow_redirects=False, timeout=40)
+assert served_image.status_code == 200 and served_image.content == image_bytes
+assert 'Authorization' not in served_image.request.headers and 'Cookie' not in served_image.request.headers
+with Image.open(io.BytesIO(served_image.content)) as decoded:
+    assert decoded.format == 'WEBP' and decoded.size == (128, 96)
+with m.DB.session() as db:
+    assert {p.operation for p in db.scalars(select(CmsPublicationConsent).where(CmsPublicationConsent.publication_id == publication_id))} == {'create', 'publish'}
+checks.append('Article Markdown réel : intertitre, tableau aligné et image transférée une fois, trois accords distincts, titre/H1 sans doublon')
+checks.append('Image publique WebP : octets SHA-256 et dimensions identiques, accessible sans authentification')
+
 success(post(base + '/content/publication/disconnect', platform='wordpress'))
 
 result = {'wordpress': config['wp'], 'yoast': config['yoast'], 'checks': checks,
           'native_api_requests': len(calls), 'native_api_writes': writes(), 'native_content_requests': len(content_calls),
           'native_content_writes': content_writes(),
           'scope': 'WordPress local réel ; transport loopback de test, aucun site client ni HTTPS public',
-          'outcome': 'passed'}
+          'outcome': 'passed', 'media': {'sha256': hashlib.sha256(image_bytes).hexdigest(), 'bytes': len(image_bytes), 'dimensions': [128, 96]}}
 output = os.environ.get('NOYARU_LAB_REPORT')
 if output:
     Path(output).write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding='utf-8')

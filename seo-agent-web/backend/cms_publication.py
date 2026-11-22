@@ -56,6 +56,11 @@ def clean_html(value):
                 if node.name == "img" and key.lower() == "src":
                     if parts.scheme != "https" or not parts.hostname or "/api/projects/" in parts.path:
                         raise PublicationError("media_not_uploaded", "Les images doivent être transférées dans votre CMS avant de publier cet article.")
+    from .cms_content_adapters.html_safe import validate_html
+    try:
+        validate_html(str(soup))
+    except AdapterError as error:
+        raise PublicationError("unsafe_html", "Le contenu comporte un élément ou un attribut non pris en charge.") from error
     return str(soup)
 
 

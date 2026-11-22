@@ -82,7 +82,13 @@ class GhostAdapter:
         self.config = dict(config or {})
 
     # ---- Operations publiques --------------------------------------------
+    def validate_draft(self, draft: ArticleDraft) -> None:
+        """Validate the draft without network access or a media transfer."""
+        require_draft_fields(draft)
+        validate_html(draft.html)
+
     def create_draft(self, draft: ArticleDraft) -> RemoteArticle:
+        self.validate_draft(draft)
         require_draft_fields(draft)
         validate_html(draft.html)
         body = {"posts": [self._payload(draft, updated_at=None, status="draft")]}

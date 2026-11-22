@@ -55,7 +55,14 @@ class WixAdapter:
         self.config = dict(config or {})
 
     # ---- Operations publiques --------------------------------------------
+    def validate_draft(self, draft: ArticleDraft) -> None:
+        """Validate the draft without network access or a media transfer."""
+        require_draft_fields(draft)
+        require_author(draft, "Wix")
+        html_to_ricos(draft.html)
+
     def create_draft(self, draft: ArticleDraft) -> RemoteArticle:
+        self.validate_draft(draft)
         require_draft_fields(draft)
         require_author(draft, "Wix")
         rich_content = html_to_ricos(draft.html)

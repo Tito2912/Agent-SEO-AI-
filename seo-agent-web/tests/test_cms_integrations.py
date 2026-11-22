@@ -51,6 +51,8 @@ def cms(journey, monkeypatch):
 
 
 def post(data, suffix, **payload):
+    if "/changes/" in suffix and suffix.endswith(("/apply", "/restore")):
+        payload.setdefault("approved", "true")
     client = data["client"]
     client.get(data["base"])
     return client.post(data["base"] + suffix, data={"_csrf": client.cookies.get(m._CSRF_COOKIE_NAME), **payload}, follow_redirects=False)
@@ -595,7 +597,7 @@ def test_simultaneous_approvals_send_one_write(cms, monkeypatch):
     token = cms['client'].cookies.get(m._CSRF_COOKIE_NAME)
     target = cms['base'] + f'/wordpress/changes/{change}/apply'
     def submit():
-        return cms['client'].post(target, data={'_csrf': token}, follow_redirects=False)
+        return cms['client'].post(target, data={'_csrf': token, 'approved': 'true'}, follow_redirects=False)
     with ThreadPoolExecutor(max_workers=2) as pool:
         first = pool.submit(submit)
         try:
@@ -642,3 +644,39 @@ def test_tracked_corrections_link_to_the_editor_and_details_render_platform_guid
     detail = cms['client'].get(f'/projects/{cms["slug"]}/issues/missing_title')
     assert detail.status_code == 200 and 'Dans WordPress avec Yoast SEO' in detail.text
     assert not writes(cms)
+
+
+def test_manual_metadata_write_requires_checkbox_and_durable_minimal_receipt(cms):
+    from backend.models import CmsPublicationConsent
+    connect(cms)
+    ident = preview(cms)
+    count = len(writes(cms))
+    missing = post(cms, f"/wordpress/changes/{ident}/apply", approved="false")
+    assert "err=" in missing.headers["location"] and len(writes(cms)) == count
+    html = cms["client"].get(cms["base"] + f"/wordpress/changes/{ident}").text
+    assert BeautifulSoup(html, "html.parser").select_one('input[name="approved"][required]')
+    response = action(cms, ident, "apply")
+    assert "err=" not in response.headers["location"] and len(writes(cms)) == count + 1
+    with m.DB.session() as db:
+        proof, = db.scalars(select(CmsPublicationConsent).where(CmsPublicationConsent.project_id == cms["project_id"]))
+        assert proof.operation == "cms_metadata_apply" and proof.actor_id == cms["member"]
+        assert proof.targets["url"] == URL and proof.content_digest and proof.expires_at
+        assert "Service de réparation" not in json.dumps(proof.targets)
+
+
+def test_failed_receipt_storage_blocks_the_metadata_write(cms):
+    from sqlalchemy import event
+    from sqlalchemy.exc import OperationalError
+    from backend.models import CmsPublicationConsent
+    connect(cms)
+    ident = preview(cms)
+    count = len(writes(cms))
+    def fail(*args):
+        raise OperationalError("receipt unavailable", {}, RuntimeError("injected fixture failure"))
+    event.listen(CmsPublicationConsent, "before_insert", fail)
+    try:
+        response = action(cms, ident, "apply")
+    finally:
+        event.remove(CmsPublicationConsent, "before_insert", fail)
+    assert "err=" in response.headers["location"] and len(writes(cms)) == count
+    assert row(ident).state == "preview"

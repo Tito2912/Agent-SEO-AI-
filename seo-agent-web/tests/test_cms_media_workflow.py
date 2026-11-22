@@ -74,3 +74,22 @@ def test_native_media_support_is_not_claimed_for_every_platform(store):
     with pytest.raises(PublicationError) as error:
         image_url(store.database, **values(store, transport, platform="webflow"))
     assert error.value.code == "media_unsupported"
+
+
+def test_unusable_public_url_preserves_known_media_identity_and_never_retries(store):
+    from backend.models import CmsPublicationConsent
+    error = CmsError("Public URL rejected", code="image_url", uncertain=True)
+    error.remote_id = "42"
+    calls = []
+    def upload(**kwargs):
+        calls.append(True)
+        raise error
+    for _ in range(2):
+        with pytest.raises(PublicationError):
+            image_url(store.database, **values(store, SimpleNamespace(upload_image=upload)))
+    with store.database.session() as db:
+        row, = db.scalars(select(CmsMediaTransfer))
+        assert row.state == "uncertain" and row.remote_id == "42" and row.remote_url is None
+        proof, = db.scalars(select(CmsPublicationConsent))
+        assert proof.targets["result"]["remote_id"] == "42" and proof.targets["result"]["url"] is None
+    assert calls == [True]

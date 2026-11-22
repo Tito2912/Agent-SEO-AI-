@@ -1,6 +1,6 @@
 # Agent Noyaru — première livraison multi-CMS
 
-État du 19 novembre 2026 : code en branche isolée, contrôles locaux et recettes simulées.
+État du 22 novembre 2026 : code en branche isolée, contrôles locaux et recettes simulées.
 Aucun déploiement ni contenu client publié. Les recettes locales réelles
 WordPress, Ghost et PrestaShop sont réussies ; les liaisons HTTPS externes et
 Wix/Webflow restent à éprouver. Ce document
@@ -19,7 +19,7 @@ distingue le code, les tests et la recette réelle.
 
 | Plateforme | Contenu natif préparé | Images privées Noyaru | Publication dans ce lot | Recette réelle |
 |---|---|---|---|---|
-| WordPress autohébergé | Articles REST natifs, indépendamment de Yoast | Transfert natif | Demande explicite après brouillon | Texte : réussie sur WordPress 6.9.12 local jetable (pilote C083) ; hébergeur HTTPS et médias à faire |
+| WordPress autohébergé | Articles REST natifs, indépendamment de Yoast | Transfert natif | Demande explicite après brouillon | WordPress 6.9.12 local jetable : article Markdown réel, tableau aligné, image publique identique et non-doublon éprouvés (C085) ; hébergeur HTTPS à faire |
 | Ghost | Articles Admin API ; aucun envoi newsletter | Transfert natif | Demande explicite après brouillon | Ghost 6.73 local jetable : média, accords, HTML et conflit rapide réussis ; HTTPS externe à faire |
 | Webflow | Éléments d’une collection choisie ; mapping explicite du champ de contenu | Non ; images déjà hébergées | Uniquement les éléments choisis, après case d’accord ; publication du site entier interdite | À faire |
 | Wix Blog | Nouveaux articles Draft Posts v3 ; sous-ensemble Ricos explicite | Non ; images déjà hébergées | Demande explicite ; Manage Blog + auteur requis | À faire ; ne lève pas l’ancienne limitation SEO sur articles existants |
@@ -41,9 +41,9 @@ Les aperçus Chromium dans `previews/` emploient uniquement un compte et un site
 
 ## Avant activation publique
 
-1. Compléter les recettes locales WordPress/Ghost/PrestaShop (rapports JSON de ce dossier) par les liaisons HTTPS externes ; vérifier WordPress avec média, PrestaShop 9, Wix et Webflow sur leurs environnements CMS de test les droits de lecture, création, relecture, modification concurrente, publication, échec ambigu et média. Ne pas utiliser de site client pour un essai de publication sans accord.
-2. Faire relire la matrice et les formulations par le Claude historique, comme demandé sous C078. C079 autorise Webflow page par page et garde Shopify hors interface client ; les CGU/confidentialité restent à mettre à jour avec le lot livré ; aucun fichier juridique public modifié dans ce lot.
-3. Les preuves CMS manuelles et médias conservées cinq ans sont intégrées par C083, avec export et purge. C084 ajoute l’accord unique à l’activation des deux modes automatiques existants, le retrait avant les prochains appels et le lien des tâches à cette activation ; voir `MODES-AUTOMATIQUES.md`. Les cas sans preuve demandent confirmation et les résultats incertains ne sont pas rejoués. Les textes publics restent à stabiliser avec Claude avant activation.
+1. Compléter les recettes locales WordPress/Ghost/PrestaShop (rapports JSON de ce dossier) par les liaisons HTTPS externes ; vérifier PrestaShop 9, Wix et Webflow sur leurs environnements CMS de test les droits de lecture, création, relecture, modification concurrente, publication, échec ambigu et média. Ne pas utiliser de site client pour un essai de publication sans accord.
+2. La revue Claude du 20/11 est prise en compte dans C085 ; voir `WORDPRESS-MEDIA.md` pour ses corrections et points ouverts. C079 autorise Webflow page par page et garde Shopify hors interface client. Les six fichiers CGU/confidentialité approuvés par Tony et préparés par Claude (`66c20a6`) sont intégrés à la branche sans réécriture des textes ; leurs dates du 20/11 devront être recalées au jour du déploiement effectif. Rien n’est déployé ici et l’annexe DPA SerpApi non poussée reste hors périmètre.
+3. Les preuves CMS manuelles et médias conservées cinq ans sont intégrées par C083, avec export et purge. C084 ajoute l’accord unique à l’activation des deux modes automatiques existants, le retrait avant les prochains appels et le lien des tâches à cette activation ; voir `MODES-AUTOMATIQUES.md`. C085 ajoute la case et le reçu durable aux anciennes corrections manuelles de métadonnées, seules ou par lot. Les cas sans preuve demandent confirmation et les résultats incertains ne sont pas rejoués.
 4. Ne pas annoncer de compatibilité générale à partir des seuls tests de transport et d’adaptateur. Une API documentée n’est pas une recette réelle.
 
 ## Plan complet accepté : lots suivants

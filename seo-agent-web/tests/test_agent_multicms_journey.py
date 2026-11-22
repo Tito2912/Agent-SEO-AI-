@@ -196,6 +196,10 @@ def test_review_create_publish_is_a_complete_separate_flow(journey, stored_artic
             return {"fields": [{"slug": "body", "type": "RichText", "editable": True}]}
 
     class Adapter:
+        def validate_draft(self, draft):
+            from backend.cms_content_adapters.html_safe import validate_html
+            validate_html(draft.html)
+
         def create_draft(self, draft):
             calls.append("create")
             assert "<h1>" not in draft.html

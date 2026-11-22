@@ -61,7 +61,12 @@ def image_url(database, *, project_id, task_id, platform, connection_fingerprint
     except (CmsError, OSError, TimeoutError) as error:
         uncertain = not isinstance(error, CmsError) or bool(error.uncertain)
         with database.session() as db:
-            db.get(CmsMediaTransfer, transfer_id).state = "uncertain" if uncertain else "failed"
+            transfer = db.get(CmsMediaTransfer, transfer_id)
+            transfer.state = "uncertain" if uncertain else "failed"
+            known_id = str(getattr(error, "remote_id", "") or "")
+            if uncertain and platform == "wordpress" and known_id.isascii() and known_id.isdigit() and int(known_id) > 0:
+                transfer.remote_id = known_id
+                cms_consent.record_result(db, receipt.id, remote_id=known_id, remote_url=None)
             db.commit()
         raise PublicationError("media_uncertain" if uncertain else "media_failed",
                 "Le transfert n’a pas pu être confirmé. Vérifiez les médias de votre CMS avant de recommencer."

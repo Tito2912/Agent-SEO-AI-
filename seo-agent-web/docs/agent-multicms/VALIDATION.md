@@ -176,3 +176,38 @@ rencontre une importation relative préexistante dans db.py ; point d’entrée
 preuves historiques sur les sources hachées d’alors, pas une recette externe du
 candidat C084. La CI complète et le pilote WordPress doivent porter sur le dernier
 head de la PR 95 ; leur ancien vert n’est pas réutilisé comme nouveau résultat.
+
+## C085 — HTML réel, média WordPress et cases de métadonnées (22 novembre)
+
+La revue Claude du 20/11 est prise en compte : le vrai rendu Markdown est validé
+avant transfert, les tableaux alignés et intertitres sont conservés, le H1 ne
+double plus celui du thème, et l’identifiant d’un média à URL refusée reste
+disponible sans nouvel upload. `WORDPRESS-MEDIA.md` détaille les corrections et
+les deux points de récupération encore ouverts. Le correctif de main ea5d794
+et les textes publics approuvés de Claude 66c20a6 sont intégrés. Aucune nouvelle
+revue Claude Code n’est attribuée à ce complément.
+
+Deux groupes disjoints : **306 tests** de parcours/transport/médias/accords/rendu
+et **248 tests** d’adaptateurs/modes/textes publics réussis. Les 35 tests du
+correctif Markdown de main font partie du premier groupe. Les anciennes passes
+132/707 sont des sous-ensembles ou des sources antérieures, pas un total à ajouter.
+Ruff F/E9 global, compilation et Bandit moyen/élevé réussis.
+
+Recette WordPress 6.9.12 / Yoast 28.7 finale : deux occurrences d’une image privée,
+un seul transfert, trois accords distincts (média, brouillon, publication),
+intertitre/tableau aligné, titre/H1 cohérent et image publique sans authentification
+identique en octets et dimensions. 41 requêtes de contenu / sept écritures ;
+les 32 requêtes / six écritures des métadonnées sont distinctes. Comptes et pages
+fictifs ; runtime et données supprimés par le lanceur.
+
+Douze écrans Chromium : correction individuelle, lot et avertissement planifié,
+chacun en français/anglais à 1440×1100 et 390×844. Cases initialement décochées,
+texte traduit, HTTP 200, aucun débordement, erreur JS ni requête externe.
+Le contrôle utilise un transport de navigation locale sans écriture CMS ni IA.
+Rapport avec empreintes : `WORDPRESS-MEDIA-LOCAL-20261122.json`.
+
+La CI complète et le pilote WordPress doivent encore porter sur le dernier head
+de la PR 95 ; consulter ses checks pour leur résultat effectif. Les verts C084
+ne prouvent pas ce complément. La PR reste en brouillon, sans merge/déploiement.
+Les dates des textes publics intégrés seront recalées à leur déploiement réel.
+Les recettes HTTPS externes, Wix/Webflow et PrestaShop 9 restent à faire.

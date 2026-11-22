@@ -356,6 +356,7 @@ class ContentTransport:
             headers = self._headers(None, mime)
         self._route("POST", path, None)
         response = self._exchange("POST", path, body, headers, write=True)
+        remote_id = None
         try:
             result = response.json()
             if response.status not in {200, 201} or not isinstance(result, dict):
@@ -376,7 +377,9 @@ class ContentTransport:
                 # Ghost's image resource has no numeric ID: its URL identifies it.
                 remote_id = url
             return {"id": remote_id, "url": url}
-        except CmsError:
+        except CmsError as error:
+            if self.platform == "wordpress" and isinstance(remote_id, int) and not isinstance(remote_id, bool) and remote_id > 0:
+                error.remote_id = str(remote_id)
             raise
         except (ValueError, UnicodeError, TypeError):
             raise _fail("reponse_illisible", uncertain=True) from None

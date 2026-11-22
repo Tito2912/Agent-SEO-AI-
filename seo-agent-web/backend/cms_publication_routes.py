@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
+import re
+from .cms_content_media import validate_image
 
 from bs4 import BeautifulSoup
 from fastapi import APIRouter, Form, HTTPException, Request
@@ -68,7 +70,7 @@ def connection_fingerprint(m, credentials):
     return fingerprint(credentials, m._safe_env("SEO_AGENT_SECRET_KEY").encode("utf-8"))
 
 
-def source_draft(m, request, slug, task_id, language, author, resolve_image=None):
+def source_draft(m, request, slug, task_id, language, author, resolve_image=None, validate=None, platform=""):
     note = m._note_d_article(request, slug, task_id)
     if note is None:
         raise workflow.PublicationError("not_found", "Article introuvable.")
@@ -77,6 +79,30 @@ def source_draft(m, request, slug, task_id, language, author, resolve_image=None
     if version is None:
         raise workflow.PublicationError("language", "Cette version linguistique n’existe plus.")
     body = BeautifulSoup(version["html"], "html.parser")
+    title = str(version["titre"])
+    leading = body.find(True)
+    if leading and leading.name == "h1":
+        title = leading.get_text().strip() or title
+        leading.decompose()  # The CMS theme supplies the article heading, without the SEO suffix.
+    for heading in body.find_all("h1"):
+        heading.name = "h2"
+    for cell in body.find_all(["td", "th"]):
+        if "style" in cell.attrs:
+            alignment = re.fullmatch(r"\s*text-align\s*:\s*(left|center|right)\s*;?\s*", str(cell["style"]))
+            if alignment:
+                cell["align"] = alignment.group(1)
+                del cell["style"]
+    for image in body.find_all("img"):
+        for key in ("decoding", "loading"):
+            if image.get(key) in {"async", "sync", "auto", "lazy", "eager"}:
+                del image[key]
+    if platform == "wix":
+        anchors = {h.get("id") for h in body.find_all(re.compile("^h[1-6]$")) if h.get("id")}
+        if any(str(a.get("href") or "").startswith("#") and str(a["href"])[1:] in anchors for a in body.find_all("a")):
+            raise workflow.PublicationError("format", "Les liens vers les intertitres ne sont pas encore pris en charge dans Wix Blog.")
+        for heading in body.find_all(re.compile("^h[1-6]$")):
+            heading.attrs.pop("id", None)
+    pending = []
     for image in body.find_all("img"):
         source = str(image.get("src") or "")
         for name in m._dimensions(note.get("images")):
@@ -84,16 +110,25 @@ def source_draft(m, request, slug, task_id, language, author, resolve_image=None
             if source in allowed:
                 if resolve_image is None:
                     raise workflow.PublicationError("media_not_uploaded", "Les images de cet article doivent être transférées dans votre CMS.")
-                content = m._image_d_article(request, slug, note, name)
-                if content is None:
+                data = m._image_d_article(request, slug, note, name)
+                if data is None:
                     raise workflow.PublicationError("media_missing", "Une image de cet article est introuvable.")
-                image["src"] = resolve_image(name, content)
+                validate_image(data=data, filename=name, content_type="image/webp")
+                image["src"] = "https://media-placeholder.noyaru.invalid/" + name
+                pending.append((image, name, data))
                 break
-    heading = body.find("h1")
-    if heading and heading.get_text().strip() == str(version["titre"]).strip():
-        heading.decompose()  # The CMS/theme supplies the article's title.
-    return ArticleDraft(title=version["titre"], html=workflow.clean_html(str(body)), slug=version["slug"],
-                        excerpt=version.get("description") or "", language=language, author=author)
+    def draft():
+        return ArticleDraft(title=title, html=workflow.clean_html(str(body)), slug=version["slug"],
+                            excerpt=version.get("description") or "", language=language, author=author)
+    initial = draft()
+    if validate:
+        validate(initial)  # All content and media bytes are valid before the first upload.
+    for image, name, data in pending:
+        image["src"] = resolve_image(name, data)
+    result = draft()
+    if validate:
+        validate(result)
+    return result
 
 
 def redirect(m, slug, publication_id="", platform="", **message):
@@ -213,8 +248,9 @@ async def publication_prepare(request: Request, slug: str):
             return cms_media_workflow.image_url(m.DB, project_id=str(project.id), task_id=task_id, platform=platform,
                        connection_fingerprint=fp, name=name, data=content, transport=transport, approved=approved_media,
                        actor_id=str(request.state.user.id))
-        draft = source_draft(m, request, slug, task_id, language, author, resolve_image=resolve_image)
-        get_adapter(platform, transport=transport, config=config)  # Validate mapping before persisting an intent.
+        adapter = get_adapter(platform, transport=transport, config=config)
+        draft = source_draft(m, request, slug, task_id, language, author, resolve_image=resolve_image,
+                             validate=adapter.validate_draft, platform=platform)
         row = workflow.prepare(m.DB, project_id=str(project.id), task_id=task_id, user_id=str(request.state.user.id),
                                platform=platform, language=language, draft=draft, config=config,
                                connection_fingerprint=fp)
@@ -283,9 +319,9 @@ def publication_execute(request: Request, slug: str, publication_id: str,
         def resolve_image(name, content):
             return cms_media_workflow.image_url(m.DB, project_id=str(project.id), task_id=row.task_id, platform=row.platform,
                        connection_fingerprint=fp, name=name, data=content, transport=transport, approved=False)
-        draft = source_draft(m, request, slug, row.task_id, row.language, row.data["article"].get("author", ""),
-                             resolve_image=resolve_image)
         adapter = get_adapter(row.platform, transport=transport, config=row.data["config"])
+        draft = source_draft(m, request, slug, row.task_id, row.language, row.data["article"].get("author", ""),
+                             resolve_image=resolve_image, validate=adapter.validate_draft, platform=row.platform)
         workflow.execute(m.DB, project_id=str(project.id), publication_id=publication_id, operation=operation,
                          adapter=adapter, connection_fingerprint=fp,
                          current_article_digest=workflow.digest(asdict(draft)), approved=approved,

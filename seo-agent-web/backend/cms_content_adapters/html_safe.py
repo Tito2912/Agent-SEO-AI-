@@ -29,6 +29,7 @@ DEFAULT_TAGS: FrozenSet[str] = frozenset({
     "blockquote", "pre", "code",
     "a", "img",
     "figure", "figcaption",
+    "table", "thead", "tbody", "tfoot", "tr", "th", "td",
 })
 
 VOID_ELEMENTS: FrozenSet[str] = frozenset({"br", "hr", "img"})
@@ -36,6 +37,9 @@ VOID_ELEMENTS: FrozenSet[str] = frozenset({"br", "hr", "img"})
 ALLOWED_ATTRS = {
     "a": frozenset({"href", "title", "rel"}),
     "img": frozenset({"src", "alt", "title", "width", "height"}),
+    **{tag: frozenset({"id"}) for tag in ("h1", "h2", "h3", "h4", "h5", "h6")},
+    "th": frozenset({"align"}), "td": frozenset({"align"}),
+    "code": frozenset({"class"}),
 }
 
 
@@ -62,6 +66,11 @@ class _Collector(HTMLParser):
             if name not in ALLOWED_ATTRS.get(tag, frozenset()):
                 if self.refused_attr is None:
                     self.refused_attr = (tag, name)
+                return
+            if ((name == "id" and not re.fullmatch(r"[A-Za-z0-9_-][A-Za-z0-9_.:-]{0,199}", value or ""))
+                    or (name == "align" and value not in {"left", "center", "right"})
+                    or (name == "class" and not re.fullmatch(r"language-[A-Za-z0-9_+-]{1,40}", value or ""))):
+                self.refused_attr = (tag, name)
                 return
             if tag == "a" and name == "href":
                 if not _is_safe_url(value):

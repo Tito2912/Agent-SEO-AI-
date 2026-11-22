@@ -229,6 +229,38 @@ les illustrations, et remplit les garanties de transfert à partir du registre D
   transmission aux seuls prestataires nommés qui en ont besoin pour le SAV, l'hébergement ou les
   sauvegardes. Date de la page : 14 novembre 2026.
 
+## Agent multi-CMS : publication d'articles et accords (20 novembre 2026)
+
+Texte validé par le propriétaire le 20/11/2026. Il est mis en ligne AVEC la fonctionnalité
+(PR #95), jamais avant. La date des deux documents (`legal.UPDATED`) est à recaler sur le jour
+de cette mise en ligne.
+
+- **CGU, en français et en anglais** :
+  - article 1 : la publication des pages rédigées dans le CMS, le plan d'actions et le suivi des
+    résultats par page ;
+  - article 3 : la publication d'un article dans le CMS n'est pas décomptée (aucun modèle appelé) ;
+  - article 6, accord exprès avant toute modification du site : donné à la demande pour une
+    opération manuelle, ou par une case cochée à l'activation d'un mode automatique ;
+  - article 6, publication d'un article en deux accords : brouillon, puis publication. Dans
+    Webflow, seuls les éléments choisis sont publiés ; dans PrestaShop, la page est activée. Les
+    images hébergées par Noyaru ne partent qu'avec un accord, et Noyaru ne supprime aucun article
+    publié ;
+  - article 6, modes automatiques : un accord vaut pour toutes les tâches du mode, dans le
+    périmètre réglé, jusqu'à désactivation. L'élargir demande un nouvel accord ; la désactivation
+    n'annule pas une opération déjà transmise ;
+  - article 6, preuves d'accord gardées cinq ans à compter de chaque accord.
+- **Confidentialité, en français et en anglais** :
+  - section 2 : catégorie « Preuves d'accord » ;
+  - section 3 : finalité « Prouver vos accords », fondée sur l'intérêt légitime ;
+  - section 4 : Wix et Webflow créent et publient les articles validés ; données envoyées, dont
+    l'identifiant du membre auteur chez Wix ;
+  - section 7 : durée de cinq ans à compter de chaque accord, y compris après la suppression du
+    projet ou du compte. Ces preuves sont citées parmi les données qui restent après la
+    suppression du compte.
+- Code correspondant : `cms_consent.py`, `automation_mandates.py`, migrations 0034 et 0035
+  (PR #95).
+- Mises en ligne sans l'e-mail de préavis de l'article 13, sur décision du propriétaire.
+
 ## Points en attente
 
 Voir `LEGAL-VALIDATION-REQUIRED.md`. Les messages de l'application qui citaient encore « Comptes
