@@ -38,6 +38,7 @@ from sqlalchemy import select  # noqa: E402
 from backend import app as m, auth, first_correction, wordpress_cms as wp  # noqa: E402
 from backend.models import CmsChange, CmsPublication, CmsPublicationConsent, CmsMediaTransfer, IssueTask, Project, User  # noqa: E402
 from backend import cms_content_transport as content_transport  # noqa: E402
+from backend.cms_content_adapters.wordpress import WordPressAdapter  # noqa: E402
 
 http = requests.Session()
 http.trust_env = False
@@ -209,6 +210,9 @@ checks.append('Déconnexion : anciens aperçus bloqués')
 # Only this subprocess replaces the DNS/TLS boundary. Keep the real content
 # transport's routes, headers, bounds, status handling and native adapter intact.
 content_calls = []
+refuse_media = False
+
+
 class LoopbackContentConnection(HTTPConnection):
     def __init__(self, host, address):
         assert host == 'wordpress.noyaru.test' and address == '127.0.0.1'
@@ -217,6 +221,8 @@ class LoopbackContentConnection(HTTPConnection):
     def request(self, method, path, body=None, headers=None):
         assert path.startswith('/wp-json/wp/v2/')
         content_calls.append({'method': method})
+        if refuse_media and method == 'POST' and path == '/wp-json/wp/v2/media':
+            headers = {key: value for key, value in (headers or {}).items() if key.lower() != 'authorization'}
         super().request(method, path, body=body, headers={**(headers or {}),
                         'Host': 'wordpress.noyaru.test', 'X-Forwarded-Proto': 'https'})
 
@@ -327,23 +333,79 @@ with m.DB.session() as db:
 start = content_writes()
 assert 'err=' in post(base + '/content/publication/prepare', platform='wordpress', version=rich_id + '|fr').headers['location']
 assert content_writes() == start
-preview = success(post(base + '/content/publication/prepare', platform='wordpress', version=rich_id + '|fr', approved_media='true'))
+prepare = base + '/content/publication/prepare'
+version = rich_id + '|fr'
+refuse_media = True
+try:
+    denied = post(prepare, platform='wordpress', version=version, approved_media='true')
+finally:
+    refuse_media = False
+assert 'err=' in denied.headers['location'] and content_writes() == start + 1
+with m.DB.session() as db:
+    refused = db.scalar(select(CmsMediaTransfer).where(CmsMediaTransfer.task_id == rich_id))
+    assert refused.state == 'failed' and refused.remote_id is None
+    previous_attempt = refused.attempt_id
+retry_form = BeautifulSoup(client.get(denied.headers['location']).text, 'html.parser')
+retry_snapshot = retry_form.find('input', attrs={'name': 'media_retry_snapshot'})['value']
+assert retry_snapshot == previous_attempt
+without_retry = post(prepare, platform='wordpress', version=version, approved_media='true',
+                     media_retry_snapshot=retry_snapshot)
+assert 'err=' in without_retry.headers['location'] and content_writes() == start + 1
+start = content_writes()
+preview = success(post(prepare, platform='wordpress', version=version,
+                       retry_media='true', media_retry_snapshot=retry_snapshot))
 receipt = preview.headers['location']; publication_id = receipt.rsplit('/', 1)[1]
 assert content_writes() == start + 1  # Media only; article remains in Noyaru.
 with m.DB.session() as db:
     transfer = db.scalar(select(CmsMediaTransfer).where(CmsMediaTransfer.task_id == rich_id))
     assert transfer.state == 'ready' and transfer.remote_id and transfer.remote_url
     media_url, media_id = transfer.remote_url, transfer.remote_id
-    proof = db.scalar(select(CmsPublicationConsent).where(CmsPublicationConsent.project_id == project_id,
-        CmsPublicationConsent.operation == 'media_upload'))
+    original = db.get(CmsPublicationConsent, previous_attempt)
+    assert 'result' not in original.targets and transfer.attempt_id != previous_attempt
+    proof = db.get(CmsPublicationConsent, transfer.attempt_id)
     assert proof.actor_id == uid and proof.content_digest == hashlib.sha256(image_bytes).hexdigest()
     assert proof.targets['result']['remote_id'] == media_id
 again = success(post(base + '/content/publication/prepare', platform='wordpress', version=rich_id + '|fr'))
 assert again.headers['location'] == receipt and content_writes() == start + 1
-success(post(receipt + '/execute', operation='create', approved='true'))
+checks.append('Média : refus réel de WordPress, nouvel accord et conservation des deux preuves')
+
+
+class InterruptedRead(RuntimeError):
+    pass
+
+
+def interrupt_and_refresh(operation, running_state):
+    original_read = WordPressAdapter.read
+
+    def interrupted_read(adapter, remote_id):
+        with m.DB.session() as db:
+            pending = db.get(CmsPublication, publication_id)
+            if pending.state == running_state and pending.data.get('write_phase') == 'answered':
+                raise InterruptedRead('WordPress responded before the local read was interrupted')
+        return original_read(adapter, remote_id)
+
+    WordPressAdapter.read = interrupted_read
+    try:
+        post(receipt + '/execute', operation=operation, approved='true')
+    except InterruptedRead:
+        pass
+    else:
+        raise AssertionError('The read after the WordPress write was not interrupted')
+    finally:
+        WordPressAdapter.read = original_read
+    with m.DB.session() as db:
+        pending = db.get(CmsPublication, publication_id)
+        assert pending.state == running_state and pending.remote_id
+    after_write = content_writes()
+    success(post(receipt + '/refresh'))
+    assert content_writes() == after_write
+
+
+interrupt_and_refresh('create', 'creating')
 with m.DB.session() as db:
     publication = db.get(CmsPublication, publication_id)
     assert publication.state == 'draft'; rich_remote_id = publication.remote_id
+checks.append('Brouillon récupéré par relecture après la réponse WordPress, sans nouvel envoi')
 remote = content('GET', '/wp-json/wp/v2/posts/' + rich_remote_id + '?context=edit').json()
 body = BeautifulSoup(remote['content']['raw'], 'html.parser')
 assert remote['title']['raw'] == 'Entretenir une chaîne' and not body.find('h1')
@@ -352,8 +414,11 @@ assert body.find('img')['src'] == media_url and body.find('img')['alt'] == 'Une 
 assert 'media-placeholder' not in remote['content']['raw'] and '/api/projects/' not in remote['content']['raw']
 assert 'err=' in post(receipt + '/execute', operation='publish').headers['location']
 assert content_writes() == start + 2
-success(post(receipt + '/execute', operation='publish', approved='true'))
+interrupt_and_refresh('publish', 'publishing')
 assert content_writes() == start + 3
+with m.DB.session() as db:
+    assert db.get(CmsPublication, publication_id).state == 'published'
+checks.append('Publication récupérée par relecture après la réponse WordPress, sans nouvel envoi')
 remote = content('GET', '/wp-json/wp/v2/posts/' + rich_remote_id + '?context=edit').json()
 public = urlsplit(remote['link'])
 served = http.get(config['server_url'] + public.path + ('?' + public.query if public.query else ''),
