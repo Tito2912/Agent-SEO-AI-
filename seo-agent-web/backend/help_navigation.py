@@ -16,6 +16,7 @@ _DOC_SCREENS = {
     "corriger-dans-wordpress": "/cms", "corriger-dans-ghost": "/cms", "corriger-dans-prestashop": "/cms", "corriger-dans-wix": "/cms",
     "corriger-dans-webflow": "/cms",
     "verifier-une-correction": "/first-correction", "rediger-du-contenu": "/content",
+    "publier-un-article-dans-votre-cms": "/content/publication",
     "analyser-les-concurrents": "/competitors", "backlinks": "/backlinks",
     "opportunites-de-mots-cles": "/keywords/opportunities",
     "suivre-la-performance": "/performance",

@@ -140,7 +140,8 @@ def test_persisted_artifact_is_never_requested_before_project_authorization(help
     ("lire-le-rapport", ""), ("corrections-automatiques", "/corrections"),
     ("corriger-dans-wordpress", "/cms"), ("verifier-une-correction", "/first-correction"),
     ("lancer-un-crawl", "/settings/crawl"), ("analyser-les-concurrents", "/competitors"),
-    ("rediger-du-contenu", "/content"), ("suivre-la-performance", "/performance"),
+    ("rediger-du-contenu", "/content"), ("publier-un-article-dans-votre-cms", "/content/publication"),
+    ("suivre-la-performance", "/performance"),
 ])
 def test_doc_ctas_open_read_screens_without_starting_operations(help_site, slug, screen):
     response = help_site["owner"].get(f'/docs/{slug}?project={help_site["slug"]}')
