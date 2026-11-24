@@ -25546,6 +25546,10 @@ def _ancres_du_sommaire(contenu: str, *, exemples: list[str],
 
 
 _LIEN_INTERNE_RE = re.compile(r"""(?:["']|\]\()(/(?!/)[^"'\s)#?]*)""")
+_MOTIF_LIEN_INTERNE_ARTICLE = (
+    r"""(?<!!)\[([^\]\n]*)\]\((%s)((?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'))?[ \t]*)\)"""
+)
+_LIEN_INTERNE_ARTICLE_RE = re.compile(_MOTIF_LIEN_INTERNE_ARTICLE % r"/(?!/)[^\s)]*")
 
 
 def _liens_internes(contenu: str) -> list[str]:
@@ -25554,8 +25558,9 @@ def _liens_internes(contenu: str) -> list[str]:
 
 
 def _reparer_les_liens(plans: list[dict[str, Any]], *, routes: dict[str, Any],
-                       traduire: "Callable[[str, str], str]") -> None:
-    """Chaque lien interne ecrit par le modele mene a une page du depot, ou il n'est plus la.
+                       traduire: "Callable[[str, str], str]",
+                       routes_du_crawl: bool = False) -> None:
+    """Reparer ou retirer les liens internes ecrits par le modele vers des pages inconnues.
 
     MESURE DU 28/09/2026, PR #10 de prosperfactory.com. La consigne « les liens internes sont
     ceux de la page montree, dans SA langue » n'a pas tenu : le modele n'a pas recopie le lien
@@ -25566,6 +25571,8 @@ def _reparer_les_liens(plans: list[dict[str, Any]], *, routes: dict[str, Any],
     ON NE JUGE QUE CE QU'ON CONNAIT. Un lien est mort s'il vise une SECTION dont le depot connait
     les pages sans viser l'une d'elles. Une section inconnue (`/tags/…`, une page engendree) ou
     un fichier (`.png`) ne se juge pas : se tromper retirerait un lien juste.
+    Pour un article issu du crawl, les liens Markdown sont compares a la liste des pages
+    publiees, a la racine comme dans les sections. Le texte du lien reste lisible.
 
     UNE TRADUCTION SE REPARE PAR SA REFERENCE. Les versions traduisent la meme liste de liens
     dans le meme ordre : le lien mort en position i correspond au lien VIVANT en position i de
@@ -25577,17 +25584,25 @@ def _reparer_les_liens(plans: list[dict[str, Any]], *, routes: dict[str, Any],
     """
     connues = {repo_index.norm_route(r) for r in (routes or {})}
     sections = {r.rsplit("/", 1)[0] for r in connues if r.count("/") > 1}
+    source = "du crawl" if routes_du_crawl else "du dépôt"
+
+    def _extraire(contenu: str) -> list[str]:
+        if routes_du_crawl:
+            return [lien.group(2) for lien in _LIEN_INTERNE_ARTICLE_RE.finditer(contenu)]
+        return _liens_internes(contenu)
 
     def _mort(lien: str) -> bool:
         route = repo_index.norm_route(lien)
+        if routes_du_crawl:
+            return route not in connues
         if "." in route.rsplit("/", 1)[-1]:
             return False
         return route not in connues and route.rsplit("/", 1)[0] in sections
 
-    reference = _liens_internes(str(plans[0]["contenu"])) if plans else []
+    reference = _extraire(str(plans[0]["contenu"])) if plans else []
     for plan in plans:
         contenu = str(plan["contenu"])
-        liens = _liens_internes(contenu)
+        liens = _extraire(contenu)
         vus: set[str] = set()
         for i, lien in enumerate(liens):
             # Un meme lien cite deux fois est repare ou retire en UNE fois : repasser dessus
@@ -25602,19 +25617,30 @@ def _reparer_les_liens(plans: list[dict[str, Any]], *, routes: dict[str, Any],
             # pouvait les distinguer de leur absence.
             if len(liens) == len(reference):
                 juste = traduire(reference[i], str(plan["langue"]))
-                if juste and lien.endswith("/") and not juste.endswith("/"):
+                if juste and not routes_du_crawl and lien.endswith("/") and not juste.endswith("/"):
                     juste += "/"
-            if juste:
+            if routes_du_crawl:
+                motif = _MOTIF_LIEN_INTERNE_ARTICLE % re.escape(lien)
+                if juste:
+                    contenu = re.sub(motif, lambda t: f"[{t[1]}]({juste}{t[3]})", contenu)
+                else:
+                    contenu, nombre = re.subn(motif, r"\1", contenu)
+                    retire = bool(nombre)
+            elif juste:
                 contenu = re.sub(r"""(["'(])%s(["')])""" % re.escape(lien),
                                  lambda t: t.group(1) + juste + t.group(2), contenu)
+            else:
+                contenu, retire = _retirer_l_entree(contenu, lien)
+
+            if juste:
                 plan["notes_redaction"].append(
                     "lien `%s` remis à `%s` — la traduction de `%s`, que le modèle avait "
                     "devinée" % (lien, juste, reference[i]))
             else:
-                contenu, retire = _retirer_l_entree(contenu, lien)
                 plan["notes_redaction"].append(
-                    "lien `%s` %s : aucune page du dépôt à cette adresse" % (
-                        lien, "retiré" if retire else "MORT, À CORRIGER À LA MAIN (hors liste)"))
+                    "lien `%s` %s : aucune page %s à cette adresse" % (
+                        lien, "retiré" if retire else "MORT, À CORRIGER À LA MAIN (hors liste)",
+                        source))
         plan["contenu"] = contenu
 
 
@@ -35942,10 +35968,21 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
     def _traduire_lien(lien: str, cle: str) -> str:
         page = par_chemin.get(repo_index.norm_route(lien))
         cible = (page or {}).get("hreflang", {}).get(_code(cle), "")
-        return repo_index.norm_route(urlsplit(cible).path) if cible else ""
+        if not cible:
+            return ""
+        url_cible = urlsplit(cible)
+        chemin = repo_index.norm_route(url_cible.path)
+        traduction = par_chemin.get(chemin)
+        if traduction is None:
+            return ""
+        hote_cible = url_cible.netloc.lower().removeprefix("www.")
+        hote_verifie = urlsplit(traduction["url"]).netloc.lower().removeprefix("www.")
+        if hote_cible and hote_cible != hote_verifie:
+            return ""
+        return chemin + ("/" if traduction["slash"] else "")
 
     suivi("Vérification des liens internes")
-    _reparer_les_liens(versions, routes={c: [c] for c in chemins}, traduire=_traduire_lien)
+    _reparer_les_liens(versions, routes=par_chemin, traduire=_traduire_lien, routes_du_crawl=True)
     _rendre_naturels(versions, model_override=model_override)
     return {"ok": True, "versions": versions, "visuels": plan_visuels}
 

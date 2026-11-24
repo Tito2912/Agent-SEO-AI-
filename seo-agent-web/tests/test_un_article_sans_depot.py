@@ -163,6 +163,54 @@ def test_un_lien_devine_est_repare_par_les_hreflang_et_un_lien_invente_retire(mo
     assert "](/guides/crypto-dca/)" in v["en"] and "leverage-explained" not in v["en"]
 
 
+def test_les_liens_generes_a_la_racine_sont_verifies_sur_le_crawl(
+    modele, monkeypatch,
+) -> None:
+    monkeypatch.setitem(
+        LIENS, "fr",
+        "[Repère](/repere/) et [accueil](/). "
+        "Voir [ce repère](/repete/), [le détail](https://site.fr/repete/?vue=texte#detail) "
+        'et [la fiche](/hors-crawl/fiche.html "Fiche"). '
+        "Autre source : [document](https://autre.fr/repete/).",
+    )
+    pages = m._pages_du_crawl(CRAWL + [
+        _p("/", "fr", "Accueil", article=False),
+        _p("/repere/", "fr", "Repère"),
+        _p("/repete/", "fr", "Page absente", status=404),
+    ])
+
+    resultat = m._preparer_des_articles(
+        pages=pages, sujet="Un repère", section="/fr/guides", site_name="site.fr",
+    )
+
+    assert resultat["ok"], resultat
+    version = resultat["versions"][0]
+    contenu = version["contenu"]
+    assert contenu.endswith(
+        "Texte. [Repère](/repere/) et [accueil](/). "
+        "Voir ce repère, le détail et la fiche. "
+        "Autre source : [document](https://autre.fr/repete/)."
+    )
+    assert sum("retiré" in note for note in version["notes_redaction"]) == 3
+
+
+def test_une_traduction_de_lien_absente_du_crawl_est_ecartee(modele) -> None:
+    pages = [
+        dict(page, hreflang={**page["hreflang"], "de": S + "/de/guides/disparue/"})
+        if page["chemin"] == "/fr/guides/dca-crypto" else page
+        for page in PAGES
+    ]
+
+    resultat = m._preparer_des_articles(
+        pages=pages, sujet="Le levier", section="/fr/guides", site_name="site.fr", langues=["de"],
+    )
+
+    assert resultat["ok"], resultat
+    allemand = resultat["versions"][1]["contenu"]
+    assert "Texte. DCA und erfunden" in allemand
+    assert "dca-krypto" not in allemand and "disparue" not in allemand
+
+
 def test_le_titre_de_niveau_1_du_corps_est_retire(modele) -> None:
     out = _preparer(section="/fr/guides")
     assert not out["versions"][0]["contenu"].startswith("# ")
