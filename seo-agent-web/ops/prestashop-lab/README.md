@@ -49,9 +49,11 @@ Le scénario ci-dessus concernait les anciennes corrections SEO. La nouvelle
 recette `native_publication.py` concerne des pages CMS fictives du lot #95 :
 création inactive, révision par empreinte, modification de la seconde langue sans
 perdre la première, activation sans changement des champs exposés par l’API,
-HTML public local FR/EN et conflit de version. Un second scénario vérifie que
-Noyaru exige deux accords distincts avant les écritures et conserve les deux
-preuves. La création dans une langue autre que celle par défaut est observée séparément.
+HTML public local FR/EN et conflit de version. Avec les URL simplifiées, la
+recette demande chaque page avec son préfixe de langue. Un second scénario
+vérifie que Noyaru exige deux accords distincts avant les écritures et conserve
+les deux preuves. La création dans une langue autre que celle par défaut est
+observée séparément.
 
 Préparer une **nouvelle boutique jetable 8.2.8 ou 9.2.1**, française par défaut,
 hors dépôt, sur un domaine `127.0.0.1:PORT` ou `localhost:PORT`. La recette 9.2.1

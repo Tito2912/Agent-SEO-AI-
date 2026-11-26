@@ -146,10 +146,16 @@ def run(root: Path, server: str, report: Path | None):
     final = snapshot(created.id)
     assert published.status == "published"
     assert final == {**after, "active": "1"}
-    for language, content in [(default, "texte fictif de cette page"), (english, "independently written English text")]:
+    public_versions = [
+        (default, metadata.get("default_iso") or "fr", "texte fictif de cette page"),
+        (english, "en", "independently written English text"),
+    ]
+    for language, locale, content in public_versions:
         with requests.Session() as session:
             session.trust_env = False
-            url = f"{server}/index.php?controller=cms&id_cms={created.id}&id_lang={language}"
+            # Avec les URL simplifiées, PrestaShop choisit la langue depuis le chemin.
+            prefix = f"/{locale}" if metadata.get("friendly_urls") else ""
+            url = f"{server}{prefix}/index.php?controller=cms&id_cms={created.id}&id_lang={language}"
             response = session.get(url, timeout=30, allow_redirects=False)
             for _ in range(3):
                 if response.status_code not in {301, 302, 303}:

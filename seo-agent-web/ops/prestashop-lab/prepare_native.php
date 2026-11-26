@@ -56,7 +56,9 @@ if (!$handle) {
 chmod($root . '/native-key.txt', 0600);
 fwrite($handle, $key);
 fclose($handle);
-$metadata = ['version' => _PS_VERSION_, 'default_lang' => (int) Configuration::get('PS_LANG_DEFAULT'),
-    'english_lang' => $english, 'server_url' => 'http://' . $domain];
+$defaultLanguage = (int) Configuration::get('PS_LANG_DEFAULT');
+$metadata = ['version' => _PS_VERSION_, 'default_lang' => $defaultLanguage,
+    'default_iso' => Language::getIsoById($defaultLanguage), 'english_lang' => $english,
+    'friendly_urls' => (bool) Configuration::get('PS_REWRITING_SETTINGS'), 'server_url' => 'http://' . $domain];
 file_put_contents($root . '/fixture.json', json_encode($metadata, JSON_PRETTY_PRINT));
 echo json_encode($metadata) . PHP_EOL;
