@@ -25546,10 +25546,151 @@ def _ancres_du_sommaire(contenu: str, *, exemples: list[str],
 
 
 _LIEN_INTERNE_RE = re.compile(r"""(?:["']|\]\()(/(?!/)[^"'\s)#?]*)""")
-_MOTIF_LIEN_INTERNE_ARTICLE = (
-    r"""(?<!!)\[([^\]\n]*)\]\((%s)((?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'))?[ \t]*)\)"""
-)
-_LIEN_INTERNE_ARTICLE_RE = re.compile(_MOTIF_LIEN_INTERNE_ARTICLE % r"/(?!/)[^\s)]*")
+# Les formes sous lesquelles un article issu du crawl peut ecrire un lien. Ce ne sont que des
+# CANDIDATS : `_liens_d_article` demande au convertisseur lesquels en sont.
+_DESTINATION_EN_LIGNE_RE = re.compile(
+    r"""\]\([ \t]*(?P<lien>(?:[^\s()]|\([^\s()]*\))+)"""
+    r"""(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'))?[ \t]*\)""")
+_DEFINITION_DE_LIEN_RE = re.compile(
+    r"""(?m)^[ ]{0,3}\[(?P<nom>(?!\^)[^\[\]\n]+)\]:[ \t]*(?:\n[ \t]*)?(?P<lien>\S+)[^\n]*"""
+    r"""(?:\n[ \t]+(?:"[^"\n]*"|'[^'\n]*'|\([^)\n]*\))[ \t]*(?=\n|$))?(?:\n|$)""")
+_LIEN_PAR_REFERENCE_RE = re.compile(
+    r"""(?<!!)\[(?P<texte>(?:[^\[\]]|\[[^\[\]]*\])*)\](?:[ ]?\n?\[(?P<nom>[^\[\]]*)\])?""")
+_ANCRE_HTML_RE = re.compile(
+    r"""<a\b(?=[^<>]*?\shref\s*=\s*(?P<g>["']?)(?P<lien>[^"'\s<>]+)(?P=g))[^<>]*>"""
+    r"""(?P<texte>(?:(?!<a\b).)*?)</a\s*>""", re.IGNORECASE | re.DOTALL)
+
+
+def _est_interne(lien: str, hotes: "set[str]") -> bool:
+    """Un chemin du site, ou son adresse complete."""
+    if lien.startswith("/"):
+        return not lien.startswith("//")
+    try:
+        adresse = urlsplit(lien)
+    except ValueError:  # `https://[votre-site].fr` : une adresse a completer, pas un lien du site
+        return False
+    return (adresse.scheme.lower() in ("http", "https")
+            and adresse.netloc.lower().removeprefix("www.") in hotes)
+
+
+def _crochet_ouvrant(texte: str, fermant: int) -> int:
+    """Le `[` qui repond au `]` en position `fermant`, dans le meme paragraphe ; -1 sinon."""
+    profondeur = 0
+    for i in range(fermant, -1, -1):
+        if texte[i] in "[]" and texte[i - 1:i] == "\\":
+            continue
+        if texte[i] == "]":
+            profondeur += 1
+        elif texte[i] == "[":
+            profondeur -= 1
+            if not profondeur:
+                return i
+        elif texte[i] == "\n" and texte[i - 1:i] == "\n":
+            break
+    return -1
+
+
+def _nom_de_reference(nom: str) -> str:
+    return " ".join(str(nom).split()).lower()
+
+
+def _adresses_rendues(markdown_texte: str) -> "tuple[set[str], set[str]]":
+    """(adresses des liens cliquables, adresses des definitions lues) apres conversion."""
+    rendu, convertisseur = _convertir_un_article(markdown_texte)
+    cliquables = {html.unescape(a) for a in re.findall(r'<a\b[^>]*?\shref="([^"]*)"', rendu)}
+    return cliquables, {adresse for adresse, _titre in convertisseur.references.values()}
+
+
+def _liens_d_article(contenu: str, hotes: "set[str]",
+                     ) -> "tuple[list[dict[str, Any]], list[dict[str, Any]]]":
+    """Les liens internes d'un article, dans l'ordre de lecture, et les definitions de reference.
+
+    CE QUI EST UN LIEN, C'EST LE CONVERTISSEUR QUI LE DIT. Chaque candidat recoit une adresse
+    temoin dans une copie, la copie est convertie, et seuls les temoins devenus des liens
+    comptent : un exemple dans un bloc de code reste un exemple, une image reste une image.
+    Un `<a href>` n'est pas rendu dans le HTML (chevrons echappes) mais le Markdown exporte le
+    garde cliquable : la copie le teste sous la forme d'un lien Markdown.
+
+    Chaque entree dit quoi ecrire a la place : `cible` est la portion qui porte l'adresse
+    (`None` pour un usage de reference, dont l'adresse vit dans la definition) ; `debut`, `fin`
+    et `texte` servent au retrait, qui garde le texte du lien.
+    """
+    definitions: list[dict[str, Any]] = []
+    for t in _DEFINITION_DE_LIEN_RE.finditer(contenu):
+        definitions.append({"nom": _nom_de_reference(t["nom"]), "lien": t["lien"],
+                            "debut": t.start(), "fin": t.end(), "texte": "",
+                            "cible": t.span("lien")})
+    par_nom = {d["nom"]: d for d in definitions}
+
+    candidats: list[dict[str, Any]] = []
+    for t in _ANCRE_HTML_RE.finditer(contenu):
+        candidats.append({"lien": t["lien"], "debut": t.start(), "fin": t.end(),
+                          "texte": re.sub(r"<[^<>]*>", "", t["texte"]),
+                          "cible": t.span("lien"), "temoin_sur": t.span()})
+    for t in _DESTINATION_EN_LIGNE_RE.finditer(contenu):
+        ouvrant = _crochet_ouvrant(contenu, t.start())
+        if ouvrant < 0 or contenu[:ouvrant].endswith("!"):
+            continue
+        candidats.append({"lien": t["lien"], "debut": ouvrant, "fin": t.end(),
+                          "texte": contenu[ouvrant + 1:t.start()],
+                          "cible": t.span("lien"), "temoin_sur": t.span("lien")})
+    for t in _LIEN_PAR_REFERENCE_RE.finditer(contenu):
+        definition = par_nom.get(_nom_de_reference(t["nom"] or t["texte"]))
+        if definition is None or any(d["debut"] <= t.start() < d["fin"] for d in definitions):
+            continue
+        if t["nom"] is None and contenu[t.end():t.end() + 1] == "(":
+            continue
+        candidats.append({"lien": definition["lien"], "nom": definition["nom"],
+                          "debut": t.start(), "fin": t.end(), "texte": t["texte"],
+                          "cible": None, "temoin_sur": t.span()})
+
+    retenus: list[dict[str, Any]] = []
+    for c in sorted(candidats, key=lambda c: (c["debut"], -c["fin"])):
+        if _est_interne(c["lien"], hotes) and (not retenus or c["debut"] >= retenus[-1]["fin"]):
+            retenus.append(c)
+    definitions = [d for d in definitions if _est_interne(d["lien"], hotes)]
+    if not retenus:
+        return [], []
+
+    poses: list[tuple[int, int, str]] = []
+    for n, c in enumerate(retenus):
+        c["temoin"] = "/temoin-de-lien-%d-fin" % n
+        portee = c["temoin_sur"]
+        poses.append((*portee, c["temoin"] if portee == c["cible"] else "[x](%s)" % c["temoin"]))
+    for n, d in enumerate(definitions):
+        d["temoin"] = "/temoin-de-definition-%d-fin" % n
+        poses.append((*d["cible"], d["temoin"]))
+    cliquables, lues = _adresses_rendues(_appliquer(contenu, poses))
+    definitions = [d for d in definitions if d["temoin"] in lues]
+    noms = {d["nom"] for d in definitions}
+    return ([c for c in retenus if c["temoin"] in cliquables
+             and ("nom" not in c or c["nom"] in noms)], definitions)
+
+
+def _appliquer(contenu: str, changements: "list[tuple[int, int, str]]") -> str:
+    """Les remplacements (debut, fin, texte), de la fin vers le debut."""
+    for debut, fin, texte in sorted(changements, reverse=True):
+        contenu = contenu[:debut] + texte + contenu[fin:]
+    return contenu
+
+
+def _reecrire_un_lien(contenu: str, lien: str, juste: str, hotes: "set[str]") -> "tuple[str, bool]":
+    """Remettre `lien` a l'adresse `juste` — ou, sans elle, le retirer en gardant son texte.
+
+    Sous toutes ses formes a la fois. Une definition de reference suit ses usages : sa nouvelle
+    adresse, ou sa disparition.
+    """
+    liens, definitions = _liens_d_article(contenu, hotes)
+    vises = [c for c in liens if c["lien"] == lien]
+    if not vises:
+        return contenu, False
+    changements: list[tuple[int, int, str]] = []
+    for c in vises + [d for d in definitions if d["lien"] == lien]:
+        if not juste:
+            changements.append((c["debut"], c["fin"], c["texte"]))
+        elif c["cible"]:
+            changements.append((*c["cible"], juste))
+    return _appliquer(contenu, changements), True
 
 
 def _liens_internes(contenu: str) -> list[str]:
@@ -25571,8 +25712,10 @@ def _reparer_les_liens(plans: list[dict[str, Any]], *, routes: dict[str, Any],
     ON NE JUGE QUE CE QU'ON CONNAIT. Un lien est mort s'il vise une SECTION dont le depot connait
     les pages sans viser l'une d'elles. Une section inconnue (`/tags/…`, une page engendree) ou
     un fichier (`.png`) ne se juge pas : se tromper retirerait un lien juste.
-    Pour un article issu du crawl, les liens Markdown sont compares a la liste des pages
-    publiees, a la racine comme dans les sections. Le texte du lien reste lisible.
+    Pour un article issu du crawl, les liens internes — en ligne, par reference ou en HTML
+    (`_liens_d_article`) — sont compares a la liste des pages publiees, a la racine comme dans
+    les sections. Le texte du lien reste lisible. Un lien rendu que rien n'a su reecrire est
+    signale.
 
     UNE TRADUCTION SE REPARE PAR SA REFERENCE. Les versions traduisent la meme liste de liens
     dans le meme ordre : le lien mort en position i correspond au lien VIVANT en position i de
@@ -25585,10 +25728,12 @@ def _reparer_les_liens(plans: list[dict[str, Any]], *, routes: dict[str, Any],
     connues = {repo_index.norm_route(r) for r in (routes or {})}
     sections = {r.rsplit("/", 1)[0] for r in connues if r.count("/") > 1}
     source = "du crawl" if routes_du_crawl else "du dépôt"
+    hotes = {urlsplit(str(p.get("url") or "")).netloc.lower().removeprefix("www.")
+             for p in (routes or {}).values() if isinstance(p, dict)} - {""}
 
     def _extraire(contenu: str) -> list[str]:
         if routes_du_crawl:
-            return [lien.group(2) for lien in _LIEN_INTERNE_ARTICLE_RE.finditer(contenu)]
+            return [c["lien"] for c in _liens_d_article(contenu, hotes)[0]]
         return _liens_internes(contenu)
 
     def _mort(lien: str) -> bool:
@@ -25620,12 +25765,7 @@ def _reparer_les_liens(plans: list[dict[str, Any]], *, routes: dict[str, Any],
                 if juste and not routes_du_crawl and lien.endswith("/") and not juste.endswith("/"):
                     juste += "/"
             if routes_du_crawl:
-                motif = _MOTIF_LIEN_INTERNE_ARTICLE % re.escape(lien)
-                if juste:
-                    contenu = re.sub(motif, lambda t: f"[{t[1]}]({juste}{t[3]})", contenu)
-                else:
-                    contenu, nombre = re.subn(motif, r"\1", contenu)
-                    retire = bool(nombre)
+                contenu, retire = _reecrire_un_lien(contenu, lien, juste, hotes)
             elif juste:
                 contenu = re.sub(r"""(["'(])%s(["')])""" % re.escape(lien),
                                  lambda t: t.group(1) + juste + t.group(2), contenu)
@@ -25641,6 +25781,12 @@ def _reparer_les_liens(plans: list[dict[str, Any]], *, routes: dict[str, Any],
                     "lien `%s` %s : aucune page %s à cette adresse" % (
                         lien, "retiré" if retire else "MORT, À CORRIGER À LA MAIN (hors liste)",
                         source))
+        if routes_du_crawl:
+            for lien in sorted(_adresses_rendues(contenu)[0]):
+                if _est_interne(lien, hotes) and _mort(lien):
+                    plan["notes_redaction"].append(
+                        "lien `%s` MORT, À CORRIGER À LA MAIN : aucune page du crawl à cette "
+                        "adresse" % lien)
         plan["contenu"] = contenu
 
 
@@ -35552,12 +35698,18 @@ def _article_en_html(markdown_texte: str) -> str:
     sans chevron (`{: onclick=...}`, lien `javascript:`) : le convertisseur des articles
     (`content_library._article_markdown_instance`) les refuse — revue du 20/11/2026.
     """
+    return _convertir_un_article(markdown_texte)[0]
+
+
+def _convertir_un_article(markdown_texte: str) -> "tuple[str, Any]":
+    """(HTML, convertisseur) : la conversion de `_article_en_html`, avec ce qu'elle a lu."""
     from backend import content_library as _cl
     source = str(markdown_texte or "").replace("<", "&lt;").replace(">", "&gt;")
     # Les citations Markdown commencent par `>` : on les rend a la ligne, ou elles ne peuvent
     # pas ouvrir de balise.
     source = re.sub(r"(?m)^(\s*)&gt;", r"\1>", source)
-    return _cl._article_markdown_instance().convert(source)
+    convertisseur = _cl._article_markdown_instance()
+    return convertisseur.convert(source), convertisseur
 
 
 def _valider_les_visuels(brut: Any, *, markdown: str, demande: "dict[str, Any]",
