@@ -93,6 +93,22 @@ def test_seules_les_pages_PUBLIEES_comptent() -> None:
     assert "/fr/guides/disparue" not in chemins and "/fr/guides/retiree" not in chemins
 
 
+def test_premier_article_sans_page_admissible(monkeypatch):
+    def rediger(**options):
+        assert options["modele"] is None
+        assert options["liens"] == []
+        assert options["langue"] == "celle du sujet"
+        return {"titre": "Sortie à vélo", "description": "Préparer une sortie",
+                "slug": "sortie", "markdown": "Préparer son vélo."}, ""
+
+    monkeypatch.setattr(m, "rediger_un_article", rediger)
+    monkeypatch.setattr(m, "_rendre_naturels", lambda *args, **kwargs: None)
+    resultat = m._preparer_des_articles(pages=[], sujet="Préparer une sortie", section="/demo",
+                                         site_sans_modele="https://atelier.wixsite.com/demo/")
+    assert resultat["ok"]
+    assert resultat["versions"][0]["adresse"] == "/demo/sortie"
+
+
 def test_les_sections_se_mesurent_les_plus_fournies_d_abord() -> None:
     assert m._sections_du_crawl(PAGES)[0] == {"section": "/fr/guides", "pages": 3, "articles": 3}
     assert {"section": "/de/guides", "pages": 2, "articles": 2} in m._sections_du_crawl(PAGES)
