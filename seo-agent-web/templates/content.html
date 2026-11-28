@@ -25,8 +25,8 @@
     {% set a_depot = github_cfg and github_cfg.repo %}
     <div id="content-progress">{{ steps(1, labels=['Choisir', 'Rédiger', 'Relire', 'Publier'], aria_label='Progression de votre contenu') }}</div>
     <div class="content-readiness">
-      <p id="c-readiness" role="status">{{ tr('Choisissez une destination et un sujet.') if sections_crawl or a_depot else tr('Une analyse du site est nécessaire pour identifier ses rubriques.') }}</p>
-      <a class="btn" id="c-prerequisite-action" href="/projects/{{ slug }}" {% if sections_crawl or a_depot %}hidden{% endif %}>{{ tr("Lancer une analyse") }}</a>
+      <p id="c-readiness" role="status">{{ tr('Choisissez une destination et un sujet.') if sections_crawl or premier_article or a_depot else tr('Une analyse du site est nécessaire pour identifier ses rubriques.') }}</p>
+      <a class="btn" id="c-prerequisite-action" href="/projects/{{ slug }}" {% if sections_crawl or premier_article or a_depot %}hidden{% endif %}>{{ tr("Lancer une analyse") }}</a>
     </div>
 
     <section class="card" id="content-compose">
@@ -159,6 +159,9 @@
                 <textarea id="c-v-donnees" rows="4" maxlength="5000" placeholder="{{ tr("Collez un tableau depuis un tableur : l’article s’appuiera sur ces chiffres, et un graphique pourra en être tiré.") }}"></textarea>
               </label>
             </details>
+          {% elif premier_article %}
+            <input type="hidden" id="c-section" value="/" />
+            <p>{{ tr("Votre site contient trop peu de pages de référence pour en reproduire le style. Le brouillon sera rédigé à partir de votre sujet.") }}</p>
           {% else %}
             <p class="muted small" id="c-sans-crawl">
               {{ tr_html('Aucune analyse de votre site pour l\'instant. L’analyse identifie les rubriques existantes et à quoi ressemblent leurs pages : <a href="{url}">lancez une analyse</a>, puis revenez ici.', url='/projects/' ~ slug) }}
@@ -964,13 +967,13 @@
         articleBox.hidden = true;
         say((langues.length > 1
           ? fill({{ tr("Le modèle écrit la version principale, puis {n} traduction(s). Cela prend environ une minute : gardez cet onglet ouvert.")|tojson }}, {n: langues.length - 1})
-          : {{ tr("Le modèle écrit l'article en imitant une page de la section. Une trentaine de secondes.")|tojson }}) +
+          : {{ (tr("Rédaction du brouillon à partir de votre sujet.") if premier_article else tr("Le modèle écrit l'article en imitant une page de la section. Une trentaine de secondes."))|tojson }}) +
           (avecVisuels ? ' ' + {{ tr("Les visuels ajoutent jusqu’à une minute.")|tojson }} : ''));
         var jeton = nouveauJeton();
         suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/article', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sujet: s, section: sectionSel.value, langues: langues, suivi: jeton,
+          body: JSON.stringify({ sujet: s, section: sectionSel.value, sans_modele: {{ premier_article|default(false)|tojson }}, langues: langues, suivi: jeton,
                                  taille: choixStyle('c-taille'), ton: choixStyle('c-ton'),
                                  images: importsPrets(), illustrations: coche('c-v-illustrations'),
                                  graphiques: coche('c-v-graphiques'), captures: coche('c-v-captures'),

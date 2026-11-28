@@ -35993,6 +35993,7 @@ def _rendre_naturels(versions: "list[dict[str, Any]]", *, model_override: str = 
 
 def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section: str,
                            langues: "list[str] | None" = None, site_name: str = "",
+                           site_sans_modele: str = "",
                            model_override: str = "",
                            suivi: "Callable[[str], None]" = _sans_suivi,
                            style: "dict[str, str] | None" = None,
@@ -36030,8 +36031,8 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
             "langue(s) que ce site ne sert pas : %s" % ", ".join(inconnues))}
 
     marque = _suffixe_de_marque([p.get("titre") or "" for p in pages])
-    modele = _modele_de_section(pages, section)
-    if modele is None:
+    modele = None if site_sans_modele else _modele_de_section(pages, section)
+    if modele is None and not site_sans_modele:
         return {"ok": False, "status": 422, "error": (
             "aucune page publiée sous %s dans le dernier crawl : pas de forme à imiter. "
             "Choisis une section qui contient déjà des pages." % section)}
@@ -36054,7 +36055,8 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
                  reference: str = "",
                  graphiques: "dict[int, dict[str, Any]] | None" = None) -> dict[str, Any]:
         article, refus = rediger_un_article(
-            sujet=sujet, langue=_code(cle), site_name=site_name, section=section_cible,
+            sujet=sujet, langue=_code(cle) or ("celle du sujet" if site_sans_modele else ""),
+            site_name=site_name, section=section_cible,
             modele=modele_cible, liens=_liens_de(cle, section_cible),
             reference=reference, langue_reference=_code(langue_source),
             model_override=model_override, style=style,
@@ -36065,13 +36067,13 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
                     "error": "version %s : %s" % (_code(cle) or "principale", refus)}
         # Un lien ABSOLU vers le site lui-meme echapperait au controle, qui lit les chemins :
         # on le ramene en relatif avant, pour que `_reparer_les_liens` le voie.
-        hote = urlsplit(modele["url"]).netloc.lower().removeprefix("www.")
+        hote = urlsplit(site_sans_modele or modele["url"]).netloc.lower().removeprefix("www.")
         if hote:
             article["markdown"] = re.sub(
                 r"\]\(https?://(?:www\.)?%s(/[^)]*)\)" % re.escape(hote), r"](\1)",
                 article["markdown"], flags=re.I)
         slug_propre = _slug_de_sujet(article["slug"]) or _slug_de_sujet(article["titre"])
-        slash = "/" if (modele_cible or modele)["slash"] else ""
+        slash = "/" if (modele_cible or modele or {}).get("slash") else ""
         adresse = ("%s/%s%s" % (section_cible.rstrip("/"), slug_propre, slash)
                    if section_cible else "")
         # Le site met une marque en fin de title : le title la garde, le H1 non. Il n'en met
@@ -36341,6 +36343,7 @@ def api_content_image_lire(request: Request, slug: str, ident: str) -> Response:
 class _ContentArticleBody(BaseModel):
     sujet: str = ""
     section: str = ""
+    sans_modele: bool = False
     langues: list[str] = []
     suivi: str = ""
     taille: str = ""
@@ -36413,11 +36416,16 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
             "Aucun crawl de ton site pour l'instant : c'est lui qui dit quelles pages existent "
             "et à quoi elles ressemblent. Lance un crawl, puis reviens ici.")}, status_code=400)
     pages = _pages_du_crawl(pages_brutes)
+    if body.sans_modele:
+        if body.langues or _sections_du_crawl(pages):
+            return JSONResponse({"ok": False, "error": "Actualisez les options de rédaction."}, status_code=400)
+        section = urlsplit(proj.base_url).path or "/"
     suivi = _ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id))
     out = _preparer_des_articles(pages=pages, sujet=sujet,
                                  section=section, langues=list(body.langues),
                                  site_name=str(proj.site_name or slug),
-                                 suivi=suivi, style=style, demande_visuels=demande_visuels)
+                                 suivi=suivi, style=style, demande_visuels=demande_visuels,
+                                 **({"site_sans_modele": proj.base_url} if body.sans_modele else {}))
     if not out.get("ok"):
         return JSONResponse({"ok": False, "error": out.get("error")},
                             status_code=int(out.get("status") or 422))
@@ -36876,9 +36884,12 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
     langues_crawl: list[dict[str, Any]] = []
     articles: list[dict[str, Any]] = []
     slash_final = False
+    premier_article = False
     try:
-        pages_crawl = _pages_du_crawl(_own_pages_for_project(_runs_dir_pour_slug(request, slug), slug)[0])
+        pages_brutes, _ = _own_pages_for_project(_runs_dir_pour_slug(request, slug), slug)
+        pages_crawl = _pages_du_crawl(pages_brutes)
         sections_crawl = _sections_du_crawl(pages_crawl)[:40]
+        premier_article = bool(pages_brutes) and not sections_crawl
         langues_crawl = _langues_du_crawl(pages_crawl)
         # LA BARRE FINALE SE MESURE : l'adresse composee par l'ecran doit ressembler a celles
         # que le site sert deja, sinon le canonical de la page neuve differe de ses voisines.
@@ -36921,6 +36932,7 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "jours_auto": list(enumerate(_JOURS_AUTO)),
             "fuseaux_auto": list(_FUSEAUX_AUTO),
             "sections_crawl": sections_crawl,
+            "premier_article": premier_article,
             # Les choix viennent des tables de la redaction : l'ecran ne peut rien offrir
             # qu'elle refuserait.
             "tailles_article": [(k, v[0]) for k, v in _TAILLES_ARTICLE.items()],
