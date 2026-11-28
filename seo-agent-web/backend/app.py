@@ -20229,7 +20229,6 @@ def project_crawl_settings_save(
     wix_site_path: str = Form(default=""),
 ) -> RedirectResponse:
     proj = _db_project_or_404(request, slug)
-    base_url = str(proj.base_url or "").strip()
     site_name = str(proj.site_name or slug).strip() or slug
 
     # Preserve sub-settings when a module is disabled (disabled checkboxes are not submitted by the browser).
