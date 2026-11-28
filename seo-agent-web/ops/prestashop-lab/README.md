@@ -43,24 +43,30 @@ Dans un dossier vide hors du dépôt, désigné par `PRESTASHOP_LAB` :
 
 Le script modifie la boutique de laboratoire : jamais contre une vraie boutique.
 
-## Recette des pages CMS natives (C082)
+## Recette des pages CMS natives
 
 Le scénario ci-dessus concernait les anciennes corrections SEO. La nouvelle
 recette `native_publication.py` concerne des pages CMS fictives du lot #95 :
 création inactive, révision par empreinte, modification de la seconde langue sans
-perdre la première, activation sans changement du texte, HTML public local et
-conflit de version. Elle observe séparément la création dans une langue non défaut.
+perdre la première, activation sans changement des champs exposés par l’API,
+HTML public local FR/EN et conflit de version. Avec les URL simplifiées, la
+recette demande chaque page avec son préfixe de langue. Un second scénario
+vérifie que Noyaru exige deux accords distincts avant les écritures et conserve
+les deux preuves. La création dans une langue autre que celle par défaut est
+observée séparément.
 
-Préparer une **nouvelle boutique jetable 8.2.8**, française par défaut, hors dépôt,
-sur un domaine `127.0.0.1:PORT` ou `localhost:PORT`. Les mêmes PHP 8.1 et MariaDB
-portables que ci-dessus conviennent ; une extraction Linux en `/tmp` évite toute
-installation système. L'installateur CLI doit recevoir explicitement son serveur
-et son port de base de données. Aucun site marchand existant ne doit servir ici.
+Préparer une **nouvelle boutique jetable 8.2.8 ou 9.2.1**, française par défaut,
+hors dépôt, sur un domaine `127.0.0.1:PORT` ou `localhost:PORT`. La recette 9.2.1
+utilise le [paquet officiel PrestaShop Classic](https://prestashop.com/direct-downloads-for-automation-integration/),
+PHP 8.3 et MariaDB 10.11. Les paquets peuvent être extraits dans un répertoire
+temporaire sans installation système. L’installateur CLI doit recevoir
+explicitement la connexion à la base jetable. Aucun site marchand existant ne
+doit servir ici.
 
 ```sh
 PRESTASHOP_LAB=/chemin/labo php ops/prestashop-lab/prepare_native.php
-# Retirer/renommer le dossier shop/install après l'installation, comme le demande PrestaShop.
-# La recette attend shop/install-disabled pour identifier cette préparation.
+# Pour 8.2.8, renommer shop/install en shop/install-disabled après l'installation.
+# L'installateur CLI 9.2.1 retire lui-même shop/install.
 PRESTASHOP_LAB=/chemin/labo php -S 127.0.0.1:8091 -t /chemin/labo/shop ops/prestashop-lab/router.php
 python ops/prestashop-lab/native_publication.py --lab-root /chemin/labo --server http://127.0.0.1:8091 --report /tmp/prestashop-native-report.json
 ```
