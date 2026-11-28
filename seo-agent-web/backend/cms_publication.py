@@ -267,25 +267,28 @@ def _write_answered(database, row):
                     and (receipt.targets.get("result") or {}).get("remote_id") == row.remote_id)
 
 
-def reconcile(database, *, project_id, publication_id, adapter):
+def reconcile(database, *, project_id, publication_id, adapter, candidate_id=""):
     """A read-only remote check can recover a known ID, never create another article."""
     row = load(database, project_id=project_id, publication_id=publication_id)
-    if row.state not in {"creating", "publishing", "uncertain", "failed", "draft", "published", "published_unverified"} or not row.remote_id:
+    recover_wix = bool(candidate_id and not row.remote_id and row.platform == "wix"
+                       and row.state == "uncertain" and row.data.get("last_operation") == "create")
+    expected_id = candidate_id if recover_wix else row.remote_id
+    if row.state not in {"creating", "publishing", "uncertain", "failed", "draft", "published", "published_unverified"} or not expected_id:
         raise PublicationError("unresolved", "L’identifiant du résultat n’est pas encore confirmé. Vérifiez directement dans votre CMS.")
-    needs_first_revision = (row.platform == "prestashop" and row.state == "uncertain"
+    needs_first_revision = recover_wix or (row.platform == "prestashop" and row.state == "uncertain"
                             and row.data.get("last_operation") == "create" and not row.remote_revision)
     try:
         if needs_first_revision:
             payload = dict(row.data["article"])
             payload.pop("images", None)
-            remote = adapter.read_created_draft(row.remote_id, ArticleDraft(**payload))
+            remote = adapter.read_created_draft(expected_id, ArticleDraft(**payload))
         else:
             remote = adapter.read(row.remote_id)
     except (AdapterError, CmsError, OSError) as error:
         if needs_first_revision and getattr(error, "code", None) == "remote_changed":
             raise PublicationError("remote_changed", "Le brouillon a changé dans le CMS. Relisez-le et poursuivez directement dans votre CMS.") from None
         raise PublicationError("read_unavailable", "Le CMS ne permet pas encore de confirmer ce résultat.") from None
-    if remote.id != row.remote_id or remote.status not in {"draft", "published"}:
+    if remote.id != expected_id or remote.status not in {"draft", "published"} or (recover_wix and remote.status != "draft"):
         raise PublicationError("unresolved", "Le CMS ne confirme pas encore un brouillon ou une publication.")
     if row.state in {"creating", "publishing"} and not _write_answered(database, row):
         message = ("Le CMS indique un brouillon. L’écriture en cours reste à confirmer."
@@ -305,7 +308,7 @@ def reconcile(database, *, project_id, publication_id, adapter):
     with database.session() as db:
         state = "draft" if remote.status == "draft" else "published" if confirmed else "published_unverified"
         adopt_revision = confirmed or (needs_first_revision and state == "draft")
-        _advance(db, row, state=state, remote_url=remote.url,
+        _advance(db, row, state=state, remote_id=remote.id, remote_url=remote.url,
                  remote_revision=remote.revision if adopt_revision else row.remote_revision, error_code=None)
         cms_consent.record_result(db, row.data.get("last_consent_id"), remote_id=remote.id, remote_url=remote.url)
         if confirmed:

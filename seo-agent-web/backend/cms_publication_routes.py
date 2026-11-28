@@ -345,7 +345,7 @@ def publication_execute(request: Request, slug: str, publication_id: str,
 
 
 @router.post("/projects/{slug}/content/publication/{publication_id}/refresh")
-def publication_refresh(request: Request, slug: str, publication_id: str):
+def publication_refresh(request: Request, slug: str, publication_id: str, candidate_id: str = Form(default="")):
     m = app_module()
     project = m._db_project_or_404(request, slug)
     try:
@@ -357,7 +357,8 @@ def publication_refresh(request: Request, slug: str, publication_id: str):
             raise workflow.PublicationError("connection_changed", "La connexion a changé. Vérifiez le résultat directement dans votre CMS.")
         transport, _ = bound_transport(project, row.platform, credentials)
         adapter = get_adapter(row.platform, transport=transport, config=row.data["config"])
-        workflow.reconcile(m.DB, project_id=str(project.id), publication_id=publication_id, adapter=adapter)
+        workflow.reconcile(m.DB, project_id=str(project.id), publication_id=publication_id, adapter=adapter,
+                           candidate_id=candidate_id.strip() if isinstance(candidate_id, str) else "")
         return redirect(m, slug, publication_id, msg="Le résultat a été relu dans votre CMS, sans nouvelle écriture.")
     except (CmsError, AdapterError, workflow.PublicationError) as error:
         if isinstance(error, workflow.PublicationError) and error.code == "not_found":
