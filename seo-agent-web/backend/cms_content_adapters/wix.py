@@ -109,6 +109,29 @@ class WixAdapter:
             return self._to_remote({"id": draft_id, "revision": current.revision}, status="published")
         return self._to_remote(post, status="published")
 
+    def read_created_draft(self, remote_id: str, draft: ArticleDraft) -> RemoteArticle:
+        path = "/blog/v3/draft-posts/" + quote(self._check_id(remote_id), safe="") + "?fieldsets=RICH_CONTENT"
+        response = wrap_transport_errors(
+            lambda: self.transport("GET", path, headers={"Accept": "application/json"}),
+            write=False, cms="Wix")
+        post = self._extract(self._expect_ok(response, write=False)) or {}
+        remote = self._to_remote(post, status=None)
+
+        def content(value):
+            if isinstance(value, list):
+                return [content(item) for item in value]
+            if isinstance(value, dict):
+                return {k: content(v) for k, v in value.items()
+                        if not (k == "id" and "type" in value and "nodes" in value)}
+            return value
+
+        if (remote.id != remote_id or remote.status != "draft" or post.get("title") != draft.title
+                or post.get("memberId") != draft.author or post.get("language") != (draft.language or "fr")
+                or (post.get("excerpt") or "") != (draft.excerpt or "")
+                or content((post.get("richContent") or {}).get("nodes")) != content(html_to_ricos(draft.html)["nodes"])):
+            raise AdapterError("Le brouillon Wix diffère de l’aperçu.", code="remote_changed")
+        return remote
+
     def update_draft(self, remote_id: str, draft: ArticleDraft,
                      expected_revision: Optional[str] = None) -> RemoteArticle:
         require_draft_fields(draft)
@@ -121,7 +144,7 @@ class WixAdapter:
         payload = {
             "draftPost": {
                 "id": draft_id,
-                "revision": current.revision,
+                **({} if current.revision.startswith("edited:") else {"revision": current.revision}),
                 "title": draft.title,
                 "slug": draft.slug,
                 "memberId": draft.author,
@@ -191,9 +214,13 @@ class WixAdapter:
             raise AdapterError("Wix n'a pas renvoye de draft exploitable.", code="unreadable")
         remote_id = str(post["id"])
         revision = str(post.get("revision") or "")
+        if not revision and post.get("editedDate"):
+            revision = "edited:" + str(post["editedDate"])
         if not revision:
             raise AdapterError("Wix n'a pas renvoye de revision.", code="unreadable")
         url = str(post.get("url") or "")
-        if status is None:
+        if post.get("status"):
+            status = {"UNPUBLISHED": "draft", "PUBLISHED": "published"}.get(post["status"], "unknown")
+        elif status is None:
             status = "published" if post.get("published") else "draft"
         return RemoteArticle(id=remote_id, status=status, url=url, revision=revision)

@@ -6,6 +6,7 @@ import json
 import pytest
 
 from backend.cms_content_adapters import AdapterError, ArticleDraft, TransportResponse, get_adapter
+from backend.cms_content_adapters.ricos import html_to_ricos
 
 
 def _draft(**overrides):
@@ -40,6 +41,21 @@ class _Transport:
         if isinstance(item, Exception):
             raise item
         return item
+
+
+def test_recover_wix_draft_by_reading_content_and_edit_date():
+    draft = _draft()
+    post = _draft_post(revision=None, editedDate="2026-11-28T13:11:30.432Z", status="UNPUBLISHED",
+                       excerpt=draft.excerpt, language="fr", richContent=html_to_ricos(draft.html))
+    transport = _Transport([_json(200, post), _json(200, post)])
+    adapter = get_adapter("wix", transport=transport, config={})
+    result = adapter.read_created_draft("draft-1", draft)
+    assert result.status == "draft"
+    assert result.revision == "edited:2026-11-28T13:11:30.432Z"
+    with pytest.raises(AdapterError) as mismatch:
+        adapter.read_created_draft("draft-1", _draft(html="<p>Autre texte</p>"))
+    assert mismatch.value.code == "remote_changed"
+    assert [call["method"] for call in transport.calls] == ["GET", "GET"]
 
 
 def test_create_draft_sends_publish_false_and_ricos_content():

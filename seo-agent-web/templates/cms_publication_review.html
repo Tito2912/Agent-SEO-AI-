@@ -15,5 +15,8 @@
 {% elif publication.state in ['creating','publishing','uncertain'] %}<h2>{{ tr("Résultat à confirmer") }}</h2><p>{{ tr("L’opération a commencé. Vérifiez son résultat dans votre CMS avant toute nouvelle tentative ; Noyaru ne renvoie pas automatiquement la création d’un article.") }}</p>
 {% else %}<h2>{{ tr("Le CMS a refusé l’opération") }}</h2><p>{{ tr("Vérifiez la connexion, les droits et la destination avant de préparer une nouvelle demande.") }}</p>{% endif %}
 </section><p><a href="/projects/{{ slug }}/agent">{{ tr("Retrouver le suivi de mes pages") }}</a> · <a href="/projects/{{ slug }}/content/publication?platform={{ publication.platform }}">{{ tr("Préparer une autre publication") }}</a></p>
-{% if publication.remote_id %}<form method="post" action="/projects/{{ slug }}/content/publication/{{ publication.id }}/refresh"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}"><button class="btn">{{ tr("Relire le résultat dans mon CMS") }}</button></form>{% endif %}
+{% set recover_wix = publication.platform == 'wix' and publication.state == 'uncertain' and publication.data.last_operation == 'create' and not publication.remote_id %}
+{% if publication.remote_id or recover_wix %}<form method="post" action="/projects/{{ slug }}/content/publication/{{ publication.id }}/refresh"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}">
+{% if recover_wix %}<label>{{ tr("Identifiant du brouillon Wix à vérifier") }}<input name="candidate_id" maxlength="64" required></label>{% endif %}
+<button class="btn">{{ tr("Relire le résultat dans mon CMS") }}</button></form>{% endif %}
 {% endblock %}
