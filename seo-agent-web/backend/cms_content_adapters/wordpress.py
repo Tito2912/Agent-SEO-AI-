@@ -15,6 +15,7 @@ transport ; aucun secret n'est manipule ici. Le transport est responsable d'ajou
 """
 from __future__ import annotations
 
+from html.parser import HTMLParser
 from typing import Any, Mapping, Optional
 
 from .base import (
@@ -33,6 +34,30 @@ from .html_safe import validate_html
 
 
 REQUIRED_CONFIG = ()  # l'URL de base et les droits sont a la charge du transport
+
+
+class _ResponsiveImages(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.positions: list[tuple[int, int]] = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "img":
+            self.positions.append(self.getpos())
+
+    def apply(self, content: str) -> str:
+        self.feed(content)
+        self.close()
+        if not self.positions:
+            return content
+        lines = content.split("\n")
+        for line, column in reversed(self.positions):
+            index = line - 1
+            end = column + len("<img")
+            lines[index] = (
+                lines[index][:end] + ' style="max-width:100%;height:auto"' + lines[index][end:]
+            )
+        return "\n".join(lines)
 
 
 class WordPressAdapter:
@@ -110,7 +135,7 @@ class WordPressAdapter:
     def _payload(self, draft: ArticleDraft, *, status: Optional[str]) -> dict:
         payload = {
             "title": draft.title,
-            "content": draft.html,
+            "content": _ResponsiveImages().apply(draft.html),
             "slug": draft.slug,
             "excerpt": draft.excerpt or "",
         }
