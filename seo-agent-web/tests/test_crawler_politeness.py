@@ -31,6 +31,13 @@ sys.modules["seo_audit_for_politeness_tests"] = seo_audit
 _SPEC.loader.exec_module(seo_audit)
 
 
+def test_wix_start_urls_stay_inside_one_site():
+    base = "https://atelier.wixsite.com/velo/"
+    article = base + "blog"
+    other = "https://atelier.wixsite.com/velo-en/blog"
+    assert seo_audit._urls_de_depart(base, [article, other]) == [base, article]
+
+
 # --- robots.txt Crawl-delay ---------------------------------------------------------------
 
 def test_crawl_delay_is_read_for_the_matching_user_agent() -> None:

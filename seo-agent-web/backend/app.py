@@ -6781,8 +6781,13 @@ def _normalize_base_url(value: str) -> str | None:
     netloc = host
     if parts.port:
         netloc = f"{host}:{parts.port}"
-    # Use root as crawl base_url (Ahrefs-like).
-    return urlunsplit((scheme, netloc, "/", "", ""))
+    path = "/"
+    if host.endswith(".wixsite.com") and parts.path.strip("/"):
+        site = parts.path.strip("/").split("/", 1)[0]
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", site):
+            return None
+        path = f"/{site}/"
+    return urlunsplit((scheme, netloc, path, "", ""))
 
 
 def _root_url(url: str) -> str:
@@ -7808,6 +7813,8 @@ def _slug_from_base_url(base_url: str) -> str | None:
         return None
     if host.startswith("www."):
         host = host[4:]
+    if host.endswith(".wixsite.com") and parts.path.strip("/"):
+        return _slugify(f"{host}-{parts.path.strip('/')}")
     return _slugify(host) or None
 
 
@@ -20151,6 +20158,8 @@ def project_crawl_settings(
         analysis_owner = db.get(User, str(proj.owner_user_id))
         analysis_owner_email = str(getattr(analysis_owner, "email", "") or "le propriétaire du site")
     project.update({"site_name": str(proj.site_name or slug), "base_url": str(proj.base_url or "")})
+    address = urlsplit(project["base_url"])
+    project["missing_wix_path"] = (address.hostname or "").endswith(".wixsite.com") and not address.path.strip("/")
     crawl = {**crawl, "max_pages": min(crawl["max_pages"], plan_crawl["max_pages_per_crawl"]),
              "pagespeed_max_urls": min(crawl["pagespeed_max_urls"], plan_crawl["max_pagespeed_urls"])}
     resp = templates.TemplateResponse(
@@ -20217,6 +20226,7 @@ def project_crawl_settings_save(
     gsc_days: int = Form(default=28),
     gsc_search_type: str = Form(default="web"),
     gsc_property: str = Form(default=""),
+    wix_site_path: str = Form(default=""),
 ) -> RedirectResponse:
     proj = _db_project_or_404(request, slug)
     base_url = str(proj.base_url or "").strip()
@@ -20289,7 +20299,14 @@ def project_crawl_settings_save(
             return RedirectResponse(url=_path_with_flash(f"/projects/{slug}/settings/crawl",
                                     err="Seul le propriétaire du site peut enregistrer ces réglages d’analyse."), status_code=303)
         current_settings = row.settings if isinstance(row.settings, dict) else {}
-        row.base_url = base_url
+        if isinstance(wix_site_path, str) and wix_site_path.strip():
+            current = urlsplit(row.base_url)
+            path = wix_site_path.strip().strip("/")
+            if (not (current.hostname or "").endswith(".wixsite.com") or current.path.strip("/")
+                    or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", path)):
+                return RedirectResponse(url=_path_with_flash(f"/projects/{slug}/settings/crawl",
+                                        err="Vérifiez le chemin du site Wix."), status_code=303)
+            row.base_url = current._replace(path=f"/{path}/", query="", fragment="").geturl()
         row.site_name = site_name
         previous_crawl, previous_gsc, previous_bing = _project_overrides_from_settings(current_settings)
         row.settings = {**current_settings, "crawl": {**previous_crawl, **crawl_cfg},

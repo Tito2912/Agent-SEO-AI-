@@ -2908,6 +2908,10 @@ def _urls_de_depart(base_url: str, sitemap_seed_urls: list[str]) -> list[str]:
     exactement /de, /es, /fr — que rien ne lie. Un site qui lie ses racines sans barre
     (easyshopbuilder, make-avis : liens ET sitemap) les fait toujours decouvrir.
     """
+    parts = urlsplit(base_url)
+    if (parts.hostname or "").endswith(".wixsite.com") and parts.path.strip("/"):
+        return list(dict.fromkeys([base_url, *(url for url in sitemap_seed_urls
+                                               if _is_allowed_host(url, parts, False))]))
     return list(dict.fromkeys([base_url, *_root_probe_urls(base_url), *sitemap_seed_urls]))
 
 
@@ -2986,6 +2990,9 @@ def _is_allowed_host(url: str, base_parts, allow_subdomains: bool) -> bool:
         return False
     base_host = base_parts.hostname or ""
     host = parts.hostname or ""
+    if base_host.endswith(".wixsite.com") and base_parts.path.strip("/"):
+        prefix = "/" + base_parts.path.strip("/").split("/", 1)[0]
+        return host == base_host and (parts.path == prefix or parts.path.startswith(prefix + "/"))
     if allow_subdomains:
         return host == base_host or host.endswith("." + base_host)
     if host == base_host:
@@ -3163,7 +3170,10 @@ def _iter_sitemap_urls(
     hreflang_by_url: dict[str, dict[str, str]] | None = None,
     urlset_locs_by_sitemap: dict[str, list[str]] | None = None,
     system_fetches: list[dict[str, Any]] | None = None,
+    site_scope=None,
 ) -> list[str]:
+    if site_scope and not _is_allowed_host(sitemap_url, site_scope, False):
+        return []
     if sitemap_url in seen_sitemaps:
         return []
     if len(seen_sitemaps) > 25:
@@ -3261,6 +3271,7 @@ def _iter_sitemap_urls(
                     hreflang_by_url=hreflang_by_url,
                     urlset_locs_by_sitemap=urlset_locs_by_sitemap,
                     system_fetches=system_fetches,
+                    site_scope=site_scope,
                 )
             )
             if len(urls) >= max_urls:
@@ -9618,8 +9629,11 @@ def main(argv: list[str]) -> int:
         )
 
     sitemap_urls = list(dict.fromkeys([*config.sitemap_urls, *discovered_sitemaps]))
+    site_scope = base_parts if (base_parts.hostname or "").endswith(".wixsite.com") and base_parts.path.strip("/") else None
+    if site_scope:
+        sitemap_urls = [u for u in sitemap_urls if _is_allowed_host(u, site_scope, False)]
     if not sitemap_urls:
-        default_sitemap = _normalize_url("/sitemap.xml", base=root)
+        default_sitemap = _normalize_url("sitemap.xml", base=config.base_url.rstrip("/") + "/" if site_scope else root.rstrip("/") + "/")
         if default_sitemap:
             sitemap_urls = [default_sitemap]
 
@@ -9634,6 +9648,7 @@ def main(argv: list[str]) -> int:
             user_agent=config.user_agent,
             max_urls=config.max_sitemap_urls - len(sitemap_seed_urls),
             seen_sitemaps=seen_sitemaps,
+            site_scope=site_scope,
             retries=int(config.http_retries),
             connection_close=bool(config.connection_close),
             hreflang_by_url=sitemap_hreflang_by_url,

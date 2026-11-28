@@ -40,6 +40,17 @@ os.environ.setdefault("CRON_SECRET", "test-cron-secret")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from backend import app as app_module  # noqa: E402
+
+
+def test_wix_project_address_keeps_the_site_directory():
+    base = app_module._normalize_base_url("atelier.wixsite.com/velo/blog?lang=fr")
+    assert base == "https://atelier.wixsite.com/velo/"
+    assert app_module._normalize_base_url(base) == base
+    assert app_module._slug_from_base_url(base) != app_module._slug_from_base_url(
+        "https://atelier.wixsite.com/autre/"
+    )
+    assert app_module._normalize_base_url("example.org/blog") == "https://example.org/"
+
 from backend import auth  # noqa: E402
 from backend.app import app  # noqa: E402
 from backend.models import Project, User  # noqa: E402
