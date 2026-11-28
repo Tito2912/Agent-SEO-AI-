@@ -67,6 +67,17 @@ def test_create_draft_rejects_non_integer_author():
     assert transport.calls == []  # aucune requete envoyee
 
 
+def test_create_draft_limits_image_width_without_changing_dimensions():
+    transport = _Transport([_json(201, _wp_response())])
+    adapter = get_adapter("wordpress", transport=transport, config={})
+    image = '<img src="https://exemple.fr/photo.webp" width="1280" height="800" alt="Atelier" />'
+    example = '<code>&lt;img src="example.webp"&gt;</code>'
+    adapter.create_draft(_draft(html=f"<p>{image}</p>\n{example}"))
+    assert transport.calls[0]["payload"]["content"] == (
+        f'<p><img style="max-width:100%;height:auto"{image[4:]}</p>\n{example}'
+    )
+
+
 def test_publish_requires_expected_revision():
     transport = _Transport([_json(200, _wp_response())])
     adapter = get_adapter("wordpress", transport=transport, config={})
